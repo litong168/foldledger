@@ -32,6 +32,9 @@ class BackupManager(
     companion object {
         const val MIME_JSON = "application/json"
         const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        /** v15.1.1：加密备份是二进制信封不是 JSON，传 JSON MIME 会被 DocumentsProvider 自动追加 .json 后缀，
+         *  导致产出 `.foldledger.crypt.json`、`isBackupFileName` 匹配失败、恢复列表永远扫不到 */
+        const val MIME_CRYPT = "application/octet-stream"
 
         /** 自动备份之外，手动备份保留的最新份数 */
         const val KEEP_MANUAL = 10
@@ -132,7 +135,7 @@ class BackupManager(
             snapshot.ledgers, snapshot.transactions, snapshot.projects
         ).bytes
 
-        val okJson = saf.writeFile(treeUri, jsonName, MIME_JSON, jsonBytes)
+        val okJson = saf.writeFile(treeUri, jsonName, if (encrypted) MIME_CRYPT else MIME_JSON, jsonBytes)
         if (!okJson) error("写入备份目录失败，请重新选择备份文件夹")
         val okXlsx = if (encrypted) false else saf.writeFile(treeUri, xlsxName, MIME_XLSX, excelBytes)
 
@@ -329,7 +332,7 @@ class BackupManager(
         val src = File(dir, item.storedName)
         if (!src.exists()) return@withContext false
         val bytes = src.readBytes()
-        if (!saf.writeFile(treeUri, item.fileName, MIME_JSON, bytes)) {
+        if (!saf.writeFile(treeUri, item.fileName, if (BackupCipher.isEncrypted(bytes)) MIME_CRYPT else MIME_JSON, bytes)) {
             return@withContext false
         }
         if (item.hasXlsx) {

@@ -5,13 +5,15 @@
 一个为折叠屏深度适配的安卓记账 App：**分账本** + **场景化记账** + **一键备份/恢复（卸载重装也能找回）**。
 
 - **包名**：`com.foldledger`（沿用旧包名，保证老版本升级安装时数据与签名连续）
-- **版本**：15.1.0 (versionCode 208)
-- **产物**：`dist/滴水记账-v15.1.0-release.apk`（已签名，R8 混淆后 3.8MB）
+- **版本**：15.1.1 (versionCode 209)
+- **产物**：`dist/滴水记账-v15.1.1-release.apk`（已签名，R8 混淆后 3.8MB）
 - **附带**：`dist/预置图标库预览.html`（不用装机就能看全 328 个预置图标 + 搜索）、
   `dist/应用图标预览.html`、`dist/Excel导出格式样例.xlsx`、`dist/备份文件格式样例.foldledger.json`
 - **签名**：正式签名库 `drip-ledger-release.jks`，证书 SHA-256 `3F:00:15:53:1B:C7:BD:6E:AC:7E:B1:06:96:9D:D7:F1:78:10:99:3E:2D:83:95:37:CA:28:D2:0A:97:51:32:E2`
 - **兼容**：Android 8.0 (API 26) ~ Android 15 (API 35)，ABI 覆盖 arm64-v8a / armeabi-v7a / x86 / x86_64
 
+> v15.1.1 变更摘要（真机冒烟修加密备份恢复）：**加密备份导出后被 SAF 追加 `.json` 后缀**（产出 `xxx.foldledger.crypt.json`）——导出时用了 `application/json` MIME，DocumentsProvider 按 MIME 自动补扩展名，导致 `isBackupFileName` 匹配失败、**恢复列表永远扫不到加密备份**。修复：加密信封不是 JSON，改用 `application/octet-stream` 写入（`MIME_CRYPT`），回收站还原同一处一并修复。真机验证：设密导出产出正确的 `.foldledger.crypt` → 恢复列表可见（🔒 手标 + 明文头摘要）→ 输密码 → Rust 预检 →「已恢复 4 个账本 / 39 个分类 / 64 笔流水」。**零数据库改动、零新依赖**。
+>
 > v15.1.0 变更摘要（隐私强化 · 代码保护基线）：**① 关闭系统云备份**——`allowBackup=false`，移除 `dataExtractionRules`/`fullBackupContent`，`foldledger.db` 不再进入 Google 云备份 / 换机传输 / adb 外传；App 自带「一键导出」不受影响。**② 备份导出支持可选密码加密**——新增 `BackupCipher`（AES-256-GCM + PBKDF2-HMAC-SHA256 十万次迭代），信封 `[FLDC1][header][salt16][iv12][密文+GCM tag]`，密码不落库（导出/导入时临时输入），产出 `.foldledger.crypt`；内层 JSON schema 不变，旧 `.foldledger.json` 仍兼容，自动备份保持明文（静默、无密码入口）。**③ 开启 R8 混淆 + 资源收缩**（`isMinifyEnabled=true` + `isShrinkResources=true`，`-keep` DripCore JNI 入口防查找失败），APK 11MB → 3.8MB（体积降约 66%），并初始化 git 版本控制。**零数据库改动、零新依赖**。
 >
 > v15.0.3 变更摘要（记一笔浮层半屏修复）：**开着记一笔时折叠/旋转，浮层只剩键盘半屏**——根因是两层外壳错配：`AppOverlay` 落位模式在打开瞬间用 remember 冻结（v3.1.1 防闪），而 `AddTxnOverlay` 的内容分支已实时跟随；旋转到书本姿态（BOOK，铰链竖直分割左右）时，内容按「居中卡」排布却落在 BOOK 的右半屏外壳里，320dp 键盘把左侧选择区挤成 0 宽。修复：`AppOverlay` 落位跟随实时姿态（与内容分支同源同变），`AddTxnOverlay` 新增 **BOOK 分支**（左屏选分类、右屏键盘）。真机验证：TABLETOP↔BOOK↔展开 三姿态下开着记一笔实时切换，均完整显示。**零数据库改动、零新依赖**。
