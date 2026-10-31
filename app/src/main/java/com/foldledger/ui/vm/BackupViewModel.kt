@@ -40,6 +40,10 @@ data class BackupUiState(
     val pickingRestore: Boolean = false,
     /** 非 null 时，UI 应弹出「确认删除备份」对话框 */
     val pendingDelete: BackupManager.BackupEntry? = null,
+    /** true 时，UI 应弹出「导出备份是否加密」的密码对话框 */
+    val pendingExportPassword: Boolean = false,
+    /** 非 null 时，UI 应弹出「输入备份密码」对话框（恢复加密备份用） */
+    val pendingRestorePassword: BackupManager.BackupEntry? = null,
     /** 每次恢复成功 +1，用于让外层重置选中态 */
     val restoredTick: Int = 0
 )
@@ -86,7 +90,23 @@ class BackupViewModel(
     // ---------------- 对外动作 ----------------
 
     /** 用户点了「导出备份」 */
-    fun requestExport() = runAction(BackupAction.EXPORT)
+    fun requestExport() {
+        if (treeUri == null) {
+            _state.value = _state.value.copy(needsFolderFor = BackupAction.EXPORT)
+        } else {
+            _state.value = _state.value.copy(pendingExportPassword = true)
+        }
+    }
+
+    /** 用户在导出对话框里确认：密码留空 = 明文导出（含 Excel 对账表），填了 = 加密导出 */
+    fun confirmExport(password: String) {
+        _state.value = _state.value.copy(pendingExportPassword = false)
+        viewModelScope.launch { doExport(auto = false, passphrase = password.ifBlank { null }) }
+    }
+
+    fun cancelExportPassword() {
+        _state.value = _state.value.copy(pendingExportPassword = false)
+    }
 
     /** 用户点了「从备份恢复」 */
     fun requestImport() = runAction(BackupAction.IMPORT)
@@ -125,7 +145,7 @@ class BackupViewModel(
             prefs.setBackupFolder(uri.toString(), label)
             when (pending) {
                 BackupAction.IMPORT -> doImport()
-                BackupAction.EXPORT -> doExport(auto = false)
+                BackupAction.EXPORT -> _state.value = _state.value.copy(pendingExportPassword = true)
                 BackupAction.ENABLE_AUTO -> doExport(auto = true)
                 null -> refreshList()
             }
@@ -167,12 +187,22 @@ class BackupViewModel(
 
     /** 用户从备份列表里指定某一份要恢复 */
     fun requestRestoreFrom(entry: BackupManager.BackupEntry) {
-        _state.value = _state.value.copy(
-            pendingRestore = entry,
-            pickingRestore = false,
-            phase = BackupPhase.IDLE,
-            message = ""
-        )
+        // v15.1：加密备份先要密码，明文备份走原有的「确认恢复」对话框
+        if (entry.encrypted) {
+            _state.value = _state.value.copy(
+                pendingRestorePassword = entry,
+                pickingRestore = false,
+                phase = BackupPhase.IDLE,
+                message = ""
+            )
+        } else {
+            _state.value = _state.value.copy(
+                pendingRestore = entry,
+                pickingRestore = false,
+                phase = BackupPhase.IDLE,
+                message = ""
+            )
+        }
     }
 
     // ---------------- 删除备份（二次确认） ----------------
@@ -215,6 +245,17 @@ class BackupViewModel(
         viewModelScope.launch { doRestore(entry) }
     }
 
+    /** 用户输入密码后确认恢复加密备份 */
+    fun confirmRestorePassword(password: String) {
+        val entry = _state.value.pendingRestorePassword ?: return
+        _state.value = _state.value.copy(pendingRestorePassword = null)
+        viewModelScope.launch { doRestore(entry, password.ifBlank { null }) }
+    }
+
+    fun cancelRestorePassword() {
+        _state.value = _state.value.copy(pendingRestorePassword = null)
+    }
+
     // ---------------- 选哪一份来恢复 ----------------
 
     fun cancelPick() {
@@ -230,6 +271,8 @@ class BackupViewModel(
                 phase = BackupPhase.FAILED,
                 message = "备份目录里没有可恢复的备份"
             )
+        } else if (newest.encrypted) {
+            _state.value = _state.value.copy(pendingRestorePassword = newest)
         } else {
             _state.value = _state.value.copy(pendingRestore = newest)
         }
@@ -250,10 +293,10 @@ class BackupViewModel(
         }
     }
 
-    private suspend fun doExport(auto: Boolean) {
+    private suspend fun doExport(auto: Boolean, passphrase: String? = null) {
         val uri = treeUri ?: return
         _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = if (auto) "正在自动备份…" else "正在导出备份…")
-        runCatching { manager.export(uri, auto) }
+        runCatching { manager.export(uri, auto, passphrase) }
             .onSuccess { r ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.DONE,
@@ -306,7 +349,7 @@ class BackupViewModel(
             }
     }
 
-    private suspend fun doRestore(entry: BackupManager.BackupEntry) {
+    private suspend fun doRestore(entry: BackupManager.BackupEntry, passphrase: String? = null) {
         val uri = treeUri ?: return
         _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在恢复…")
         runCatching {
@@ -314,7 +357,7 @@ class BackupViewModel(
             if (!repo.isDatabaseEmpty()) {
                 runCatching { manager.export(uri, auto = true) }
             }
-            val snapshot = manager.readBackup(uri, entry.docId)
+            val snapshot = manager.readBackup(uri, entry.docId, passphrase)
             manager.restore(snapshot)
         }
             .onSuccess { stats ->

@@ -2,6 +2,7 @@ package com.foldledger.data.backup
 
 import android.content.Context
 import android.net.Uri
+import com.foldledger.BuildConfig
 import com.foldledger.ServiceLocator
 import com.foldledger.core.DripCore
 import com.foldledger.data.export.ExcelExporter
@@ -58,8 +59,18 @@ class BackupManager(
         val appVersion: String,
         val sizeBytes: Long,
         val isAuto: Boolean,
+        /** v15.1：这份备份是否加密（恢复时需输入密码） */
+        val encrypted: Boolean = false,
         /** v15：摘要都读不出来 —— 文件损坏或不是本 App 的备份。可见但禁用恢复 */
         val corrupt: Boolean = false
+    )
+
+    /** v15.1：列表用的统一摘要（加密/明文头部都映射到它，避免两种 Header 类型不兼容） */
+    private data class BackupSummary(
+        val exportedAt: Long,
+        val ledgerCount: Int,
+        val txnCount: Int,
+        val appVersion: String
     )
 
     // ---------------- 目录授权 ----------------
@@ -74,7 +85,7 @@ class BackupManager(
 
     // ---------------- 导出 ----------------
 
-    suspend fun export(treeUri: Uri, auto: Boolean): ExportOutcome = withContext(Dispatchers.IO) {
+    suspend fun export(treeUri: Uri, auto: Boolean, passphrase: String? = null): ExportOutcome = withContext(Dispatchers.IO) {
         val snapshot = repo.snapshot()
         if (snapshot.ledgerCount == 0) {
             // v10.5：auto 也要挡住空快照 —— 清库/全软删后自动备份不能拿空数据覆盖好备份
@@ -87,23 +98,43 @@ class BackupManager(
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.CHINA)
             .format(Date(snapshot.exportedAt))
+
+        // v15.1：手动导出可带密码（加密信封），自动备份永不加密（静默、无密码入口，且是兜底安全网）
+        val encrypted = !auto && !passphrase.isNullOrBlank()
         val jsonName = if (auto) {
             // v15：自动备份也轮转（保留最近 KEEP_AUTO 份），不再是"覆盖同一份"
             BackupFormat.AUTO_PREFIX + stamp + BackupFormat.EXT_JSON
+        } else if (encrypted) {
+            BackupFormat.MANUAL_CRYPT_PREFIX + stamp + BackupFormat.EXT_CRYPT
         } else {
             "${BackupFormat.FILE_PREFIX}备份-$stamp${BackupFormat.EXT_JSON}"
         }
-        val xlsxName = jsonName.removeSuffix(BackupFormat.EXT_JSON) + BackupFormat.EXT_XLSX
+        val xlsxName = if (encrypted) "" else jsonName.removeSuffix(BackupFormat.EXT_JSON) + BackupFormat.EXT_XLSX
 
-        val jsonBytes = BackupFormat.encode(snapshot)
-        // v10.5：补 projects —— 原来不传导致 Excel 项目列全空、项目汇总表丢失
-        val excelBytes = ExcelExporter(repo).build(
+        val plainJson = BackupFormat.encode(snapshot)
+        val jsonBytes = if (encrypted) {
+            BackupCipher.encrypt(
+                plainJson,
+                passphrase!!,
+                BackupCipher.EncHeader(
+                    appVersion = BuildConfig.VERSION_NAME,
+                    exportedAt = snapshot.exportedAt,
+                    ledgerCount = snapshot.ledgerCount,
+                    txnCount = snapshot.txnCount
+                )
+            )
+        } else {
+            plainJson
+        }
+
+        // v10.5：补 projects —— 原来不传导致 Excel 项目列全空、项目汇总表丢失（仅明文备份产出 xlsx）
+        val excelBytes = if (encrypted) ByteArray(0) else ExcelExporter(repo).build(
             snapshot.ledgers, snapshot.transactions, snapshot.projects
         ).bytes
 
         val okJson = saf.writeFile(treeUri, jsonName, MIME_JSON, jsonBytes)
         if (!okJson) error("写入备份目录失败，请重新选择备份文件夹")
-        val okXlsx = saf.writeFile(treeUri, xlsxName, MIME_XLSX, excelBytes)
+        val okXlsx = if (encrypted) false else saf.writeFile(treeUri, xlsxName, MIME_XLSX, excelBytes)
 
         // v15：自动/手动都轮转（自动保留最近 KEEP_AUTO 份，手动保留 KEEP_MANUAL 份）
         val pruned = prune(treeUri)
@@ -174,7 +205,14 @@ class BackupManager(
                         }
                 }.getOrNull()
 
-                if (head == null) {
+                // v15.1：加密备份用 BackupCipher 读头部，明文备份仍走原有 peekHeader
+                val isEnc = head != null && BackupCipher.isEncrypted(head)
+                val summary = head?.let { h ->
+                    if (isEnc) BackupCipher.peekHeader(h)?.let { BackupSummary(it.exportedAt, it.ledgerCount, it.txnCount, it.appVersion) }
+                    else BackupFormat.peekHeader(h)?.let { BackupSummary(it.exportedAt, it.ledgerCount, it.txnCount, it.appVersion) }
+                }
+
+                if (summary == null) {
                     // v15：读不出摘要 ≠ 目录里没这份 —— 标成"损坏"让它可见，
                     // 否则用户会以为备份"少了一份"（或某次写一半坏掉的备份凭空消失）
                     return@mapNotNull BackupEntry(
@@ -189,40 +227,41 @@ class BackupManager(
                         corrupt = true
                     )
                 }
-                val header = BackupFormat.peekHeader(head) ?: return@mapNotNull BackupEntry(
-                    docId = f.docId,
-                    fileName = f.name,
-                    savedAt = f.lastModified,
-                    ledgerCount = 0,
-                    txnCount = 0,
-                    appVersion = "",
-                    sizeBytes = f.size,
-                    isAuto = BackupFormat.isAutoBackupName(f.name),
-                    corrupt = true
-                )
                 BackupEntry(
                     docId = f.docId,
                     fileName = f.name,
-                    savedAt = if (header.exportedAt > 0) header.exportedAt else f.lastModified,
-                    ledgerCount = header.ledgerCount,
-                    txnCount = header.txnCount,
-                    appVersion = header.appVersion,
+                    savedAt = if (summary.exportedAt > 0) summary.exportedAt else f.lastModified,
+                    ledgerCount = summary.ledgerCount,
+                    txnCount = summary.txnCount,
+                    appVersion = summary.appVersion,
                     sizeBytes = f.size,
-                    isAuto = BackupFormat.isAutoBackupName(f.name)
+                    isAuto = BackupFormat.isAutoBackupName(f.name),
+                    encrypted = isEnc
                 )
             }
             .sortedByDescending { it.savedAt }
             .toList()
     }
 
-    suspend fun readBackup(treeUri: Uri, docId: String): BackupSnapshot = withContext(Dispatchers.IO) {
+    suspend fun readBackup(treeUri: Uri, docId: String, passphrase: String? = null): BackupSnapshot = withContext(Dispatchers.IO) {
         val bytes = saf.read(treeUri, docId) ?: error("读取备份文件失败")
+        // v15.1：加密备份先解密，再走原有完整性预检
+        val plaintext = if (BackupCipher.isEncrypted(bytes)) {
+            if (passphrase.isNullOrBlank()) error("这份备份已加密，需要输入密码才能恢复")
+            try {
+                BackupCipher.decrypt(bytes, passphrase)
+            } catch (e: IllegalStateException) {
+                error(e.message ?: "备份密码不正确，无法解密")
+            }
+        } else {
+            bytes
+        }
         // v4.0：恢复前先用 Rust 核心做完整性预检（DripCore.validateBackup，so 缺失时 Kotlin 回退），
         // 挡掉明显损坏 / 不是本 App 的文件，避免把垃圾数据灌进数据库。
-        if (!DripCore.validateBackup(bytes)) {
+        if (!DripCore.validateBackup(plaintext)) {
             error("这份备份文件损坏或不是滴水记账的备份，已拒绝恢复")
         }
-        BackupFormat.decode(bytes)
+        BackupFormat.decode(plaintext)
     }
 
     /**

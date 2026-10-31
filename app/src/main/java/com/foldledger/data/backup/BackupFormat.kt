@@ -58,9 +58,13 @@ object BackupFormat {
     const val VERSION = 1
     const val EXT_JSON = ".foldledger.json"
     const val EXT_XLSX = ".xlsx"
+    /** v15.1：加密导出的扩展名（文件名仍以品牌前缀开头，列表/清理/删除白名单共用一套规则） */
+    const val EXT_CRYPT = ".foldledger.crypt"
 
     /** 当前品牌名（应用改名「滴水记账」后启用） */
     const val FILE_PREFIX = "滴水记账-"
+    /** v15.1：手动加密备份的文件名前缀（放在 FILE_PREFIX 之后，常量初始化顺序才对） */
+    const val MANUAL_CRYPT_PREFIX = "${FILE_PREFIX}加密备份-"
 
     /** 历史品牌名前缀：改名前的备份**依然能列出来、能恢复**，不能因为它们换了名字就认不出 */
     val LEGACY_PREFIXES = listOf("折叠记账-")
@@ -77,13 +81,13 @@ object BackupFormat {
      */
     const val AUTO_PREFIX = "${FILE_PREFIX}自动备份-"
 
-    /** 判断是不是自动备份文件（兼容旧的固定名） */
+    /** 判断是不是自动备份文件（兼容旧的固定名；自动备份永不加密，这里只是兜底兼容） */
     fun isAutoBackupName(name: String): Boolean =
-        name == AUTO_FILE_NAME || (name.endsWith(EXT_JSON) && name.startsWith(AUTO_PREFIX))
+        name == AUTO_FILE_NAME || (name.startsWith(AUTO_PREFIX) && (name.endsWith(EXT_JSON) || name.endsWith(EXT_CRYPT)))
 
     /** 判断一个文件名是不是本 App 自己写出来的备份（含历史命名），用于列表 / 清理 / 删除的白名单 */
     fun isBackupFileName(name: String): Boolean =
-        name.endsWith(EXT_JSON) && ALL_PREFIXES.any { name.startsWith(it) }
+        (name.endsWith(EXT_JSON) || name.endsWith(EXT_CRYPT)) && ALL_PREFIXES.any { name.startsWith(it) }
 
     fun encode(snapshot: BackupSnapshot): ByteArray {
         val ledgers = JSONArray()

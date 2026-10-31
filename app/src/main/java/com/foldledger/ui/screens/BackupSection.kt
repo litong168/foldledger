@@ -18,12 +18,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foldledger.data.backup.BackupManager
 import com.foldledger.ui.anim.clickableScale
@@ -239,6 +244,23 @@ fun BackupSection(
                 onDismiss = { backupVm.cancelDelete() }
             )
         }
+
+        // ---------- 导出加密对话框 ----------
+        if (s.pendingExportPassword) {
+            ExportPasswordDialog(
+                onConfirm = { backupVm.confirmExport(it) },
+                onDismiss = { backupVm.cancelExportPassword() }
+            )
+        }
+
+        // ---------- 恢复加密备份：输入密码 ----------
+        if (s.pendingRestorePassword != null) {
+            RestorePasswordDialog(
+                entry = s.pendingRestorePassword!!,
+                onConfirm = { backupVm.confirmRestorePassword(it) },
+                onDismiss = { backupVm.cancelRestorePassword() }
+            )
+        }
     }
 }
 
@@ -309,7 +331,7 @@ private fun BackupRow(
             Modifier.padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(if (entry.isAuto) "🔄" else "📦", fontSize = 17.sp)
+            Text(if (entry.encrypted) "🔒" else if (entry.isAuto) "🔄" else "📦", fontSize = 17.sp)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -318,10 +340,13 @@ private fun BackupRow(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    if (entry.isAuto) {
-                        Spacer(Modifier.width(6.dp))
-                        PillTag("自动", CoolGreen, filled = true)
-                    }
+                if (entry.encrypted) {
+                    Spacer(Modifier.width(6.dp))
+                    PillTag("加密", pendingTone(), filled = true)
+                } else if (entry.isAuto) {
+                    Spacer(Modifier.width(6.dp))
+                    PillTag("自动", CoolGreen, filled = true)
+                }
                 }
                 Text(
                     "${entry.ledgerCount} 个账本 · ${entry.txnCount} 笔流水 · ${
@@ -417,6 +442,93 @@ private fun DeleteConfirmDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }
         }
+    )
+}
+
+@Composable
+private fun ExportPasswordDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var pass by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    GlassDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("用密码保护这份备份？") },
+        text = {
+            Column {
+                Text(
+                    "设置密码后，备份文件会被加密，恢复时必须输入同样的密码；留空则保持明文（同时生成一份 Excel 对账表）。",
+                    fontSize = 13.sp, lineHeight = 18.sp
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = pass, onValueChange = { pass = it; error = null },
+                    label = { Text("密码（可选）") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirm, onValueChange = { confirm = it; error = null },
+                    label = { Text("再次输入密码") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(error!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.error, lineHeight = 16.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (pass.isBlank()) { onConfirm(""); return@TextButton }
+                if (pass.length < 4) { error = "密码至少 4 位"; return@TextButton }
+                if (pass != confirm) { error = "两次输入的密码不一致"; return@TextButton }
+                onConfirm(pass)
+            }) { Text(if (pass.isBlank()) "直接导出" else "加密导出") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
+}
+
+@Composable
+private fun RestorePasswordDialog(
+    entry: BackupManager.BackupEntry,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var pass by remember { mutableStateOf("") }
+    GlassDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("这份备份已加密") },
+        text = {
+            Column {
+                Text(
+                    "「${BackupViewModel.formatTime(entry.savedAt)}」的备份受密码保护，输入密码后才能恢复。",
+                    fontSize = 13.sp, lineHeight = 18.sp
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = pass, onValueChange = { pass = it },
+                    label = { Text("备份密码") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = pass.isNotBlank(),
+                onClick = { onConfirm(pass) }
+            ) { Text("确认恢复") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }
 
