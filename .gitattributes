@@ -1,0 +1,2 @@
+# 统一换行符：仓库内统一存 LF，检出时按系统转换，避免 CRLF 噪声与跨平台 diff
+* text=auto eol=lf
