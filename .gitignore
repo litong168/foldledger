@@ -1,0 +1,28 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/.build-cache/
+/.kotlin/
+/app/build/
+/build/
+
+# 签名材料绝不入版本库：私钥 + 口令一旦泄露，任何人都能伪造你的更新包。
+# 请单独备份 drip-ledger-release.jks 与 keystore.properties（丢了就再也发不了升级包）。
+/keystore.properties
+*.jks
+*.keystore
+*.p12
+
+# 构建产物与交付二进制（不进版本库，避免仓库膨胀）
+dist/*.apk
+dist/*.aab
+rust/drip-core/target/
+.workbuddy/
+generated-images/

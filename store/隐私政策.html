@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>滴水记账 · 隐私政策</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0 auto; padding: 32px 20px 64px; max-width: 760px;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    line-height: 1.85; font-size: 15px; color: #1f2328; background: #ffffff;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 32px 0 8px; padding-left: 10px; border-left: 3px solid #FF7A18; }
+  .meta { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #fff7ec; border: 1px solid #ffe0b8; border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
+  .card b { color: #b45309; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f7f7f8; }
+  ul { padding-left: 20px; }
+  .foot { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16181d; color: #e6e6e6; }
+    .card { background: #241c12; border-color: #4a3a22; }
+    th { background: #22252b; }
+    th, td { border-color: #333740; }
+    .meta, .foot { color: #9aa0a6; }
+  }
+</style>
+</head>
+<body>
+
+<h1>滴水记账 · 隐私政策</h1>
+<div class="meta">
+  开发者：滴水记账开发者 &nbsp;|&nbsp; 适用版本：v9.0.0 及以上<br>
+  生效日期：2026 年 10 月 22 日 &nbsp;|&nbsp; 最近更新：2026 年 10 月 22 日
+</div>
+
+<div class="card">
+  <b>一句话概括：</b>滴水记账是一款<b>完全在本机运行</b>的个人记账工具。
+  它不收集、不上传、不共享你的任何账本数据，不设账号体系，不含广告与统计 SDK。
+  你写的每一笔账，只存在你自己手机的数据库里。
+</div>
+
+<h2>一、我们收集哪些信息</h2>
+<p><b>我们不收集你的个人信息。</b>具体来说：</p>
+<ul>
+  <li>不收集姓名、手机号、身份证号、邮箱、设备标识符、位置等任何身份识别信息；</li>
+  <li>不收集通讯录、通话记录、日历、剪贴板、相机、麦克风内容；</li>
+  <li>不接入任何第三方广告、用户行为分析、崩溃统计 SDK；</li>
+  <li>不设账号体系，因此也不存在"注册/登录"环节，无账号可被注销。</li>
+</ul>
+<p>应用的全部数据（账本、分类、项目、账户、流水、预算、标签等）均以结构化形式
+保存在设备本地的 SQLite 数据库中，<b>不会离开你的设备</b>。</p>
+
+<h2>二、我们申请的权限及其用途</h2>
+<table>
+  <tr><th>权限</th><th>用途</th><th>是否必需</th></tr>
+  <tr>
+    <td><code>RECEIVE_SMS</code><br>接收短信</td>
+    <td>用于<b>自动记账</b>：解析银行发来的动账短信（如"支出人民币 X 元"），
+        在你确认后生成一笔待确认流水。短信内容仅在本机解析，不保存原文、不上传。</td>
+    <td>可选，拒绝后仅关闭自动记账，其余功能不受影响</td>
+  </tr>
+  <tr>
+    <td>通知使用权<br>（系统设置中授予）</td>
+    <td>用于<b>自动记账</b>：读取微信支付、支付宝、云闪付及银行 App 的支付通知，
+        解析出金额与对方，生成一笔待确认流水。</td>
+    <td>可选，拒绝后仅关闭自动记账，其余功能不受影响</td>
+  </tr>
+  <tr>
+    <td><code>POST_NOTIFICATIONS</code></td>
+    <td>用于发送你自行开启的<b>每日记账提醒</b>。</td>
+    <td>可选</td>
+  </tr>
+  <tr>
+    <td><code>VIBRATE</code></td>
+    <td>用于按钮与数字键盘的触感反馈。</td>
+    <td>普通权限</td>
+  </tr>
+</table>
+<p>除上表所列外，应用不申请任何其他权限，也不需要网络访问权限（不声明
+<code>INTERNET</code> 权限），无法自行与任何服务器通信。</p>
+
+<h2>三、第三方 SDK</h2>
+<p>滴水记账<b>不含任何第三方 SDK</b>（包括但不限于广告、统计、推送、地图、社交分享）。
+所有功能均在本机离线完成。</p>
+
+<h2>四、数据存储、共享与安全</h2>
+<ul>
+  <li><b>存储位置</b>：仅存储于本机应用私有目录的数据库文件；</li>
+  <li><b>共享与转让</b>：我们不会与任何第三方共享、转让或公开披露你的数据；</li>
+  <li><b>对外提供</b>：无；</li>
+  <li><b>导出</b>：你可以通过"导出备份"主动生成备份文件（JSON / Excel），
+      文件由你自行保管与分享，我们不参与该过程；</li>
+  <li><b>安全措施</b>：数据不离开设备；删除账本时进入"回收站"而非立即抹除，
+      便于误删恢复；彻底删除会级联清除相关流水。</li>
+</ul>
+
+<h2>五、权限的撤回</h2>
+<p>你可以随时在系统设置中撤回上述权限：</p>
+<ul>
+  <li>短信权限：设置 › 应用管理 › 滴水记账 › 权限 › 短信</li>
+  <li>通知使用权：设置 › 通知与控制中心 › 通知使用权 › 滴水记账</li>
+  <li>通知与振动：设置 › 应用管理 › 滴水记账 › 通知</li>
+</ul>
+<p>撤回后，相关功能（如自动记账、每日提醒）会自动停止工作，其他功能不受影响。</p>
+
+<h2>六、数据的删除</h2>
+<ul>
+  <li>删除单条流水：在流水详情中删除，或在"我的"里清空流水；</li>
+  <li>删除账本：账本会先进入"回收站"，可随时恢复；彻底删除后其下流水一并清除；</li>
+  <li>卸载应用：所有本地数据随应用一并删除，无法恢复。</li>
+</ul>
+
+<h2>七、未成年人保护</h2>
+<p>本应用为通用记账工具，不面向未成年人收集任何信息，也不含有诱导消费的功能。
+若未成年人需使用，请在监护人指导下进行。</p>
+
+<h2>八、本政策的更新</h2>
+<p>政策如有变更，我们会在应用内"关于"页面或应用商店更新日志中说明。
+重大变更（如新增权限用途）会在应用首次启动时以弹窗提示。</p>
+
+<h2>九、联系我们</h2>
+<p>如对本政策有任何疑问、意见或需要行使个人信息权利，可通过以下方式与我们联系：</p>
+<ul>
+  <li>应用内：我的 › 关于 › 反馈</li>
+  <li>邮箱：<b>__FILL_CONTACT_EMAIL__</b>（请替换为你的真实联系邮箱）</li>
+</ul>
+
+<div class="foot">
+  滴水记账 · 隐私政策<br>
+  本政策依据《中华人民共和国个人信息保护法》《中华人民共和国网络安全法》及相关规定制定。
+</div>
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">滴水记账</string>
+    <string name="app_slogan">滴水穿石 · 每日记账</string>
+
+    <!-- 底部导航（顺序：明细 / 账本 / 我的） -->
+    <string name="nav_detail">明细</string>
+    <string name="nav_ledgers">账本</string>
+    <string name="nav_stats">统计</string>
+    <string name="nav_scenes">场景</string>
+    <string name="nav_settings">我的</string>
+
+    <!-- 通用 -->
+    <string name="action_add">记一笔</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_confirm">确定</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="action_edit">编辑</string>
+
+    <!-- 无障碍 -->
+    <string name="cd_back">返回</string>
+    <string name="cd_add_record">新增记账</string>
+
+    <!-- v14 桌面/锁屏组件 -->
+    <string name="widget_today_title">今日收支</string>
+    <string name="widget_expense">支出</string>
+    <string name="widget_income">收入</string>
+    <string name="widget_month">本月</string>
+    <string name="widget_quick_add">速记</string>
+    <string name="widget_today_desc">查看今日 / 本月收支，一键速记</string>
+</resources>

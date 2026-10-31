@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  应用图标 · 前景层
+  寓意：**滴水穿石，每日记账**
+
+    · 一枚水滴（顶点朝上）    = 每天记下的那一笔
+    · 水滴里嵌一个 ¥          = 记的是钱
+    · 水滴下方两道扁椭圆涟漪   = 落在水面上荡开，一滴一滴，日积月累
+
+  构图刻意避开了两种常见毛病：
+    · 不用同心圆环 —— 那会像靶心
+    · 不用半圆弧线 —— 那会像一张嘴
+  改成「水滴落向水面」，有方向、有动势，小尺寸下也不会糊成一团。
+
+  配色：白色水滴压在暖橙底上，对比强、够醒目；水滴自带一点自上而下的
+  明暗渐变（纯白 -> 暖奶油），看起来有体积而不是一块死白。
+  ¥ 用深橙描出来，在实心水滴上等价于镂空。
+  所有元素都收在自适应图标的安全区内（距中心最远 32.5/108），任意遮罩都不被裁切。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 水面外圈涟漪 -->
+    <path
+        android:pathData="M30,73 a24,6 0 1 0 48,0 a24,6 0 1 0 -48,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#8CFFF6E0"
+        android:strokeWidth="3" />
+
+    <!-- 水面内圈涟漪 -->
+    <path
+        android:pathData="M41,73 a13,3.4 0 1 0 26,0 a13,3.4 0 1 0 -26,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#66FFF6E0"
+        android:strokeWidth="2.6" />
+
+    <!-- 水滴主体（带一点自上而下的明暗） -->
+    <path android:pathData="M54,24 C60.5,31.5 71,38 71,45 A17,17 0 1 1 37,45 C37,38 47.5,31.5 54,24 Z">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="29"
+                android:endX="54"
+                android:endY="62"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="1" android:color="#FFFFE9C4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 水滴里的 ¥：用底色描出来，等价于在实心水滴上镂空 -->
+    <path
+        android:pathData="M48,35 L54,41 M60,35 L54,41 M54,41 L54,55"
+        android:strokeColor="#FFEF5F0A"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M48,45.5 L60,45.5 M48,51 L60,51"
+        android:strokeColor="#FFEF5F0A"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round" />
+</vector>

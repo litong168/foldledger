@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 记账本为纯本地应用：不联网、不上传。以下权限均为本机功能所需 -->
+
+    <!-- 每日记账提醒的通知权限（Android 13+ 需运行时请求） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- v5.0：数字键盘与按钮的触感反馈（普通权限，无需运行时申请） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- v8.1 自动记账：接收银行动账短信（运行时请求；不读历史短信、不外传） -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!--
+      折叠屏适配关键声明：
+      1. resizeableActivity = true        -> 允许自由窗口 / 分屏 / 折叠态尺寸变化（Fold 必备）
+      2. configChanges 含 screenSize/smallestScreenSize/screenLayout/density
+         -> 折叠展开时不再重建 Activity，由 Compose 自行重排，避免闪屏与状态丢失
+      3. screenOrientation = unspecified  -> 禁止锁定方向，否则展开后无法横屏
+      4. max_aspect 2.4                   -> 兼容外屏超长比例（约 21:9）
+      5. supports-screens large/xlarge    -> 声明对平板 / 展开大屏的支持
+    -->
+    <supports-screens
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="false"
+        android:xlargeScreens="true"
+        android:requiresSmallestWidthDp="320" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true" />
+
+    <application
+        android:name=".FoldLedgerApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:largeHeap="false"
+        android:hardwareAccelerated="true"
+        android:resizeableActivity="true"
+        android:theme="@style/Theme.FoldLedger"
+        tools:targetApi="35">
+
+        <meta-data
+            android:name="android.max_aspect"
+            android:value="2.4" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density|uiMode|fontScale|layoutDirection|locale|touchscreen|colorMode"
+            android:theme="@style/Theme.FoldLedger">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 支持从其他应用“分享账单文本”直接记账 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- v8.1 自动记账：支付通知监听（需用户在系统设置授予「通知使用权」） -->
+        <service
+            android:name=".auto.AutoBookkeepingListener"
+            android:label="滴水记账 · 自动记账"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- v8.1 自动记账：银行动账短信（需 RECEIVE_SMS 运行时权限） -->
+        <receiver
+            android:name=".auto.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v14 桌面/锁屏组件：今日收支（home + keyguard），纯本地、不联网 -->
+        <receiver
+            android:name=".widget.TodayWidget"
+            android:exported="false"
+            android:label="@string/widget_today_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+    </application>
+
+</manifest>

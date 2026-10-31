@@ -1,0 +1,26 @@
+[package]
+name = "drip-core"
+version = "4.0.0"
+edition = "2021"
+description = "滴水记账 Rust 核心：金额运算 / 统计聚合 / 搜索匹配 / 备份完整性校验"
+license = "MIT"
+
+# cdylib → Android .so（JNI）；staticlib → 可静态链；rlib → 宿主测试 / 未来复用
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+# JNI 仅在安卓目标使用；宿主测试不需要它也能编过（见 lib.rs 的 cfg）
+jni = { version = "0.21", optional = true }
+
+[features]
+default = []
+# 打开后编出带 JNI 导出的 .so（安卓构建用）
+android = ["dep:jni"]
+
+[profile.release]
+opt-level = "z"      # 体积优先，逻辑都很轻
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

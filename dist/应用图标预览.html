@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>滴水记账 · 应用图标（暖色版）</title>
+<style>
+  :root{ --bg:#faf7f4; --card:#fff; --line:#ece5df; --ink:#20180f; --ink2:#7a6a5c; }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:32px 20px 64px;background:var(--bg);color:var(--ink);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 6px;letter-spacing:.02em}
+  h2{font-size:15px;margin:34px 0 14px;font-weight:600}
+  .sub{color:var(--ink2);margin:0 0 4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 22px}
+  .row{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-end}
+  .item{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .cap{font-size:11px;color:var(--ink2);letter-spacing:.02em;text-align:center}
+  .mask{position:relative;overflow:hidden;flex:none;border-radius:50%;background:#F04E0A}
+  .mask svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .layers{display:flex;flex-wrap:wrap;gap:26px}
+  .layer{background:#f3ece6;border-radius:14px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .layer svg{display:block}
+  .notes{margin:14px 0 0;padding-left:20px;color:var(--ink2)}
+  .notes li{margin:4px 0}
+  .notes b{color:var(--ink);font-weight:600}
+  code{background:#f3ece6;border-radius:5px;padding:1px 6px;font-size:12.5px;
+       font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  .swatches{display:flex;border-radius:12px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+  .sw{flex:1;height:56px;display:flex;align-items:flex-end;justify-content:center;
+      font-size:10.5px;color:#fff;padding-bottom:6px;letter-spacing:.03em;
+      text-shadow:0 1px 2px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>滴水记账 · 应用图标<span style="font-size:14px;color:#7a6a5c;font-weight:400">（暖色版）</span></h1>
+  <p class="sub">自适应图标（Adaptive Icon）· 三层全矢量 · 未使用任何位图资源</p>
+
+  <h2>启动器里的样子（同一份图标，不同遮罩裁切）</h2>
+  <div class="card">
+    <div class="row" id="maskRow"></div>
+    <ul class="notes">
+      <li>圆形、圆角方形、接近方的圆角三种遮罩下构图都完整，<b>没有元素被切到边</b></li>
+      <li>内容距中心最远 32.5/108，收在 66dp 保障圈（半径 33）以内</li>
+    </ul>
+  </div>
+
+  <h2>真实尺寸（应用列表 / 搜索结果 / 通知用小图）</h2>
+  <div class="card">
+    <div class="row" id="sizeRow"></div>
+  </div>
+
+  <h2>暖色渐变</h2>
+  <div class="card">
+    <div class="swatches">
+      <div class="sw" style="background:#F04E0A">#F04E0A</div>
+      <div class="sw" style="background:#FF7A18">#FF7A18</div>
+      <div class="sw" style="background:#FFA51F">#FFA51F</div>
+      <div class="sw" style="background:#FFCE4A">#FFCE4A</div>
+    </div>
+    <ul class="notes">
+      <li><b>为什么要暖色</b>：启动器里记账类 App 几乎清一色是蓝的，朱橙 + 白水滴在列表里一眼就能扫到</li>
+      <li>白水滴压在中间调的深橙上，对比度约 <code>2.5:1</code>，比蓝底更"跳"</li>
+    </ul>
+  </div>
+
+  <h2>三层结构拆解</h2>
+  <div class="card">
+    <div class="layers">
+      <div class="layer"><div id="lBg"></div><span class="cap">background 背景</span></div>
+      <div class="layer"><div id="lFg"></div><span class="cap">foreground 前景</span></div>
+      <div class="layer"><div id="lMono"></div><span class="cap">monochrome 单色</span></div>
+    </div>
+    <ul class="notes">
+      <li>前景那枚 <code>¥</code> 用的是背景里的深橙 —— 相当于在实心水滴上挖空</li>
+      <li>水滴自带自上而下的明暗渐变（纯白 → 暖奶油），看起来有体积而不是一块死白</li>
+      <li>单色层去掉了 <code>¥</code>：Android 13+ 的主题图标会被系统统一染色，实心水滴里的同色笔画会糊成一块</li>
+    </ul>
+  </div>
+
+  <h2>寓意</h2>
+  <div class="card">
+    <ul class="notes">
+      <li><b>顶点朝上的水滴</b> —— 每天记下的那一笔</li>
+      <li><b>水滴里的 ¥</b> —— 记的是钱</li>
+      <li><b>下方两道扁椭圆涟漪</b> —— 水滴落在水面上荡开，一滴一滴，日积月累，水滴石穿</li>
+      <li>构图刻意避开同心圆环（像靶心）和半圆弧（像一张嘴），改成「水滴落向水面」，有方向、有动势</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   以下图形与 app/src/main/res/drawable/ic_launcher_*.xml 一一对应，
+   同一个 108×108 的坐标系，改了矢量文件记得同步这里。
+------------------------------------------------------------------ */
+
+const BG = `
+  <rect x="0" y="0" width="108" height="108" fill="url(#[W])"/>
+  <path d="M108,0 L108,44 C86,40 70,24 66,0 Z" fill="url(#[L])"/>`;
+
+const RIPPLES = `
+  <path d="M30,73 a24,6 0 1 0 48,0 a24,6 0 1 0 -48,0"
+        fill="none" stroke="#FFF6E0" stroke-opacity="0.55" stroke-width="3"/>
+  <path d="M41,73 a13,3.4 0 1 0 26,0 a13,3.4 0 1 0 -26,0"
+        fill="none" stroke="#FFF6E0" stroke-opacity="0.4" stroke-width="2.6"/>`;
+
+const DROP = `
+  <path d="M54,24 C60.5,31.5 71,38 71,45 A17,17 0 1 1 37,45 C37,38 47.5,31.5 54,24 Z"
+        fill="url(#[D])"/>`;
+
+const YEN = `
+  <path d="M48,35 L54,41 M60,35 L54,41 M54,41 L54,55"
+        fill="none" stroke="#EF5F0A" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48,45.5 L60,45.5 M48,51 L60,51"
+        fill="none" stroke="#EF5F0A" stroke-width="2.8" stroke-linecap="round"/>`;
+
+const FG = RIPPLES + DROP + YEN;
+
+let seq = 0;
+function defs(){
+  const u = ++seq;
+  return {
+    ids: ['w', 'l', 'd'].map(k => k + u),
+    xml: `<defs>
+      <linearGradient id="w${u}" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+        <stop offset="0"    stop-color="#F04E0A"/>
+        <stop offset="0.4"  stop-color="#FF7A18"/>
+        <stop offset="0.72" stop-color="#FFA51F"/>
+        <stop offset="1"    stop-color="#FFCE4A"/>
+      </linearGradient>
+      <linearGradient id="l${u}" x1="108" y1="0" x2="70" y2="40" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+        <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="d${u}" x1="54" y1="29" x2="54" y2="62" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#FFE9C4"/>
+      </linearGradient>
+    </defs>`
+  };
+}
+
+/** 渲染一层或整枚图标：parts 为若干 108×108 图形片段 */
+function svg(parts, size){
+  const d = defs();
+  const body = parts
+    .replace(/url\(#W\)/g, 'url(#' + d.ids[0] + ')')
+    .replace(/url\(#L\)/g, 'url(#' + d.ids[1] + ')')
+    .replace(/url\(#D\)/g, 'url(#' + d.ids[2] + ')');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 108 108"
+           xmlns="http://www.w3.org/2000/svg">${d.xml}${body}</svg>`;
+}
+
+const FULL = BG + FG;
+
+/**
+ * 启动器图标：外层按 size 裁切，内层 SVG 放大到 size×1.5。
+ * 自适应图标总画布 108×108，可见区只有中央 72×72，比例正好 1.5。
+ */
+function launcher(size, radius, label){
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `<div class="mask" style="width:${size}px;height:${size}px;border-radius:${radius}">
+                    ${svg(FULL, Math.round(size * 108 / 72))}
+                  </div><span class="cap">${label}</span>`;
+  return el;
+}
+
+const maskRow = document.getElementById('maskRow');
+maskRow.appendChild(launcher(124, '50%', '圆形遮罩'));
+maskRow.appendChild(launcher(124, '26%', '圆角方形'));
+maskRow.appendChild(launcher(124, '14%', '接近方形'));
+
+const sizeRow = document.getElementById('sizeRow');
+[[144,'144 px · 商店'],[96,'96 px'],[72,'72 px'],[48,'48 px'],[32,'32 px']]
+  .forEach(([s, label]) => sizeRow.appendChild(launcher(s, '50%', label)));
+
+document.getElementById('lBg').innerHTML   = svg(BG, 168);
+document.getElementById('lFg').innerHTML   = svg(FG, 168);
+document.getElementById('lMono').innerHTML = svg(RIPPLES + DROP.replace('url(#[D])', '#ffffff'), 168);
+</script>
+</body>
+</html>

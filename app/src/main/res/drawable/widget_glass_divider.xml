@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面组件 · 分隔线：中间亮、两端淡出的一道光缝（不是一根实色灰线）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:startColor="#00B4C0CC"
+        android:centerColor="#40B4C0CC"
+        android:endColor="#00B4C0CC" />
+</shape>

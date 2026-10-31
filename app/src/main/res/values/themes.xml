@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      仅作为 Activity 启动前的窗口基底主题。
+      UI 全部由 Jetpack Compose (Material 3) 绘制，
+      这里只负责 windowBackground / 系统栏透明，保证 edge-to-edge 无白闪。
+    -->
+    <style name="Theme.FoldLedger" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>滴水记账 · 预置分类图标库</title>
+<style>
+  :root{
+    --bg:#F7F7FA; --card:#FFFFFF; --line:#E1E4EC;
+    --ink:#14161A; --ink2:#5A6172; --brand:#1F6FEB;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0F1116; --card:#171B22; --line:#2C323E; --ink:#E7E9EF; --ink2:#A8B0C0; --brand:#7CAEF5; }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* 环境柔光底：和 App 里 GlassBackground 同一套思路 */
+  .glow{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden}
+  .glow i{position:absolute; display:block; border-radius:50%; filter:blur(70px); opacity:.5}
+  .glow i:nth-child(1){width:70vw;height:70vw;left:-18vw;top:-16vw;background:var(--brand)}
+  .glow i:nth-child(2){width:58vw;height:58vw;right:-14vw;top:6vh;background:#FF9C1A}
+  .glow i:nth-child(3){width:64vw;height:64vw;left:6vw;bottom:-22vw;background:#7048E8}
+  @media (prefers-color-scheme: dark){ .glow i{opacity:.26} }
+
+  header{padding:40px 26px 8px; max-width:1120px; margin:0 auto}
+  h1{margin:0 0 8px; font-size:26px; letter-spacing:-.01em}
+  .sub{color:var(--ink2); font-size:13px; line-height:1.7}
+  .stats{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+  .pill{
+    font-size:12px; padding:6px 12px; border-radius:999px;
+    background:color-mix(in srgb, var(--brand) 13%, transparent);
+    color:var(--brand); font-weight:600;
+  }
+  main{max-width:1120px; margin:0 auto; padding:16px 26px 60px}
+  .groups{display:flex; gap:8px; flex-wrap:wrap; margin:22px 0 18px}
+  .gtab{
+    font-size:12px; padding:7px 13px; border-radius:999px; cursor:pointer;
+    background:var(--card); border:1px solid var(--line); color:var(--ink);
+    user-select:none;
+  }
+  .gtab.on{background:var(--brand); border-color:transparent; color:#fff; font-weight:600}
+  section{
+    background:color-mix(in srgb, var(--card) 82%, transparent);
+    border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+    border-radius:20px; padding:20px; margin-bottom:18px;
+    backdrop-filter:blur(10px);
+  }
+  section > h2{
+    margin:0 0 4px; font-size:15px; display:flex; align-items:center; gap:8px;
+  }
+  section > h2 small{font-weight:400; color:var(--ink2); font-size:11px}
+  .grid{
+    display:grid; gap:8px; margin-top:14px;
+    grid-template-columns:repeat(auto-fill,minmax(58px,1fr));
+  }
+  .ic{
+    height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--ink) 6%, transparent);
+    font-size:24px; cursor:default; transition:transform .12s ease, background .12s ease;
+    position:relative;
+  }
+  .ic:hover{transform:scale(1.08); background:color-mix(in srgb, var(--brand) 18%, transparent)}
+  .ic span.k{
+    position:absolute; bottom:3px; left:0; right:0; text-align:center;
+    font-size:8px; color:var(--ink2); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    padding:0 3px; opacity:0; transition:opacity .12s ease;
+  }
+  .ic:hover span.k{opacity:1}
+  .search{
+    width:100%; max-width:420px; margin-top:20px; padding:11px 15px; font-size:14px;
+    border-radius:14px; border:1px solid var(--line); background:var(--card); color:var(--ink);
+    outline:none;
+  }
+  .search:focus{border-color:var(--brand)}
+  .empty{color:var(--ink2); font-size:13px; padding:20px 0}
+  footer{color:var(--ink2); font-size:11.5px; line-height:1.9; max-width:1120px; margin:0 auto; padding:0 26px 60px}
+  code{background:color-mix(in srgb, var(--ink) 8%, transparent); padding:1px 5px; border-radius:5px; font-size:11px}
+</style>
+</head>
+<body>
+<div class="glow"><i></i><i></i><i></i></div>
+
+<header>
+  <h1>滴水记账 · 预置分类图标库</h1>
+  <div class="sub">
+    这是分类管理里「选择图标」弹层的全部预置内容，直接照着源码里的
+    <code>CategoryIconLibrary.kt</code> 生成，所以永远和 App 里的一致。<br>
+    每个图标都带中文关键词，弹层里输入「加油」「疫苗」「房贷」这类词就能直接搜到。
+  </div>
+  <div class="stats" id="stats"></div>
+  <input class="search" id="q" placeholder="搜索图标（如：加油 / 疫苗 / 房贷 / 奶粉）">
+</header>
+
+<main>
+  <div class="groups" id="tabs"></div>
+  <div id="body"></div>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+const GROUPS = [{"name": "餐饮", "emoji": "🍽️", "icons": [{"e": "🍜", "k": "餐饮 面条 拉面 米线 面"}, {"e": "🍚", "k": "米饭 盖饭 主食"}, {"e": "🍱", "k": "便当 外卖 快餐"}, {"e": "🍔", "k": "汉堡 快餐"}, {"e": "🍕", "k": "披萨 西餐"}, {"e": "🍟", "k": "薯条 零食"}, {"e": "🍗", "k": "炸鸡 烤肉"}, {"e": "🥩", "k": "牛排 肉"}, {"e": "🍤", "k": "海鲜 虾 炸物"}, {"e": "🥗", "k": "沙拉 轻食 减脂"}, {"e": "🍞", "k": "面包 早餐"}, {"e": "🥛", "k": "牛奶 乳品"}, {"e": "☕", "k": "咖啡 奶茶 饮品"}, {"e": "🧋", "k": "奶茶 饮料"}, {"e": "🍺", "k": "啤酒 酒"}, {"e": "🍷", "k": "红酒 酒"}, {"e": "🍰", "k": "蛋糕 甜品"}, {"e": "🍦", "k": "冰淇淋 甜品"}, {"e": "🥤", "k": "饮料 可乐"}, {"e": "🍬", "k": "糖果 零食"}]}, {"name": "买菜生鲜", "emoji": "🥬", "icons": [{"e": "🥬", "k": "青菜 蔬菜 买菜"}, {"e": "🥕", "k": "胡萝卜 蔬菜"}, {"e": "🍅", "k": "西红柿 番茄 蔬菜"}, {"e": "🥔", "k": "土豆 蔬菜"}, {"e": "🥚", "k": "鸡蛋 蛋"}, {"e": "🍖", "k": "猪肉 肉"}, {"e": "🐟", "k": "鱼 海鲜"}, {"e": "🦐", "k": "虾 海鲜"}, {"e": "🍎", "k": "苹果 水果"}, {"e": "🍌", "k": "香蕉 水果"}, {"e": "🍇", "k": "葡萄 水果"}, {"e": "🍉", "k": "西瓜 水果"}, {"e": "🥦", "k": "西兰花 蔬菜"}, {"e": "🌽", "k": "玉米 粗粮"}, {"e": "🍄", "k": "蘑菇 菌菇"}, {"e": "🧄", "k": "蒜 调味"}, {"e": "🌶️", "k": "辣椒 调味"}, {"e": "🥜", "k": "坚果 干果"}, {"e": "🧀", "k": "芝士 乳品"}, {"e": "🍯", "k": "蜂蜜 调味"}]}, {"name": "出行交通", "emoji": "🚌", "icons": [{"e": "🚗", "k": "汽车 开车 用车"}, {"e": "🚕", "k": "打车 出租车"}, {"e": "🚌", "k": "公交 巴士"}, {"e": "🚇", "k": "地铁 轨道交通"}, {"e": "🚄", "k": "高铁 火车 动车"}, {"e": "✈️", "k": "飞机 机票"}, {"e": "🚲", "k": "自行车 单车"}, {"e": "🛵", "k": "电动车 摩托"}, {"e": "⛽", "k": "加油 油费"}, {"e": "🔋", "k": "充电 换电"}, {"e": "🅿️", "k": "停车 停车费"}, {"e": "🛣️", "k": "高速 过路费"}, {"e": "🚢", "k": "船 轮渡"}, {"e": "🚏", "k": "站台 候车"}, {"e": "🚦", "k": "交通 红绿灯"}, {"e": "🧭", "k": "导航 路线"}, {"e": "🎫", "k": "车票 票据"}, {"e": "🚚", "k": "货运 搬家 运输"}, {"e": "🛺", "k": "三轮 摩的"}, {"e": "🚡", "k": "缆车 索道"}]}, {"name": "购物服饰", "emoji": "🛍️", "icons": [{"e": "🛒", "k": "购物 超市 日用品"}, {"e": "🛍️", "k": "购物袋 买"}, {"e": "👕", "k": "上衣 T恤 服饰"}, {"e": "👖", "k": "裤子 牛仔"}, {"e": "👗", "k": "裙子 连衣裙"}, {"e": "👟", "k": "运动鞋 鞋"}, {"e": "👠", "k": "高跟鞋 鞋"}, {"e": "🧥", "k": "外套 大衣"}, {"e": "🧢", "k": "帽子 配饰"}, {"e": "👜", "k": "包包 箱包"}, {"e": "💄", "k": "化妆 美妆"}, {"e": "💍", "k": "首饰 珠宝 戒指"}, {"e": "👓", "k": "眼镜 配镜"}, {"e": "⌚", "k": "手表 腕表"}, {"e": "🧴", "k": "洗护 护肤品"}, {"e": "🧻", "k": "纸巾 纸品"}, {"e": "🧹", "k": "清洁 打扫"}, {"e": "🪣", "k": "桶 清洁用具"}, {"e": "🧺", "k": "收纳 篮子 洗衣"}, {"e": "🎁", "k": "礼物 送礼"}]}, {"name": "居家家电", "emoji": "🏠", "icons": [{"e": "🏠", "k": "房子 家 居家"}, {"e": "🛋️", "k": "沙发 家具"}, {"e": "🛏️", "k": "床 卧床"}, {"e": "🪑", "k": "椅子 家具"}, {"e": "🚪", "k": "门 门窗"}, {"e": "🪟", "k": "窗 窗户"}, {"e": "💡", "k": "灯具 灯泡"}, {"e": "📺", "k": "电视 家电"}, {"e": "❄️", "k": "空调 制冷"}, {"e": "🧊", "k": "冰箱 冷冻"}, {"e": "🧺", "k": "洗衣机 洗衣"}, {"e": "🚿", "k": "淋浴 浴室 花洒"}, {"e": "🛁", "k": "浴缸 卫浴"}, {"e": "🪴", "k": "绿植 盆栽"}, {"e": "🖼️", "k": "装饰 挂画"}, {"e": "🔨", "k": "锤子 工具 装修"}, {"e": "🧰", "k": "工具箱 五金"}, {"e": "🔌", "k": "插座 电线 水电"}, {"e": "🗄️", "k": "储物 柜子"}, {"e": "🧯", "k": "消防 灭火器"}]}, {"name": "水电物业", "emoji": "💧", "icons": [{"e": "💧", "k": "水费 用水 自来水"}, {"e": "⚡", "k": "电费 用电"}, {"e": "🔥", "k": "燃气 天然气"}, {"e": "📡", "k": "宽带 网络 电视费"}, {"e": "📱", "k": "话费 通讯 手机"}, {"e": "🗑️", "k": "垃圾 垃圾费"}, {"e": "♻️", "k": "回收 环保"}, {"e": "🏢", "k": "物业 物业费"}, {"e": "🔑", "k": "房租 租房 钥匙"}, {"e": "🏦", "k": "房贷 按揭"}, {"e": "🧾", "k": "账单 缴费单"}, {"e": "♨️", "k": "取暖 暖气"}, {"e": "🚰", "k": "水表 龙头"}, {"e": "🔆", "k": "照明 电灯"}, {"e": "💵", "k": "缴费 付款"}, {"e": "🧮", "k": "抄表 读数"}]}, {"name": "医疗健康", "emoji": "💊", "icons": [{"e": "💊", "k": "药品 买药 药"}, {"e": "🩺", "k": "问诊 看病 门诊"}, {"e": "🏥", "k": "医院 住院"}, {"e": "💉", "k": "疫苗 打针 输液"}, {"e": "🦷", "k": "牙齿 洗牙 口腔"}, {"e": "👁️", "k": "眼科 眼睛"}, {"e": "🩹", "k": "敷料 创可贴"}, {"e": "🧪", "k": "化验 检验"}, {"e": "🩻", "k": "检查 拍片 CT"}, {"e": "🧠", "k": "心理 咨询"}, {"e": "🦴", "k": "骨科 骨"}, {"e": "❤️", "k": "心脏 心血管"}, {"e": "🫁", "k": "呼吸 肺"}, {"e": "🩸", "k": "血压 血糖 体检"}, {"e": "🚑", "k": "急救 急诊"}, {"e": "😷", "k": "口罩 防疫"}, {"e": "🧼", "k": "消毒 洗手"}, {"e": "🌡️", "k": "体温 体温计"}, {"e": "🧑⚕️", "k": "医生 复诊"}, {"e": "🍵", "k": "中医 养生"}]}, {"name": "母婴", "emoji": "🍼", "icons": [{"e": "🍼", "k": "奶粉 奶瓶 喂养"}, {"e": "🧷", "k": "尿不湿 尿布"}, {"e": "👶", "k": "宝宝 婴儿"}, {"e": "🧸", "k": "玩具 毛绒"}, {"e": "🧴", "k": "婴儿护肤 洗护"}, {"e": "🩺", "k": "产检 儿保"}, {"e": "🛏️", "k": "月子 婴儿床"}, {"e": "🚼", "k": "推车 安全座椅"}, {"e": "🤰", "k": "孕妇 孕期用品"}, {"e": "🎠", "k": "早教 亲子"}, {"e": "🏫", "k": "托育 幼儿园 入园"}, {"e": "🥣", "k": "辅食 米粉"}, {"e": "🧦", "k": "童袜 婴儿衣物"}, {"e": "📚", "k": "绘本 童书"}, {"e": "🎓", "k": "学费 兴趣班"}, {"e": "💉", "k": "儿童疫苗"}]}, {"name": "学习办公", "emoji": "📚", "icons": [{"e": "📚", "k": "书 书籍 教材"}, {"e": "📖", "k": "阅读 看书"}, {"e": "✏️", "k": "文具 铅笔"}, {"e": "🖊️", "k": "笔 签字笔"}, {"e": "📓", "k": "笔记本 本子"}, {"e": "🎓", "k": "培训 考试 学费"}, {"e": "🏫", "k": "学校 教育"}, {"e": "💻", "k": "电脑 笔记本"}, {"e": "🖥️", "k": "显示器 主机"}, {"e": "🖨️", "k": "打印 复印"}, {"e": "📎", "k": "回形针 办公用品"}, {"e": "🗂️", "k": "文件夹 归档"}, {"e": "📅", "k": "日程 会议"}, {"e": "📐", "k": "设计 制图"}, {"e": "🔬", "k": "实验 科研"}, {"e": "🎯", "k": "目标 计划"}, {"e": "📝", "k": "笔记 记录"}, {"e": "🗒️", "k": "备忘 便签"}, {"e": "🧑🏫", "k": "课程 讲师"}, {"e": "🖇️", "k": "办公用品 夹子"}]}, {"name": "娱乐休闲", "emoji": "🎮", "icons": [{"e": "🎮", "k": "游戏 手游"}, {"e": "🎬", "k": "电影 影院"}, {"e": "🎵", "k": "音乐 会员"}, {"e": "🎤", "k": "K歌 演出"}, {"e": "🎧", "k": "耳机 音频"}, {"e": "🎳", "k": "保龄球 娱乐"}, {"e": "🎱", "k": "台球 桌球"}, {"e": "🎲", "k": "桌游 骰子"}, {"e": "🃏", "k": "扑克 牌"}, {"e": "🎨", "k": "绘画 美术"}, {"e": "🎭", "k": "演出 话剧"}, {"e": "🎪", "k": "展会 展览"}, {"e": "📷", "k": "摄影 相机"}, {"e": "🏕️", "k": "露营 户外"}, {"e": "🎣", "k": "钓鱼 垂钓"}, {"e": "🎢", "k": "游乐园 过山车"}, {"e": "🎡", "k": "摩天轮 景区"}, {"e": "🎯", "k": "射箭 射击"}, {"e": "🎹", "k": "乐器 钢琴"}, {"e": "🕹️", "k": "电玩 街机"}]}, {"name": "运动健身", "emoji": "🏃", "icons": [{"e": "🏃", "k": "跑步 慢跑"}, {"e": "🚴", "k": "骑行 单车"}, {"e": "🏊", "k": "游泳 泳池"}, {"e": "🏀", "k": "篮球"}, {"e": "⚽", "k": "足球"}, {"e": "🏸", "k": "羽毛球"}, {"e": "🎾", "k": "网球"}, {"e": "🏓", "k": "乒乓球 球拍"}, {"e": "🏋️", "k": "健身 力量 撸铁"}, {"e": "🧘", "k": "瑜伽 冥想"}, {"e": "⛷️", "k": "滑雪 双板"}, {"e": "🏂", "k": "单板 滑雪"}, {"e": "🥊", "k": "拳击 搏击"}, {"e": "🥋", "k": "格斗 跆拳道"}, {"e": "⛳", "k": "高尔夫"}, {"e": "🎽", "k": "队服 运动服"}, {"e": "👟", "k": "跑鞋 运动鞋"}, {"e": "🥗", "k": "减脂 营养"}, {"e": "🏅", "k": "赛事 奖金"}, {"e": "🧗", "k": "攀岩 岩馆"}]}, {"name": "数码", "emoji": "📱", "icons": [{"e": "📱", "k": "手机 换机"}, {"e": "💻", "k": "笔记本电脑"}, {"e": "⌨️", "k": "键盘 外设"}, {"e": "🖱️", "k": "鼠标 外设"}, {"e": "🎧", "k": "耳机 蓝牙"}, {"e": "🔊", "k": "音箱 音响"}, {"e": "📷", "k": "相机 镜头"}, {"e": "🎥", "k": "摄像机 录像"}, {"e": "🖨️", "k": "打印机 耗材"}, {"e": "⌚", "k": "智能手表 穿戴"}, {"e": "🕹️", "k": "手柄 游戏机"}, {"e": "🔌", "k": "插排 充电头"}, {"e": "🔋", "k": "电池 充电宝"}, {"e": "🛰️", "k": "路由器 网络"}, {"e": "💾", "k": "硬盘 U盘 存储"}, {"e": "🖥️", "k": "显示器 屏幕"}]}, {"name": "人情往来", "emoji": "🎁", "icons": [{"e": "🎁", "k": "礼物 送礼"}, {"e": "🧧", "k": "红包 压岁钱"}, {"e": "💐", "k": "鲜花 花束"}, {"e": "🎂", "k": "生日 蛋糕"}, {"e": "💒", "k": "婚礼 结婚"}, {"e": "🍼", "k": "满月 百日"}, {"e": "🕯️", "k": "吊唁 白事"}, {"e": "🎊", "k": "庆贺 乔迁"}, {"e": "🤝", "k": "请客 应酬"}, {"e": "🍻", "k": "聚餐 喝酒"}, {"e": "🎀", "k": "赠礼 礼物包装"}, {"e": "💌", "k": "请柬 喜帖"}, {"e": "🏮", "k": "春节 过年"}, {"e": "🌙", "k": "中秋 月饼"}, {"e": "🧨", "k": "鞭炮 烟花"}, {"e": "💰", "k": "份子 随礼"}]}, {"name": "金融理财", "emoji": "💰", "icons": [{"e": "💰", "k": "现金 钱"}, {"e": "💵", "k": "纸币 现金"}, {"e": "💴", "k": "零钱 零用"}, {"e": "💳", "k": "信用卡 刷卡"}, {"e": "🏦", "k": "银行 存款"}, {"e": "🏧", "k": "取现 ATM"}, {"e": "📈", "k": "股票 基金 收益"}, {"e": "📉", "k": "下跌 亏损"}, {"e": "💹", "k": "期货 外汇"}, {"e": "🪙", "k": "数字货币 金币"}, {"e": "🏆", "k": "奖金 奖励"}, {"e": "💼", "k": "工资 薪资"}, {"e": "🧾", "k": "报销 发票"}, {"e": "🎫", "k": "优惠券 折扣"}, {"e": "↩️", "k": "退款 退回"}, {"e": "🔁", "k": "转账 还款"}, {"e": "💸", "k": "支出 花钱"}, {"e": "📊", "k": "报表 分红"}, {"e": "🏛️", "k": "税费 公积金"}, {"e": "🛡️", "k": "保险 理赔"}]}, {"name": "宠物", "emoji": "🐾", "icons": [{"e": "🐱", "k": "猫 猫咪"}, {"e": "🐶", "k": "狗 狗狗"}, {"e": "🐹", "k": "仓鼠 小宠"}, {"e": "🐰", "k": "兔子"}, {"e": "🐦", "k": "鸟 鹦鹉"}, {"e": "🐠", "k": "鱼 水族"}, {"e": "🥫", "k": "主粮 口粮 猫粮 狗粮"}, {"e": "🦴", "k": "零食 磨牙"}, {"e": "🧶", "k": "玩具 猫抓"}, {"e": "💉", "k": "疫苗 驱虫"}, {"e": "🩺", "k": "看病 宠物医院"}, {"e": "🛁", "k": "洗澡 洗护 美容"}, {"e": "🏠", "k": "寄养 宠物店"}, {"e": "🦺", "k": "牵引 衣物"}, {"e": "🧹", "k": "猫砂 尿垫"}, {"e": "🐾", "k": "爪印 宠物"}]}, {"name": "旅行度假", "emoji": "✈️", "icons": [{"e": "✈️", "k": "机票 飞机"}, {"e": "🏨", "k": "酒店 住宿"}, {"e": "🎟️", "k": "门票 景区票"}, {"e": "🚄", "k": "高铁 动车"}, {"e": "🧳", "k": "行李箱 行李托运"}, {"e": "🗺️", "k": "地图 攻略"}, {"e": "🏖️", "k": "海滩 海岛"}, {"e": "🏔️", "k": "雪山 登山"}, {"e": "🏛️", "k": "博物馆 古迹"}, {"e": "🎡", "k": "景区 游乐"}, {"e": "🛂", "k": "签证 护照"}, {"e": "💱", "k": "换汇 外币"}, {"e": "🍹", "k": "度假 饮品"}, {"e": "📸", "k": "打卡 拍照"}, {"e": "🚢", "k": "邮轮 游船"}, {"e": "🎒", "k": "背包 出行"}]}, {"name": "收入", "emoji": "💵", "icons": [{"e": "💼", "k": "工资 薪水"}, {"e": "🏆", "k": "奖金 绩效"}, {"e": "🧧", "k": "红包 礼金"}, {"e": "📈", "k": "理财收益 投资"}, {"e": "🧑💻", "k": "兼职 副业"}, {"e": "🧾", "k": "报销到账"}, {"e": "✨", "k": "其他收入"}, {"e": "🎁", "k": "礼金 馈赠"}, {"e": "💰", "k": "补贴 补助"}, {"e": "🏛️", "k": "津贴 生育津贴"}, {"e": "🛡️", "k": "理赔 保险"}, {"e": "↩️", "k": "退款 返现"}, {"e": "💵", "k": "租金收入"}, {"e": "🏦", "k": "利息 存款利息"}, {"e": "📊", "k": "分红 股息"}, {"e": "🪙", "k": "稿费 稿酬"}]}, {"name": "通用", "emoji": "📦", "icons": [{"e": "📦", "k": "其他 杂项"}, {"e": "🏷️", "k": "标签 分类"}, {"e": "⭐", "k": "收藏 常用"}, {"e": "✨", "k": "特别 其他"}, {"e": "✅", "k": "完成 已办"}, {"e": "⏰", "k": "提醒 定时"}, {"e": "🔖", "k": "标记 书签"}, {"e": "💡", "k": "想法 点子"}, {"e": "🧩", "k": "杂项 拼图"}, {"e": "🎯", "k": "目标 重点"}, {"e": "📌", "k": "置顶 固定"}, {"e": "🧾", "k": "票据 单据"}, {"e": "🗒️", "k": "备注 便条"}, {"e": "🪙", "k": "零钱 硬币"}, {"e": "🔔", "k": "通知 提醒"}, {"e": "🌐", "k": "网络 线上"}]}];
+
+const tabsEl = document.getElementById('tabs');
+const bodyEl = document.getElementById('body');
+const footEl = document.getElementById('foot');
+const qEl = document.getElementById('q');
+
+document.getElementById('stats').innerHTML = `
+  <span class="pill">${GROUPS.length} 个分组</span>
+  <span class="pill">${GROUPS.reduce((s,g)=>s+g.icons.length,0)} 个图标</span>
+  <span class="pill">支持中文关键词搜索</span>
+  <span class="pill">也支持上传自己的图片</span>
+`;
+
+let active = 0;
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function iconTile(ic){
+  return `<div class="ic" title="${esc(ic.k)}">${ic.e}<span class="k">${esc(ic.k.split(' ')[0])}</span></div>`;
+}
+
+function renderTabs(){
+  tabsEl.innerHTML = GROUPS.map((g,i)=>
+    `<div class="gtab ${i===active?'on':''}" data-i="${i}">${g.emoji} ${esc(g.name)}</div>`
+  ).join('');
+  tabsEl.querySelectorAll('.gtab').forEach(el=>{
+    el.onclick = ()=>{ active = +el.dataset.i; render(); };
+  });
+}
+
+function render(keyword){
+  const q = (keyword||'').trim();
+  if(q){
+    const hits = [];
+    GROUPS.forEach(g=>g.icons.forEach(ic=>{
+      if(ic.k.includes(q) || ic.e === q) hits.push(ic);
+    }));
+    tabsEl.style.display = 'none';
+    bodyEl.innerHTML = hits.length
+      ? `<section><h2>🔍 搜索「${esc(q)}」 <small>命中 ${hits.length} 个</small></h2>
+         <div class="grid">${hits.map(iconTile).join('')}</div></section>`
+      : `<div class="empty">没找到匹配的图标。换个词试试，或者在 App 里点「从相册上传图片」。</div>`;
+    return;
+  }
+  tabsEl.style.display = '';
+  const g = GROUPS[active];
+  bodyEl.innerHTML = `<section>
+      <h2>${g.emoji} ${esc(g.name)} <small>${g.icons.length} 个</small></h2>
+      <div class="grid">${g.icons.map(iconTile).join('')}</div>
+    </section>`;
+}
+
+footEl.innerHTML = `
+  说明：图标库是纯 Emoji，不引任何图标资源包 —— 零体积、全彩、任意尺寸都不糊，<br>
+  在任何 Android 版本上表现一致。用户上传的图片会被居中裁成 256×256 的方形 PNG，<br>
+  存在应用私有目录 <code>filesDir/category_icons/</code> 下（不需要存储权限）。<br>
+  用户上传的图片不进备份包：恢复旧备份后如果图标文件不在，会优雅降级成 🖼️ 占位。
+`;
+
+qEl.oninput = () => render(qEl.value);
+renderTabs();
+render();
+</script>
+</body>
+</html>

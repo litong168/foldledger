@@ -1,0 +1,3188 @@
+滴水记账 V9.0 源程序
+（源码共 474 页，按规定提交前 30 页与后 30 页）
+========================================================================
+
+
+【滴水记账 V9.0 源程序】                                    第 1 页
+------------------------------------------------------------------------
+    1  /* 文件: app/src/main/java/com/foldledger/FoldLedgerApp.kt */
+    2  package com.foldledger
+    3  import android.app.Application
+    4  import android.content.Context
+    5  import com.foldledger.data.db.AppDatabase
+    6  import com.foldledger.data.prefs.AppPreferences
+    7  import com.foldledger.data.repo.LedgerRepository
+    8  object ServiceLocator {
+    9      @Volatile
+   10      private var initialized = false
+   11      lateinit var repository: LedgerRepository
+   12          private set
+   13      lateinit var preferences: AppPreferences
+   14          private set
+   15      lateinit var appContext: Context
+   16          private set
+   17      val db: AppDatabase get() = AppDatabase.get(appContext)
+   18      fun init(context: Context) {
+   19          if (initialized) return
+   20          synchronized(this) {
+   21              if (initialized) return
+   22              appContext = context.applicationContext
+   23              repository = LedgerRepository(AppDatabase.get(appContext))
+   24              preferences = AppPreferences(appContext)
+   25              initialized = true
+   26          }
+   27      }
+   28  }
+   29  class FoldLedgerApp : Application() {
+   30      override fun onCreate() {
+   31          super.onCreate()
+   32          ServiceLocator.init(this)
+   33      }
+   34  }
+   35  
+   36  /* 文件: app/src/main/java/com/foldledger/MainActivity.kt */
+   37  package com.foldledger
+   38  import android.os.Bundle
+   39  import androidx.activity.ComponentActivity
+   40  import androidx.activity.compose.setContent
+   41  import androidx.activity.enableEdgeToEdge
+   42  import com.foldledger.ui.nav.AppRoot
+   43  import com.foldledger.util.FrameRate
+   44  class MainActivity : ComponentActivity() {
+   45      override fun onCreate(savedInstanceState: Bundle?) {
+   46          enableEdgeToEdge()
+   47          super.onCreate(savedInstanceState)
+   48          FrameRate.apply(window, highRefresh = true)
+   49          setContent {
+   50              AppRoot()
+
+【滴水记账 V9.0 源程序】                                    第 2 页
+------------------------------------------------------------------------
+   51          }
+   52      }
+   53  }
+   54  
+   55  /* 文件: app/src/main/java/com/foldledger/auto/AutoBookkeepingListener.kt */
+   56  package com.foldledger.auto
+   57  import android.app.Notification
+   58  import android.service.notification.NotificationListenerService
+   59  import android.service.notification.StatusBarNotification
+   60  import com.foldledger.ServiceLocator
+   61  import com.foldledger.util.PaymentParser
+   62  import kotlinx.coroutines.CoroutineScope
+   63  import kotlinx.coroutines.Dispatchers
+   64  import kotlinx.coroutines.SupervisorJob
+   65  import kotlinx.coroutines.cancel
+   66  import kotlinx.coroutines.flow.first
+   67  import kotlinx.coroutines.launch
+   68  class AutoBookkeepingListener : NotificationListenerService() {
+   69      private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+   70      override fun onListenerConnected() {
+   71          super.onListenerConnected()
+   72          ServiceLocator.init(applicationContext)
+   73      }
+   74      override fun onNotificationPosted(sbn: StatusBarNotification?) {
+   75          sbn ?: return
+   76          if (sbn.isOngoing) return
+   77          val notification = sbn.notification ?: return
+   78          val extras = notification.extras ?: return
+   79          val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+   80          val text = (
+   81              extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+   82                  ?: extras.getCharSequence(Notification.EXTRA_TEXT)
+   83              )?.toString() ?: ""
+   84          if (title.isBlank() && text.isBlank()) return
+   85          val parsed = PaymentParser.parseNotification(
+   86              pkg = sbn.packageName ?: "",
+   87              title = title,
+   88              text = text,
+   89              postTime = sbn.postTime
+   90          ) ?: return
+   91          scope.launch {
+   92              runCatching {
+   93                  val enabled = ServiceLocator.preferences.settings.first().autoBookkeepingEnabled
+   94                  if (!enabled) return@launch
+   95                  ServiceLocator.repository.recordAutoPayment(parsed)
+   96              }
+   97          }
+   98      }
+   99      override fun onDestroy() {
+  100          super.onDestroy()
+
+【滴水记账 V9.0 源程序】                                    第 3 页
+------------------------------------------------------------------------
+  101          scope.cancel()
+  102      }
+  103  }
+  104  
+  105  /* 文件: app/src/main/java/com/foldledger/auto/SmsReceiver.kt */
+  106  package com.foldledger.auto
+  107  import android.content.BroadcastReceiver
+  108  import android.content.Context
+  109  import android.content.Intent
+  110  import android.provider.Telephony
+  111  import com.foldledger.ServiceLocator
+  112  import com.foldledger.util.PaymentParser
+  113  import kotlinx.coroutines.CoroutineScope
+  114  import kotlinx.coroutines.Dispatchers
+  115  import kotlinx.coroutines.SupervisorJob
+  116  import kotlinx.coroutines.flow.first
+  117  import kotlinx.coroutines.launch
+  118  class SmsReceiver : BroadcastReceiver() {
+  119      override fun onReceive(context: Context, intent: Intent) {
+  120          if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+  121          ServiceLocator.init(context.applicationContext)
+  122          val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
+  123          val body = messages.joinToString("") { it.messageBody ?: "" }
+  124          if (body.isBlank()) return
+  125          val parsed = PaymentParser.parseSms(body) ?: return
+  126          val pending = goAsync()
+  127          CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+  128              try {
+  129                  val enabled = ServiceLocator.preferences.settings.first().autoBookkeepingEnabled
+  130                  if (enabled) {
+  131                      ServiceLocator.repository.recordAutoPayment(
+  132                          parsed.copy(atMillis = System.currentTimeMillis())
+  133                      )
+  134                  }
+  135              } finally {
+  136                  pending.finish()
+  137              }
+  138          }
+  139      }
+  140  }
+  141  
+  142  /* 文件: app/src/main/java/com/foldledger/core/DripCore.kt */
+  143  package com.foldledger.core
+  144  import com.foldledger.util.Money
+  145  object DripCore {
+  146      val nativeAvailable: Boolean = runCatching {
+  147          System.loadLibrary("drip_core")
+  148          true
+  149      }.getOrDefault(false)
+  150      fun formatCents(cents: Long, symbol: Boolean): String =
+
+【滴水记账 V9.0 源程序】                                    第 4 页
+------------------------------------------------------------------------
+  151          if (nativeAvailable) runCatching { nativeFormatCents(cents, symbol) }.getOrDefault(Money.format(cents, symbol))
+  152          else Money.format(cents, symbol)
+  153      fun toPlain(cents: Long): String =
+  154          if (nativeAvailable) runCatching { nativeToPlain(cents) }.getOrDefault(Money.centsToPlain(cents))
+  155          else Money.centsToPlain(cents)
+  156      fun parseToCents(input: String): Long? {
+  157          if (nativeAvailable) {
+  158              val v = runCatching { nativeParseToCents(input) }.getOrDefault(PARSE_INVALID)
+  159              return if (v == PARSE_INVALID) null else v
+  160          }
+  161          return Money.parseToCents(input)
+  162      }
+  163      fun matchesQuery(name: String, note: String, amountCents: Long, query: String): Boolean =
+  164          if (nativeAvailable) runCatching { nativeMatchesQuery(name, note, amountCents, query) }
+  165              .getOrDefault(kotlinMatchesQuery(name, note, amountCents, query))
+  166          else kotlinMatchesQuery(name, note, amountCents, query)
+  167      fun validateBackup(bytes: ByteArray): Boolean =
+  168          if (nativeAvailable) runCatching { nativeValidateBackup(bytes) }
+  169              .getOrDefault(kotlinValidateBackup(bytes))
+  170          else kotlinValidateBackup(bytes)
+  171      fun fnv1a(bytes: ByteArray): Int =
+  172          if (nativeAvailable) runCatching { nativeFnv1a(bytes) }.getOrDefault(kotlinFnv1a(bytes))
+  173          else kotlinFnv1a(bytes)
+  174      private external fun nativeFormatCents(cents: Long, symbol: Boolean): String
+  175      private external fun nativeToPlain(cents: Long): String
+  176      private external fun nativeParseToCents(input: String): Long
+  177      private external fun nativeMatchesQuery(name: String, note: String, amountCents: Long, query: String): Boolean
+  178      private external fun nativeValidateBackup(data: ByteArray): Boolean
+  179      private external fun nativeFnv1a(data: ByteArray): Int
+  180      private const val PARSE_INVALID = Long.MIN_VALUE
+  181      private fun kotlinMatchesQuery(
+  182          name: String,
+  183          note: String,
+  184          amountCents: Long,
+  185          query: String
+  186      ): Boolean {
+  187          val q = query.trim()
+  188          if (q.isEmpty()) return true
+  189          val nameL = name.lowercase()
+  190          val noteL = note.lowercase()
+  191          val abs = kotlin.math.abs(amountCents)
+  192          val plain = Money.centsToPlain(abs)
+  193          val grouped = Money.format(abs, symbol = false)
+  194          return q.split(Regex("\\s+")).filter { it.isNotEmpty() }.all { token ->
+  195              val t = token.lowercase()
+  196              var hit = nameL.contains(t) || noteL.contains(t)
+  197              if (!hit && isNumericToken(t)) {
+  198                  hit = plain.contains(t) || grouped.contains(t)
+  199              }
+  200              hit
+
+【滴水记账 V9.0 源程序】                                    第 5 页
+------------------------------------------------------------------------
+  201          }
+  202      }
+  203      private fun isNumericToken(t: String): Boolean =
+  204          t.isNotEmpty() && t.all { it.isDigit() || it == '.' || it == ',' }
+  205      private fun kotlinValidateBackup(bytes: ByteArray): Boolean {
+  206          val s = String(bytes, Charsets.UTF_8)
+  207          val isDrip = s.contains("\"format\":\"foldledger.backup\"")
+  208          val version = jsonInt(s, "version") ?: 0
+  209          return isDrip && version in 1..2 && s.contains("\"ledgers\":") && s.contains("\"transactions\":")
+  210      }
+  211      private fun kotlinFnv1a(bytes: ByteArray): Int {
+  212          var h = -0x7ee3623b // 0x811c9dc5 as signed Int
+  213          for (b in bytes) {
+  214              h = h xor (b.toInt() and 0xFF)
+  215              h = h * 0x01000193
+  216          }
+  217          return h
+  218      }
+  219      private fun jsonInt(text: String, key: String): Int? {
+  220          val pat = "\"$key\":"
+  221          val idx = text.indexOf(pat)
+  222          if (idx < 0) return null
+  223          val rest = text.substring(idx + pat.length)
+  224          val num = rest.takeWhile { it.isDigit() || it == '-' }
+  225          return num.toIntOrNull()
+  226      }
+  227  }
+  228  
+  229  /* 文件: app/src/main/java/com/foldledger/data/CategoryIconLibrary.kt */
+  230  package com.foldledger.data
+  231  data class PresetIcon(val emoji: String, val keywords: String)
+  232  data class IconGroup(
+  233      val name: String,
+  234      val emoji: String,
+  235      val icons: List<PresetIcon>
+  236  )
+  237  object CategoryIconLibrary {
+  238      private fun p(emoji: String, keywords: String) = PresetIcon(emoji, keywords)
+  239      val groups: List<IconGroup> = listOf(
+  240          IconGroup("餐饮", "🍽️", listOf(
+  241              p("🍜", "餐饮 面条 拉面 米线 面"),
+  242              p("🍚", "米饭 盖饭 主食"),
+  243              p("🍱", "便当 外卖 快餐"),
+  244              p("🍔", "汉堡 快餐"),
+  245              p("🍕", "披萨 西餐"),
+  246              p("🍟", "薯条 零食"),
+  247              p("🍗", "炸鸡 烤肉"),
+  248              p("🥩", "牛排 肉"),
+  249              p("🍤", "海鲜 虾 炸物"),
+  250              p("🥗", "沙拉 轻食 减脂"),
+
+【滴水记账 V9.0 源程序】                                    第 6 页
+------------------------------------------------------------------------
+  251              p("🍞", "面包 早餐"),
+  252              p("🥛", "牛奶 乳品"),
+  253              p("☕", "咖啡 奶茶 饮品"),
+  254              p("🧋", "奶茶 饮料"),
+  255              p("🍺", "啤酒 酒"),
+  256              p("🍷", "红酒 酒"),
+  257              p("🍰", "蛋糕 甜品"),
+  258              p("🍦", "冰淇淋 甜品"),
+  259              p("🥤", "饮料 可乐"),
+  260              p("🍬", "糖果 零食")
+  261          )),
+  262          IconGroup("买菜生鲜", "🥬", listOf(
+  263              p("🥬", "青菜 蔬菜 买菜"),
+  264              p("🥕", "胡萝卜 蔬菜"),
+  265              p("🍅", "西红柿 番茄 蔬菜"),
+  266              p("🥔", "土豆 蔬菜"),
+  267              p("🥚", "鸡蛋 蛋"),
+  268              p("🍖", "猪肉 肉"),
+  269              p("🐟", "鱼 海鲜"),
+  270              p("🦐", "虾 海鲜"),
+  271              p("🍎", "苹果 水果"),
+  272              p("🍌", "香蕉 水果"),
+  273              p("🍇", "葡萄 水果"),
+  274              p("🍉", "西瓜 水果"),
+  275              p("🥦", "西兰花 蔬菜"),
+  276              p("🌽", "玉米 粗粮"),
+  277              p("🍄", "蘑菇 菌菇"),
+  278              p("🧄", "蒜 调味"),
+  279              p("🌶️", "辣椒 调味"),
+  280              p("🥜", "坚果 干果"),
+  281              p("🧀", "芝士 乳品"),
+  282              p("🍯", "蜂蜜 调味")
+  283          )),
+  284          IconGroup("出行交通", "🚌", listOf(
+  285              p("🚗", "汽车 开车 用车"),
+  286              p("🚕", "打车 出租车"),
+  287              p("🚌", "公交 巴士"),
+  288              p("🚇", "地铁 轨道交通"),
+  289              p("🚄", "高铁 火车 动车"),
+  290              p("✈️", "飞机 机票"),
+  291              p("🚲", "自行车 单车"),
+  292              p("🛵", "电动车 摩托"),
+  293              p("⛽", "加油 油费"),
+  294              p("🔋", "充电 换电"),
+  295              p("🅿️", "停车 停车费"),
+  296              p("🛣️", "高速 过路费"),
+  297              p("🚢", "船 轮渡"),
+  298              p("🚏", "站台 候车"),
+  299              p("🚦", "交通 红绿灯"),
+  300              p("🧭", "导航 路线"),
+
+【滴水记账 V9.0 源程序】                                    第 7 页
+------------------------------------------------------------------------
+  301              p("🎫", "车票 票据"),
+  302              p("🚚", "货运 搬家 运输"),
+  303              p("🛺", "三轮 摩的"),
+  304              p("🚡", "缆车 索道")
+  305          )),
+  306          IconGroup("购物服饰", "🛍️", listOf(
+  307              p("🛒", "购物 超市 日用品"),
+  308              p("🛍️", "购物袋 买"),
+  309              p("👕", "上衣 T恤 服饰"),
+  310              p("👖", "裤子 牛仔"),
+  311              p("👗", "裙子 连衣裙"),
+  312              p("👟", "运动鞋 鞋"),
+  313              p("👠", "高跟鞋 鞋"),
+  314              p("🧥", "外套 大衣"),
+  315              p("🧢", "帽子 配饰"),
+  316              p("👜", "包包 箱包"),
+  317              p("💄", "化妆 美妆"),
+  318              p("💍", "首饰 珠宝 戒指"),
+  319              p("👓", "眼镜 配镜"),
+  320              p("⌚", "手表 腕表"),
+  321              p("🧴", "洗护 护肤品"),
+  322              p("🧻", "纸巾 纸品"),
+  323              p("🧹", "清洁 打扫"),
+  324              p("🪣", "桶 清洁用具"),
+  325              p("🧺", "收纳 篮子 洗衣"),
+  326              p("🎁", "礼物 送礼")
+  327          )),
+  328          IconGroup("居家家电", "🏠", listOf(
+  329              p("🏠", "房子 家 居家"),
+  330              p("🛋️", "沙发 家具"),
+  331              p("🛏️", "床 卧床"),
+  332              p("🪑", "椅子 家具"),
+  333              p("🚪", "门 门窗"),
+  334              p("🪟", "窗 窗户"),
+  335              p("💡", "灯具 灯泡"),
+  336              p("📺", "电视 家电"),
+  337              p("❄️", "空调 制冷"),
+  338              p("🧊", "冰箱 冷冻"),
+  339              p("🧺", "洗衣机 洗衣"),
+  340              p("🚿", "淋浴 浴室 花洒"),
+  341              p("🛁", "浴缸 卫浴"),
+  342              p("🪴", "绿植 盆栽"),
+  343              p("🖼️", "装饰 挂画"),
+  344              p("🔨", "锤子 工具 装修"),
+  345              p("🧰", "工具箱 五金"),
+  346              p("🔌", "插座 电线 水电"),
+  347              p("🗄️", "储物 柜子"),
+  348              p("🧯", "消防 灭火器")
+  349          )),
+  350          IconGroup("水电物业", "💧", listOf(
+
+【滴水记账 V9.0 源程序】                                    第 8 页
+------------------------------------------------------------------------
+  351              p("💧", "水费 用水 自来水"),
+  352              p("⚡", "电费 用电"),
+  353              p("🔥", "燃气 天然气"),
+  354              p("📡", "宽带 网络 电视费"),
+  355              p("📱", "话费 通讯 手机"),
+  356              p("🗑️", "垃圾 垃圾费"),
+  357              p("♻️", "回收 环保"),
+  358              p("🏢", "物业 物业费"),
+  359              p("🔑", "房租 租房 钥匙"),
+  360              p("🏦", "房贷 按揭"),
+  361              p("🧾", "账单 缴费单"),
+  362              p("♨️", "取暖 暖气"),
+  363              p("🚰", "水表 龙头"),
+  364              p("🔆", "照明 电灯"),
+  365              p("💵", "缴费 付款"),
+  366              p("🧮", "抄表 读数")
+  367          )),
+  368          IconGroup("医疗健康", "💊", listOf(
+  369              p("💊", "药品 买药 药"),
+  370              p("🩺", "问诊 看病 门诊"),
+  371              p("🏥", "医院 住院"),
+  372              p("💉", "疫苗 打针 输液"),
+  373              p("🦷", "牙齿 洗牙 口腔"),
+  374              p("👁️", "眼科 眼睛"),
+  375              p("🩹", "敷料 创可贴"),
+  376              p("🧪", "化验 检验"),
+  377              p("🩻", "检查 拍片 CT"),
+  378              p("🧠", "心理 咨询"),
+  379              p("🦴", "骨科 骨"),
+  380              p("❤️", "心脏 心血管"),
+  381              p("🫁", "呼吸 肺"),
+  382              p("🩸", "血压 血糖 体检"),
+  383              p("🚑", "急救 急诊"),
+  384              p("😷", "口罩 防疫"),
+  385              p("🧼", "消毒 洗手"),
+  386              p("🌡️", "体温 体温计"),
+  387              p("🧑⚕️", "医生 复诊"),
+  388              p("🍵", "中医 养生")
+  389          )),
+  390          IconGroup("母婴", "🍼", listOf(
+  391              p("🍼", "奶粉 奶瓶 喂养"),
+  392              p("🧷", "尿不湿 尿布"),
+  393              p("👶", "宝宝 婴儿"),
+  394              p("🧸", "玩具 毛绒"),
+  395              p("🧴", "婴儿护肤 洗护"),
+  396              p("🩺", "产检 儿保"),
+  397              p("🛏️", "月子 婴儿床"),
+  398              p("🚼", "推车 安全座椅"),
+  399              p("🤰", "孕妇 孕期用品"),
+  400              p("🎠", "早教 亲子"),
+
+【滴水记账 V9.0 源程序】                                    第 9 页
+------------------------------------------------------------------------
+  401              p("🏫", "托育 幼儿园 入园"),
+  402              p("🥣", "辅食 米粉"),
+  403              p("🧦", "童袜 婴儿衣物"),
+  404              p("📚", "绘本 童书"),
+  405              p("🎓", "学费 兴趣班"),
+  406              p("💉", "儿童疫苗")
+  407          )),
+  408          IconGroup("学习办公", "📚", listOf(
+  409              p("📚", "书 书籍 教材"),
+  410              p("📖", "阅读 看书"),
+  411              p("✏️", "文具 铅笔"),
+  412              p("🖊️", "笔 签字笔"),
+  413              p("📓", "笔记本 本子"),
+  414              p("🎓", "培训 考试 学费"),
+  415              p("🏫", "学校 教育"),
+  416              p("💻", "电脑 笔记本"),
+  417              p("🖥️", "显示器 主机"),
+  418              p("🖨️", "打印 复印"),
+  419              p("📎", "回形针 办公用品"),
+  420              p("🗂️", "文件夹 归档"),
+  421              p("📅", "日程 会议"),
+  422              p("📐", "设计 制图"),
+  423              p("🔬", "实验 科研"),
+  424              p("🎯", "目标 计划"),
+  425              p("📝", "笔记 记录"),
+  426              p("🗒️", "备忘 便签"),
+  427              p("🧑🏫", "课程 讲师"),
+  428              p("🖇️", "办公用品 夹子")
+  429          )),
+  430          IconGroup("娱乐休闲", "🎮", listOf(
+  431              p("🎮", "游戏 手游"),
+  432              p("🎬", "电影 影院"),
+  433              p("🎵", "音乐 会员"),
+  434              p("🎤", "K歌 演出"),
+  435              p("🎧", "耳机 音频"),
+  436              p("🎳", "保龄球 娱乐"),
+  437              p("🎱", "台球 桌球"),
+  438              p("🎲", "桌游 骰子"),
+  439              p("🃏", "扑克 牌"),
+  440              p("🎨", "绘画 美术"),
+  441              p("🎭", "演出 话剧"),
+  442              p("🎪", "展会 展览"),
+  443              p("📷", "摄影 相机"),
+  444              p("🏕️", "露营 户外"),
+  445              p("🎣", "钓鱼 垂钓"),
+  446              p("🎢", "游乐园 过山车"),
+  447              p("🎡", "摩天轮 景区"),
+  448              p("🎯", "射箭 射击"),
+  449              p("🎹", "乐器 钢琴"),
+  450              p("🕹️", "电玩 街机")
+
+【滴水记账 V9.0 源程序】                                    第 10 页
+------------------------------------------------------------------------
+  451          )),
+  452          IconGroup("运动健身", "🏃", listOf(
+  453              p("🏃", "跑步 慢跑"),
+  454              p("🚴", "骑行 单车"),
+  455              p("🏊", "游泳 泳池"),
+  456              p("🏀", "篮球"),
+  457              p("⚽", "足球"),
+  458              p("🏸", "羽毛球"),
+  459              p("🎾", "网球"),
+  460              p("🏓", "乒乓球 球拍"),
+  461              p("🏋️", "健身 力量 撸铁"),
+  462              p("🧘", "瑜伽 冥想"),
+  463              p("⛷️", "滑雪 双板"),
+  464              p("🏂", "单板 滑雪"),
+  465              p("🥊", "拳击 搏击"),
+  466              p("🥋", "格斗 跆拳道"),
+  467              p("⛳", "高尔夫"),
+  468              p("🎽", "队服 运动服"),
+  469              p("👟", "跑鞋 运动鞋"),
+  470              p("🥗", "减脂 营养"),
+  471              p("🏅", "赛事 奖金"),
+  472              p("🧗", "攀岩 岩馆")
+  473          )),
+  474          IconGroup("数码", "📱", listOf(
+  475              p("📱", "手机 换机"),
+  476              p("💻", "笔记本电脑"),
+  477              p("⌨️", "键盘 外设"),
+  478              p("🖱️", "鼠标 外设"),
+  479              p("🎧", "耳机 蓝牙"),
+  480              p("🔊", "音箱 音响"),
+  481              p("📷", "相机 镜头"),
+  482              p("🎥", "摄像机 录像"),
+  483              p("🖨️", "打印机 耗材"),
+  484              p("⌚", "智能手表 穿戴"),
+  485              p("🕹️", "手柄 游戏机"),
+  486              p("🔌", "插排 充电头"),
+  487              p("🔋", "电池 充电宝"),
+  488              p("🛰️", "路由器 网络"),
+  489              p("💾", "硬盘 U盘 存储"),
+  490              p("🖥️", "显示器 屏幕")
+  491          )),
+  492          IconGroup("人情往来", "🎁", listOf(
+  493              p("🎁", "礼物 送礼"),
+  494              p("🧧", "红包 压岁钱"),
+  495              p("💐", "鲜花 花束"),
+  496              p("🎂", "生日 蛋糕"),
+  497              p("💒", "婚礼 结婚"),
+  498              p("🍼", "满月 百日"),
+  499              p("🕯️", "吊唁 白事"),
+  500              p("🎊", "庆贺 乔迁"),
+
+【滴水记账 V9.0 源程序】                                    第 11 页
+------------------------------------------------------------------------
+  501              p("🤝", "请客 应酬"),
+  502              p("🍻", "聚餐 喝酒"),
+  503              p("🎀", "赠礼 礼物包装"),
+  504              p("💌", "请柬 喜帖"),
+  505              p("🏮", "春节 过年"),
+  506              p("🌙", "中秋 月饼"),
+  507              p("🧨", "鞭炮 烟花"),
+  508              p("💰", "份子 随礼")
+  509          )),
+  510          IconGroup("金融理财", "💰", listOf(
+  511              p("💰", "现金 钱"),
+  512              p("💵", "纸币 现金"),
+  513              p("💴", "零钱 零用"),
+  514              p("💳", "信用卡 刷卡"),
+  515              p("🏦", "银行 存款"),
+  516              p("🏧", "取现 ATM"),
+  517              p("📈", "股票 基金 收益"),
+  518              p("📉", "下跌 亏损"),
+  519              p("💹", "期货 外汇"),
+  520              p("🪙", "数字货币 金币"),
+  521              p("🏆", "奖金 奖励"),
+  522              p("💼", "工资 薪资"),
+  523              p("🧾", "报销 发票"),
+  524              p("🎫", "优惠券 折扣"),
+  525              p("↩️", "退款 退回"),
+  526              p("🔁", "转账 还款"),
+  527              p("💸", "支出 花钱"),
+  528              p("📊", "报表 分红"),
+  529              p("🏛️", "税费 公积金"),
+  530              p("🛡️", "保险 理赔")
+  531          )),
+  532          IconGroup("宠物", "🐾", listOf(
+  533              p("🐱", "猫 猫咪"),
+  534              p("🐶", "狗 狗狗"),
+  535              p("🐹", "仓鼠 小宠"),
+  536              p("🐰", "兔子"),
+  537              p("🐦", "鸟 鹦鹉"),
+  538              p("🐠", "鱼 水族"),
+  539              p("🥫", "主粮 口粮 猫粮 狗粮"),
+  540              p("🦴", "零食 磨牙"),
+  541              p("🧶", "玩具 猫抓"),
+  542              p("💉", "疫苗 驱虫"),
+  543              p("🩺", "看病 宠物医院"),
+  544              p("🛁", "洗澡 洗护 美容"),
+  545              p("🏠", "寄养 宠物店"),
+  546              p("🦺", "牵引 衣物"),
+  547              p("🧹", "猫砂 尿垫"),
+  548              p("🐾", "爪印 宠物")
+  549          )),
+  550          IconGroup("旅行度假", "✈️", listOf(
+
+【滴水记账 V9.0 源程序】                                    第 12 页
+------------------------------------------------------------------------
+  551              p("✈️", "机票 飞机"),
+  552              p("🏨", "酒店 住宿"),
+  553              p("🎟️", "门票 景区票"),
+  554              p("🚄", "高铁 动车"),
+  555              p("🧳", "行李箱 行李托运"),
+  556              p("🗺️", "地图 攻略"),
+  557              p("🏖️", "海滩 海岛"),
+  558              p("🏔️", "雪山 登山"),
+  559              p("🏛️", "博物馆 古迹"),
+  560              p("🎡", "景区 游乐"),
+  561              p("🛂", "签证 护照"),
+  562              p("💱", "换汇 外币"),
+  563              p("🍹", "度假 饮品"),
+  564              p("📸", "打卡 拍照"),
+  565              p("🚢", "邮轮 游船"),
+  566              p("🎒", "背包 出行")
+  567          )),
+  568          IconGroup("收入", "💵", listOf(
+  569              p("💼", "工资 薪水"),
+  570              p("🏆", "奖金 绩效"),
+  571              p("🧧", "红包 礼金"),
+  572              p("📈", "理财收益 投资"),
+  573              p("🧑💻", "兼职 副业"),
+  574              p("🧾", "报销到账"),
+  575              p("✨", "其他收入"),
+  576              p("🎁", "礼金 馈赠"),
+  577              p("💰", "补贴 补助"),
+  578              p("🏛️", "津贴 生育津贴"),
+  579              p("🛡️", "理赔 保险"),
+  580              p("↩️", "退款 返现"),
+  581              p("💵", "租金收入"),
+  582              p("🏦", "利息 存款利息"),
+  583              p("📊", "分红 股息"),
+  584              p("🪙", "稿费 稿酬")
+  585          )),
+  586          IconGroup("通用", "📦", listOf(
+  587              p("📦", "其他 杂项"),
+  588              p("🏷️", "标签 分类"),
+  589              p("⭐", "收藏 常用"),
+  590              p("✨", "特别 其他"),
+  591              p("✅", "完成 已办"),
+  592              p("⏰", "提醒 定时"),
+  593              p("🔖", "标记 书签"),
+  594              p("💡", "想法 点子"),
+  595              p("🧩", "杂项 拼图"),
+  596              p("🎯", "目标 重点"),
+  597              p("📌", "置顶 固定"),
+  598              p("🧾", "票据 单据"),
+  599              p("🗒️", "备注 便条"),
+  600              p("🪙", "零钱 硬币"),
+
+【滴水记账 V9.0 源程序】                                    第 13 页
+------------------------------------------------------------------------
+  601              p("🔔", "通知 提醒"),
+  602              p("🌐", "网络 线上")
+  603          ))
+  604      )
+  605      val all: List<PresetIcon> by lazy {
+  606          groups.flatMap { it.icons }
+  607              .groupBy { it.emoji }
+  608              .map { (emoji, list) -> PresetIcon(emoji, list.joinToString(" ") { it.keywords }) }
+  609      }
+  610      fun search(query: String): List<PresetIcon>? {
+  611          val q = query.trim()
+  612          if (q.isEmpty()) return null
+  613          return all.filter { it.keywords.contains(q, ignoreCase = true) || it.emoji == q }
+  614      }
+  615  }
+  616  
+  617  /* 文件: app/src/main/java/com/foldledger/data/RecurringSchedule.kt */
+  618  package com.foldledger.data
+  619  import com.foldledger.data.db.RecurringInterval
+  620  import java.time.Instant
+  621  import java.time.ZoneId
+  622  object RecurringSchedule {
+  623      fun advance(from: Long, kind: Int, zone: ZoneId = ZoneId.systemDefault()): Long {
+  624          val dt = Instant.ofEpochMilli(from).atZone(zone).toLocalDateTime()
+  625          val next = when (kind) {
+  626              RecurringInterval.WEEKLY -> dt.plusWeeks(1)
+  627              RecurringInterval.YEARLY -> dt.plusYears(1)
+  628              else -> dt.plusMonths(1)
+  629          }
+  630          return next.atZone(zone).toInstant().toEpochMilli()
+  631      }
+  632      fun advancePast(nextDueAt: Long, kind: Int, now: Long, zone: ZoneId = ZoneId.systemDefault()): Long {
+  633          var cur = nextDueAt
+  634          var guard = 0
+  635          while (cur <= now && guard < 240) {
+  636              cur = advance(cur, kind, zone)
+  637              guard++
+  638          }
+  639          return cur
+  640      }
+  641  }
+  642  
+  643  /* 文件: app/src/main/java/com/foldledger/data/ScenePresets.kt */
+  644  package com.foldledger.data
+  645  import com.foldledger.data.db.Direction
+  646  enum class FieldKind { TEXT, NUMBER, CHOICE, MONEY, DATE }
+  647  data class FieldOption(val value: String, val label: String)
+  648  data class SceneField(
+  649      val key: String,
+  650      val label: String,
+
+【滴水记账 V9.0 源程序】                                    第 14 页
+------------------------------------------------------------------------
+  651      val kind: FieldKind,
+  652      val options: List<FieldOption> = emptyList(),
+  653      val placeholder: String = ""
+  654  )
+  655  data class CategoryPreset(val name: String, val emoji: String)
+  656  data class ScenePreset(
+  657      val key: String,
+  658      val name: String,
+  659      val emoji: String,
+  660      val tagline: String,
+  661      val colorHex: String,
+  662      val expenses: List<CategoryPreset>,
+  663      val incomes: List<CategoryPreset>,
+  664      val fields: List<SceneField> = emptyList(),
+  665      val supportsReimbursement: Boolean = false,
+  666      val suggestedBudgetYuan: Long = 0L,
+  667      val hidden: Boolean = false
+  668  ) {
+  669      val allCategories: List<CategoryPreset> get() = expenses + incomes
+  670  }
+  671  object ScenePresets {
+  672      val CUSTOM_KEY = "custom"
+  673      val AUTO_KEY = "auto"
+  674      private val DAILY = ScenePreset(
+  675          key = "daily",
+  676          name = "日常",
+  677          emoji = "🏠",
+  678          tagline = "吃喝住行，记录每一天",
+  679          colorHex = "#1F6FEB",
+  680          expenses = listOf(
+  681              CategoryPreset("餐饮", "🍜"),
+  682              CategoryPreset("买菜", "🥬"),
+  683              CategoryPreset("零食饮料", "🧋"),
+  684              CategoryPreset("日用品", "🧻"),
+  685              CategoryPreset("服饰", "👕"),
+  686              CategoryPreset("美容美发", "💅"),
+  687              CategoryPreset("娱乐", "🎮"),
+  688              CategoryPreset("医疗买药", "💊"),
+  689              CategoryPreset("学习", "📚"),
+  690              CategoryPreset("通讯网费", "📱"),
+  691              CategoryPreset("交通", "🚌"),
+  692              CategoryPreset("人情往来", "🎁"),
+  693              CategoryPreset("宠物", "🐾"),
+  694              CategoryPreset("其他支出", "📦")
+  695          ),
+  696          incomes = listOf(
+  697              CategoryPreset("工资", "💰"),
+  698              CategoryPreset("奖金", "🏆"),
+  699              CategoryPreset("红包", "🧧"),
+  700              CategoryPreset("理财收益", "📈"),
+
+【滴水记账 V9.0 源程序】                                    第 15 页
+------------------------------------------------------------------------
+  701              CategoryPreset("兼职", "💼"),
+  702              CategoryPreset("报销到账", "🧾"),
+  703              CategoryPreset("其他收入", "✨")
+  704          ),
+  705          fields = listOf(
+  706              SceneField("payment", "支付方式", FieldKind.CHOICE, listOf(
+  707                  FieldOption("wechat", "微信"),
+  708                  FieldOption("alipay", "支付宝"),
+  709                  FieldOption("cash", "现金"),
+  710                  FieldOption("card", "银行卡")
+  711              ))
+  712          )
+  713      )
+  714      private val RENOVATION = ScenePreset(
+  715          key = "renovation",
+  716          name = "家装",
+  717          emoji = "🛠️",
+  718          tagline = "主材辅材人工，装修不超支",
+  719          colorHex = "#E8590C",
+  720          expenses = listOf(
+  721              CategoryPreset("主材", "🧱"),
+  722              CategoryPreset("辅材", "🧰"),
+  723              CategoryPreset("人工费", "👷"),
+  724              CategoryPreset("设计费", "📐"),
+  725              CategoryPreset("拆改", "🔨"),
+  726              CategoryPreset("水电改造", "🔌"),
+  727              CategoryPreset("防水瓦工", "🚿"),
+  728              CategoryPreset("木工吊顶", "🪚"),
+  729              CategoryPreset("油漆涂料", "🎨"),
+  730              CategoryPreset("门窗", "🚪"),
+  731              CategoryPreset("定制柜", "🗄️"),
+  732              CategoryPreset("家具", "🛋️"),
+  733              CategoryPreset("家电", "📺"),
+  734              CategoryPreset("软装布艺", "🪟"),
+  735              CategoryPreset("灯具五金", "💡"),
+  736              CategoryPreset("运输上楼", "🚚"),
+  737              CategoryPreset("保洁", "🧹"),
+  738              CategoryPreset("监理", "📋"),
+  739              CategoryPreset("其他", "📦")
+  740          ),
+  741          incomes = listOf(
+  742              CategoryPreset("商家退款", "↩️"),
+  743              CategoryPreset("优惠返现", "🎫"),
+  744              CategoryPreset("尾款结余", "💵")
+  745          ),
+  746          fields = listOf(
+  747              SceneField("space", "空间", FieldKind.CHOICE, listOf(
+  748                  FieldOption("whole", "全屋"),
+  749                  FieldOption("living", "客厅"),
+  750                  FieldOption("master", "主卧"),
+
+【滴水记账 V9.0 源程序】                                    第 16 页
+------------------------------------------------------------------------
+  751                  FieldOption("second", "次卧"),
+  752                  FieldOption("kitchen", "厨房"),
+  753                  FieldOption("bathroom", "卫生间"),
+  754                  FieldOption("balcony", "阳台"),
+  755                  FieldOption("study", "书房")
+  756              )),
+  757              SceneField("vendor", "商家/施工方", FieldKind.TEXT, placeholder = "如：XX装饰公司"),
+  758              SceneField("stage", "阶段", FieldKind.CHOICE, listOf(
+  759                  FieldOption("design", "设计"),
+  760                  FieldOption("hardcover", "硬装"),
+  761                  FieldOption("softcover", "软装"),
+  762                  FieldOption("appliance", "家电进场"),
+  763                  FieldOption("done", "已完工")
+  764              )),
+  765              SceneField("isPaid", "是否已付款", FieldKind.CHOICE, listOf(
+  766                  FieldOption("paid", "已付全款"),
+  767                  FieldOption("deposit", "已付定金"),
+  768                  FieldOption("credit", "赊账待付")
+  769              ))
+  770          ),
+  771          suggestedBudgetYuan = 200_000L
+  772      )
+  773      private val REIMBURSEMENT = ScenePreset(
+  774          key = "reimbursement",
+  775          name = "报销",
+  776          emoji = "🧾",
+  777          tagline = "先垫后报，进度一目了然",
+  778          colorHex = "#0B7285",
+  779          expenses = listOf(
+  780              CategoryPreset("交通费", "🚕"),
+  781              CategoryPreset("住宿费", "🏨"),
+  782              CategoryPreset("餐饮补助", "🍱"),
+  783              CategoryPreset("办公用品", "🖇️"),
+  784              CategoryPreset("快递邮寄", "📮"),
+  785              CategoryPreset("通讯补贴", "📞"),
+  786              CategoryPreset("业务招待", "🍷"),
+  787              CategoryPreset("会议培训", "🎓"),
+  788              CategoryPreset("差旅其他", "🧳"),
+  789              CategoryPreset("团建", "🎉"),
+  790              CategoryPreset("其他垫付", "📦")
+  791          ),
+  792          incomes = listOf(
+  793              CategoryPreset("报销到账", "✅"),
+  794              CategoryPreset("差旅补贴", "💵"),
+  795              CategoryPreset("预借款", "🏦")
+  796          ),
+  797          fields = listOf(
+  798              SceneField("applicant", "报销人", FieldKind.TEXT, placeholder = "填写姓名"),
+  799              SceneField("docNo", "单据号", FieldKind.TEXT, placeholder = "如：BX20261013"),
+  800              SceneField("project", "项目/客户", FieldKind.TEXT, placeholder = "如：深圳分公司"),
+
+【滴水记账 V9.0 源程序】                                    第 17 页
+------------------------------------------------------------------------
+  801              SceneField("state", "报销状态", FieldKind.CHOICE, listOf(
+  802                  FieldOption("0", "待提交"),
+  803                  FieldOption("1", "已提交"),
+  804                  FieldOption("2", "已到账")
+  805              ))
+  806          ),
+  807          supportsReimbursement = true
+  808      )
+  809      private val BABY = ScenePreset(
+  810          key = "baby",
+  811          name = "母婴",
+  812          emoji = "🍼",
+  813          tagline = "奶粉尿裤疫苗，育儿开支清单",
+  814          colorHex = "#D6336C",
+  815          expenses = listOf(
+  816              CategoryPreset("奶粉", "🍼"),
+  817              CategoryPreset("尿不湿", "🧷"),
+  818              CategoryPreset("辅食", "🥣"),
+  819              CategoryPreset("婴儿衣物", "👶"),
+  820              CategoryPreset("玩具绘本", "🧸"),
+  821              CategoryPreset("洗护用品", "🧴"),
+  822              CategoryPreset("医疗疫苗", "💉"),
+  823              CategoryPreset("早教课程", "🎠"),
+  824              CategoryPreset("产检", "🩺"),
+  825              CategoryPreset("月子护理", "🛏️"),
+  826              CategoryPreset("推车安全座椅", "🚼"),
+  827              CategoryPreset("孕妇用品", "🤰"),
+  828              CategoryPreset("托育入园", "🏫"),
+  829              CategoryPreset("其他", "📦")
+  830          ),
+  831          incomes = listOf(
+  832              CategoryPreset("红包礼金", "🧧"),
+  833              CategoryPreset("生育津贴", "🏛️"),
+  834              CategoryPreset("商业保险理赔", "🛡️")
+  835          ),
+  836          fields = listOf(
+  837              SceneField("kid", "宝宝", FieldKind.CHOICE, listOf(
+  838                  FieldOption("babyl", "大宝"),
+  839                  FieldOption("baby2", "二宝"),
+  840                  FieldOption("tummy", "孕期")
+  841              )),
+  842              SceneField("monthAge", "月龄", FieldKind.NUMBER, placeholder = "如：8"),
+  843              SceneField("size", "规格", FieldKind.TEXT, placeholder = "如：L 码 / 900g")
+  844          )
+  845      )
+  846      private val CAR = ScenePreset(
+  847          key = "car",
+  848          name = "用车",
+  849          emoji = "🚗",
+  850          tagline = "油电保养保险，一车一本账",
+
+【滴水记账 V9.0 源程序】                                    第 18 页
+------------------------------------------------------------------------
+  851          colorHex = "#2F9E44",
+  852          expenses = listOf(
+  853              CategoryPreset("加油", "⛽"),
+  854              CategoryPreset("充电", "🔋"),
+  855              CategoryPreset("停车费", "🅿️"),
+  856              CategoryPreset("过路桥费", "🛣️"),
+  857              CategoryPreset("洗车美容", "🚿"),
+  858              CategoryPreset("常规保养", "🔧"),
+  859              CategoryPreset("维修", "🔩"),
+  860              CategoryPreset("轮胎", "⚙️"),
+  861              CategoryPreset("保险", "🛡️"),
+  862              CategoryPreset("车船税", "📄"),
+  863              CategoryPreset("年检", "🧾"),
+  864              CategoryPreset("违章罚款", "🚨"),
+  865              CategoryPreset("车载配件", "🎧"),
+  866              CategoryPreset("车位租金", "🏗️"),
+  867              CategoryPreset("其他", "📦")
+  868          ),
+  869          incomes = listOf(
+  870              CategoryPreset("顺风车", "🧭"),
+  871              CategoryPreset("油费报销", "🧾"),
+  872              CategoryPreset("保险返现", "🎫")
+  873          ),
+  874          fields = listOf(
+  875              SceneField("vehicle", "车辆", FieldKind.TEXT, placeholder = "如：小米 SU7"),
+  876              SceneField("odometer", "当前里程", FieldKind.NUMBER, placeholder = "km"),
+  877              SceneField("fuel", "加油量/电量", FieldKind.NUMBER, placeholder = "L 或 kWh"),
+  878              SceneField("plate", "车牌", FieldKind.TEXT, placeholder = "粤B·XXXXX")
+  879          )
+  880      )
+  881      private val HOUSING = ScenePreset(
+  882          key = "housing",
+  883          name = "房屋",
+  884          emoji = "🏡",
+  885          tagline = "房租房贷物业水电，居住成本",
+  886          colorHex = "#5F3DC4",
+  887          expenses = listOf(
+  888              CategoryPreset("房租", "🔑"),
+  889              CategoryPreset("房贷", "🏦"),
+  890              CategoryPreset("物业费", "🏢"),
+  891              CategoryPreset("水费", "💧"),
+  892              CategoryPreset("电费", "⚡"),
+  893              CategoryPreset("燃气费", "🔥"),
+  894              CategoryPreset("取暖费", "♨️"),
+  895              CategoryPreset("宽带电视", "📡"),
+  896              CategoryPreset("家政保洁", "🧹"),
+  897              CategoryPreset("维修", "🧰"),
+  898              CategoryPreset("家具家电", "🛋️"),
+  899              CategoryPreset("中介费", "🤝"),
+  900              CategoryPreset("垃圾清运", "🗑️"),
+
+【滴水记账 V9.0 源程序】                                    第 19 页
+------------------------------------------------------------------------
+  901              CategoryPreset("其他", "📦")
+  902          ),
+  903          incomes = listOf(
+  904              CategoryPreset("租金收入", "💵"),
+  905              CategoryPreset("物业返还", "↩️"),
+  906              CategoryPreset("住房补贴", "🏛️")
+  907          ),
+  908          fields = listOf(
+  909              SceneField("property", "房产", FieldKind.TEXT, placeholder = "如：南山 xx 花园 A 栋"),
+  910              SceneField("period", "周期", FieldKind.CHOICE, listOf(
+  911                  FieldOption("month", "按月"),
+  912                  FieldOption("quarter", "按季"),
+  913                  FieldOption("year", "按年"),
+  914                  FieldOption("once", "一次性")
+  915              )),
+  916              SceneField("meterReading", "抄表读数", FieldKind.NUMBER, placeholder = "如：1234")
+  917          )
+  918      )
+  919      private val TRAVEL = ScenePreset(
+  920          key = "travel",
+  921          name = "旅行",
+  922          emoji = "✈️",
+  923          tagline = "机票酒店门票，玩得明白",
+  924          colorHex = "#4263EB",
+  925          expenses = listOf(
+  926              CategoryPreset("机票", "✈️"),
+  927              CategoryPreset("火车票", "🚄"),
+  928              CategoryPreset("住宿", "🏨"),
+  929              CategoryPreset("门票", "🎟️"),
+  930              CategoryPreset("餐饮", "🍽️"),
+  931              CategoryPreset("当地交通", "🚕"),
+  932              CategoryPreset("购物", "🛍️"),
+  933              CategoryPreset("签证", "🛂"),
+  934              CategoryPreset("保险", "🛡️"),
+  935              CategoryPreset("行李托运", "🧳"),
+  936              CategoryPreset("其他", "📦")
+  937          ),
+  938          incomes = listOf(
+  939              CategoryPreset("退款", "↩️"),
+  940              CategoryPreset("旅游补贴", "🏛️")
+  941          ),
+  942          fields = listOf(
+  943              SceneField("trip", "行程", FieldKind.TEXT, placeholder = "如：大阪 5 日"),
+  944              SceneField("companion", "同行人", FieldKind.TEXT, placeholder = "如：家人 3 人"),
+  945              SceneField("city", "城市", FieldKind.TEXT, placeholder = "如：Osaka")
+  946          ),
+  947          suggestedBudgetYuan = 10_000L
+  948      )
+  949      private val PET = ScenePreset(
+  950          key = "pet",
+
+【滴水记账 V9.0 源程序】                                    第 20 页
+------------------------------------------------------------------------
+  951          name = "宠物",
+  952          emoji = "🐾",
+  953          tagline = "主子口粮医疗，花销有数",
+  954          colorHex = "#C2255C",
+  955          expenses = listOf(
+  956              CategoryPreset("主粮", "🥫"),
+  957              CategoryPreset("零食", "🦴"),
+  958              CategoryPreset("猫砂/尿垫", "🧹"),
+  959              CategoryPreset("疫苗驱虫", "💉"),
+  960              CategoryPreset("看病", "🩺"),
+  961              CategoryPreset("洗护美容", "🛁"),
+  962              CategoryPreset("玩具窝笼", "🧶"),
+  963              CategoryPreset("寄养", "🏠"),
+  964              CategoryPreset("服饰牵引", "🦺"),
+  965              CategoryPreset("其他", "📦")
+  966          ),
+  967          incomes = listOf(
+  968              CategoryPreset("保险理赔", "🛡️"),
+  969              CategoryPreset("转让收入", "💵")
+  970          ),
+  971          fields = listOf(
+  972              SceneField("petName", "宠物名", FieldKind.TEXT, placeholder = "如：布丁"),
+  973              SceneField("species", "类型", FieldKind.CHOICE, listOf(
+  974                  FieldOption("cat", "猫"),
+  975                  FieldOption("dog", "狗"),
+  976                  FieldOption("other", "其他")
+  977              ))
+  978          )
+  979      )
+  980      private val CUSTOM = ScenePreset(
+  981          key = CUSTOM_KEY,
+  982          name = "自定义",
+  983          emoji = "✨",
+  984          tagline = "从零开始，完全按你的方式来",
+  985          colorHex = "#495057",
+  986          expenses = listOf(CategoryPreset("其他支出", "📦")),
+  987          incomes = listOf(CategoryPreset("其他收入", "✨"))
+  988      )
+  989      private val AUTO = ScenePreset(
+  990          key = AUTO_KEY,
+  991          name = "自动记账",
+  992          emoji = "🤖",
+  993          tagline = "支付通知自动进账，确认后移去正式账本",
+  994          colorHex = "#7048E8",
+  995          expenses = listOf(CategoryPreset("自动记账", "🤖")),
+  996          incomes = listOf(CategoryPreset("自动收入", "🤖")),
+  997          hidden = true
+  998      )
+  999      val all: List<ScenePreset> = listOf(
+ 1000          DAILY, RENOVATION, REIMBURSEMENT, BABY, CAR, HOUSING, TRAVEL, PET, CUSTOM, AUTO
+
+【滴水记账 V9.0 源程序】                                    第 21 页
+------------------------------------------------------------------------
+ 1001      )
+ 1002      val gallery: List<ScenePreset> = all.filter { !it.hidden }
+ 1003      val quickCreate: List<ScenePreset> by lazy {
+ 1004          listOf(DAILY, RENOVATION, REIMBURSEMENT, BABY, CAR, HOUSING)
+ 1005      }
+ 1006      fun byKey(key: String): ScenePreset = all.firstOrNull { it.key == key } ?: CUSTOM
+ 1007      fun directionOf(preset: CategoryPreset, scene: ScenePreset): Int =
+ 1008          if (scene.expenses.contains(preset)) Direction.EXPENSE else Direction.INCOME
+ 1009      fun displayValue(sceneKey: String, fieldKey: String, raw: String): String {
+ 1010          if (raw.isBlank()) return ""
+ 1011          val field = byKey(sceneKey).fields.firstOrNull { it.key == fieldKey } ?: return raw
+ 1012          return field.options.firstOrNull { it.value == raw }?.label ?: raw
+ 1013      }
+ 1014      fun extraSummary(sceneKey: String, extra: Map<String, String>, max: Int = 2): List<String> {
+ 1015          if (extra.isEmpty()) return emptyList()
+ 1016          val scene = byKey(sceneKey)
+ 1017          val out = mutableListOf<String>()
+ 1018          val known = HashSet<String>()
+ 1019          scene.fields.forEach { f ->
+ 1020              known += f.key
+ 1021              if (out.size >= max) return@forEach
+ 1022              if (f.key == "state") return@forEach
+ 1023              val raw = extra[f.key]?.takeIf { it.isNotBlank() } ?: return@forEach
+ 1024              out += when (f.kind) {
+ 1025                  FieldKind.CHOICE -> f.options.firstOrNull { it.value == raw }?.label ?: raw
+ 1026                  else -> "${f.label} $raw"
+ 1027              }
+ 1028          }
+ 1029          if (out.size < max) {
+ 1030              extra.forEach { (k, v) ->
+ 1031                  if (k !in known && k != "state" && v.isNotBlank() && out.size < max) out += v
+ 1032              }
+ 1033          }
+ 1034          return out
+ 1035      }
+ 1036  }
+ 1037  
+ 1038  /* 文件: app/src/main/java/com/foldledger/data/TxnTemplate.kt */
+ 1039  package com.foldledger.data
+ 1040  import org.json.JSONArray
+ 1041  import org.json.JSONObject
+ 1042  data class TxnTemplate(
+ 1043      val id: Long,
+ 1044      val name: String,
+ 1045      val direction: Int,
+ 1046      val categoryName: String,
+ 1047      val categoryEmoji: String,
+ 1048      val amountCents: Long,
+ 1049      val note: String
+ 1050  )
+
+【滴水记账 V9.0 源程序】                                    第 22 页
+------------------------------------------------------------------------
+ 1051  object TxnTemplateCodec {
+ 1052      fun encode(list: List<TxnTemplate>): String {
+ 1053          val arr = JSONArray()
+ 1054          list.forEach { t ->
+ 1055              arr.put(
+ 1056                  JSONObject().apply {
+ 1057                      put("id", t.id)
+ 1058                      put("name", t.name)
+ 1059                      put("direction", t.direction)
+ 1060                      put("categoryName", t.categoryName)
+ 1061                      put("categoryEmoji", t.categoryEmoji)
+ 1062                      put("amountCents", t.amountCents)
+ 1063                      put("note", t.note)
+ 1064                  }
+ 1065              )
+ 1066          }
+ 1067          return arr.toString()
+ 1068      }
+ 1069      fun decode(json: String): List<TxnTemplate> {
+ 1070          if (json.isBlank()) return emptyList()
+ 1071          return try {
+ 1072              val arr = JSONArray(json)
+ 1073              buildList {
+ 1074                  for (i in 0 until arr.length()) {
+ 1075                      val o = arr.optJSONObject(i) ?: continue
+ 1076                      add(
+ 1077                          TxnTemplate(
+ 1078                              id = o.optLong("id"),
+ 1079                              name = o.optString("name"),
+ 1080                              direction = o.optInt("direction"),
+ 1081                              categoryName = o.optString("categoryName"),
+ 1082                              categoryEmoji = o.optString("categoryEmoji"),
+ 1083                              amountCents = o.optLong("amountCents"),
+ 1084                              note = o.optString("note")
+ 1085                          )
+ 1086                      )
+ 1087                  }
+ 1088              }
+ 1089          } catch (_: Exception) {
+ 1090              emptyList()
+ 1091          }
+ 1092      }
+ 1093  }
+ 1094  
+ 1095  /* 文件: app/src/main/java/com/foldledger/data/backup/BackupFormat.kt */
+ 1096  package com.foldledger.data.backup
+ 1097  import com.foldledger.data.db.CategoryEntity
+ 1098  import com.foldledger.data.db.LedgerEntity
+ 1099  import com.foldledger.data.db.AccountEntity
+ 1100  import com.foldledger.data.db.AccountType
+
+【滴水记账 V9.0 源程序】                                    第 23 页
+------------------------------------------------------------------------
+ 1101  import com.foldledger.data.db.ProjectEntity
+ 1102  import com.foldledger.data.db.RecurringEntity
+ 1103  import com.foldledger.data.db.TransactionEntity
+ 1104  import org.json.JSONArray
+ 1105  import org.json.JSONObject
+ 1106  data class BackupSnapshot(
+ 1107      val exportedAt: Long,
+ 1108      val appVersion: String,
+ 1109      val ledgers: List<LedgerEntity>,
+ 1110      val categories: List<CategoryEntity>,
+ 1111      val transactions: List<TransactionEntity>,
+ 1112      val projects: List<ProjectEntity> = emptyList(),
+ 1113      val recurring: List<RecurringEntity> = emptyList(),
+ 1114      val accounts: List<AccountEntity> = emptyList()
+ 1115  ) {
+ 1116      val ledgerCount: Int get() = ledgers.size
+ 1117      val txnCount: Int get() = transactions.size
+ 1118  }
+ 1119  object BackupFormat {
+ 1120      const val FORMAT_TAG = "foldledger.backup"
+ 1121      const val VERSION = 1
+ 1122      const val EXT_JSON = ".foldledger.json"
+ 1123      const val EXT_XLSX = ".xlsx"
+ 1124      const val FILE_PREFIX = "滴水记账-"
+ 1125      val LEGACY_PREFIXES = listOf("折叠记账-")
+ 1126      val ALL_PREFIXES: List<String> get() = listOf(FILE_PREFIX) + LEGACY_PREFIXES
+ 1127      const val AUTO_FILE_NAME = "${FILE_PREFIX}自动备份$EXT_JSON"
+ 1128      fun isBackupFileName(name: String): Boolean =
+ 1129          name.endsWith(EXT_JSON) && ALL_PREFIXES.any { name.startsWith(it) }
+ 1130      fun encode(snapshot: BackupSnapshot): ByteArray {
+ 1131          val ledgers = JSONArray()
+ 1132          snapshot.ledgers.forEach { ledgers.put(ledgerToJson(it)) }
+ 1133          val categories = JSONArray()
+ 1134          snapshot.categories.forEach { categories.put(categoryToJson(it)) }
+ 1135          val txns = JSONArray()
+ 1136          snapshot.transactions.forEach { txns.put(txnToJson(it)) }
+ 1137          val projects = JSONArray()
+ 1138          snapshot.projects.forEach { projects.put(projectToJson(it)) }
+ 1139          val recurring = JSONArray()
+ 1140          snapshot.recurring.forEach { recurring.put(recurringToJson(it)) }
+ 1141          val accounts = JSONArray()
+ 1142          snapshot.accounts.forEach { accounts.put(accountToJson(it)) }
+ 1143          val sb = StringBuilder(256)
+ 1144          sb.append("{\"format\":\"").append(FORMAT_TAG).append('"')
+ 1145          sb.append(",\"version\":").append(VERSION)
+ 1146          sb.append(",\"appVersion\":\"").append(escapeJson(snapshot.appVersion)).append('"')
+ 1147          sb.append(",\"exportedAt\":").append(snapshot.exportedAt)
+ 1148          sb.append(",\"ledgerCount\":").append(snapshot.ledgerCount)
+ 1149          sb.append(",\"txnCount\":").append(snapshot.txnCount)
+ 1150          sb.append(",\"ledgers\":").append(ledgers)
+
+【滴水记账 V9.0 源程序】                                    第 24 页
+------------------------------------------------------------------------
+ 1151          sb.append(",\"categories\":").append(categories)
+ 1152          sb.append(",\"transactions\":").append(txns)
+ 1153          sb.append(",\"projects\":").append(projects)
+ 1154          sb.append(",\"recurring\":").append(recurring)
+ 1155          sb.append(",\"accounts\":").append(accounts)
+ 1156          sb.append('}')
+ 1157          return sb.toString().toByteArray(Charsets.UTF_8)
+ 1158      }
+ 1159      private fun escapeJson(s: String): String {
+ 1160          val sb = StringBuilder(s.length + 8)
+ 1161          for (c in s) {
+ 1162              when (c) {
+ 1163                  '"' -> sb.append("\\\"")
+ 1164                  '\\' -> sb.append("\\\\")
+ 1165                  '\n' -> sb.append("\\n")
+ 1166                  '\r' -> sb.append("\\r")
+ 1167                  '\t' -> sb.append("\\t")
+ 1168                  '\b' -> sb.append("\\b")
+ 1169                  '\u000C' -> sb.append("\\f")
+ 1170                  else -> if (c.code < 0x20) {
+ 1171                      sb.append("\\u").append(c.code.toString(16).padStart(4, '0'))
+ 1172                  } else {
+ 1173                      sb.append(c)
+ 1174                  }
+ 1175              }
+ 1176          }
+ 1177          return sb.toString()
+ 1178      }
+ 1179      fun decode(bytes: ByteArray): BackupSnapshot {        val root = JSONObject(String(bytes, Charsets.UTF_8))
+ 1180          val format = root.optString("format")
+ 1181          require(format == FORMAT_TAG) { "不是滴水记账的备份文件" }
+ 1182          val version = root.optInt("version", 0)
+ 1183          require(version in 1..VERSION) { "备份文件版本不支持（v$version）" }
+ 1184          val ledgers = root.optJSONArray("ledgers").toList { o ->
+ 1185              LedgerEntity(
+ 1186                  id = o.optLong("id"),
+ 1187                  name = o.optString("name"),
+ 1188                  sceneKey = o.optString("sceneKey", "custom"),
+ 1189                  emoji = o.optString("emoji", "📒"),
+ 1190                  colorHex = o.optString("colorHex", "#1F6FEB"),
+ 1191                  budgetCents = o.optLong("budgetCents"),
+ 1192                  note = o.optString("note"),
+ 1193                  archived = o.optBoolean("archived", false),
+ 1194                  sortOrder = o.optInt("sortOrder"),
+ 1195                  createdAt = o.optLong("createdAt", System.currentTimeMillis())
+ 1196              )
+ 1197          }
+ 1198          val categories = root.optJSONArray("categories").toList { o ->
+ 1199              CategoryEntity(
+ 1200                  id = o.optLong("id"),
+
+【滴水记账 V9.0 源程序】                                    第 25 页
+------------------------------------------------------------------------
+ 1201                  ledgerId = o.optLong("ledgerId"),
+ 1202                  name = o.optString("name"),
+ 1203                  emoji = o.optString("emoji", "🏷️"),
+ 1204                  direction = o.optInt("direction"),
+ 1205                  sortOrder = o.optInt("sortOrder"),
+ 1206                  builtIn = o.optBoolean("builtIn", false),
+ 1207                  budgetCents = o.optLong("budgetCents")
+ 1208              )
+ 1209          }
+ 1210          val transactions = root.optJSONArray("transactions").toList { o ->
+ 1211              TransactionEntity(
+ 1212                  id = o.optLong("id"),
+ 1213                  ledgerId = o.optLong("ledgerId"),
+ 1214                  categoryId = if (o.isNull("categoryId")) null else o.optLong("categoryId"),
+ 1215                  categoryName = o.optString("categoryName", "未分类"),
+ 1216                  categoryEmoji = o.optString("categoryEmoji", "📦"),
+ 1217                  direction = o.optInt("direction"),
+ 1218                  amountCents = o.optLong("amountCents"),
+ 1219                  note = o.optString("note"),
+ 1220                  occurredAt = o.optLong("occurredAt"),
+ 1221                  extraJson = o.optString("extraJson"),
+ 1222                  reimburseState = o.optInt("reimburseState", -1),
+ 1223                  projectId = o.optLong("projectId", 0L),
+ 1224                  accountId = o.optLong("accountId", 0L),
+ 1225                  createdAt = o.optLong("createdAt", System.currentTimeMillis())
+ 1226              )
+ 1227          }
+ 1228          val projects = root.optJSONArray("projects").toList { o ->
+ 1229              ProjectEntity(
+ 1230                  id = o.optLong("id"),
+ 1231                  ledgerId = o.optLong("ledgerId"),
+ 1232                  name = o.optString("name"),
+ 1233                  emoji = o.optString("emoji", "📁"),
+ 1234                  colorHex = o.optString("colorHex", "#3B82F6"),
+ 1235                  budgetCents = o.optLong("budgetCents", 0L),
+ 1236                  note = o.optString("note"),
+ 1237                  closed = o.optBoolean("closed", false),
+ 1238                  createdAt = o.optLong("createdAt", System.currentTimeMillis())
+ 1239              )
+ 1240          }
+ 1241          return BackupSnapshot(
+ 1242              exportedAt = root.optLong("exportedAt", System.currentTimeMillis()),
+ 1243              appVersion = root.optString("appVersion", "?"),
+ 1244              ledgers = ledgers,
+ 1245              categories = categories,
+ 1246              transactions = transactions,
+ 1247              projects = projects,
+ 1248              recurring = root.optJSONArray("recurring").toList { o ->
+ 1249                  RecurringEntity(
+ 1250                      id = o.optLong("id"),
+
+【滴水记账 V9.0 源程序】                                    第 26 页
+------------------------------------------------------------------------
+ 1251                      ledgerId = o.optLong("ledgerId"),
+ 1252                      name = o.optString("name"),
+ 1253                      categoryId = if (o.isNull("categoryId")) null else o.optLong("categoryId"),
+ 1254                      categoryName = o.optString("categoryName"),
+ 1255                      categoryEmoji = o.optString("categoryEmoji", "📦"),
+ 1256                      direction = o.optInt("direction"),
+ 1257                      amountCents = o.optLong("amountCents"),
+ 1258                      note = o.optString("note"),
+ 1259                      intervalKind = o.optInt("intervalKind"),
+ 1260                      nextDueAt = o.optLong("nextDueAt"),
+ 1261                      enabled = o.optBoolean("enabled", true),
+ 1262                      projectId = o.optLong("projectId", 0L),
+ 1263                      createdAt = o.optLong("createdAt", System.currentTimeMillis())
+ 1264                  )
+ 1265              },
+ 1266              accounts = root.optJSONArray("accounts").toList { o ->
+ 1267                  AccountEntity(
+ 1268                      id = o.optLong("id"),
+ 1269                      ledgerId = o.optLong("ledgerId"),
+ 1270                      name = o.optString("name"),
+ 1271                      type = o.optInt("type", AccountType.SAVINGS),
+ 1272                      emoji = o.optString("emoji", "💳"),
+ 1273                      colorHex = o.optString("colorHex", "#3B82F6"),
+ 1274                      initialBalanceCents = o.optLong("initialBalanceCents", 0L),
+ 1275                      includeInNetWorth = o.optBoolean("includeInNetWorth", true),
+ 1276                      note = o.optString("note"),
+ 1277                      closed = o.optBoolean("closed", false),
+ 1278                      createdAt = o.optLong("createdAt", System.currentTimeMillis())
+ 1279                  )
+ 1280              }
+ 1281          )
+ 1282      }
+ 1283      data class Header(
+ 1284          val exportedAt: Long,
+ 1285          val ledgerCount: Int,
+ 1286          val txnCount: Int,
+ 1287          val appVersion: String
+ 1288      )
+ 1289      fun peekHeader(bytes: ByteArray, maxChars: Int = 400): Header? {
+ 1290          if (bytes.size < 32) return null
+ 1291          val head = String(bytes, 0, minOf(bytes.size, maxChars), Charsets.UTF_8)
+ 1292          if (!head.contains(FORMAT_TAG)) return null
+ 1293          fun num(key: String): Long? =
+ 1294              Regex("\"" + Regex.escape(key) + "\"\\s*:\\s*(-?\\d+)")
+ 1295                  .find(head)?.groupValues?.get(1)?.toLongOrNull()
+ 1296          fun str(key: String): String? =
+ 1297              Regex("\"" + Regex.escape(key) + "\"\\s*:\\s*\"([^\"]*)\"")
+ 1298                  .find(head)?.groupValues?.get(1)
+ 1299          return Header(
+ 1300              exportedAt = num("exportedAt") ?: 0L,
+
+【滴水记账 V9.0 源程序】                                    第 27 页
+------------------------------------------------------------------------
+ 1301              ledgerCount = (num("ledgerCount") ?: 0L).toInt(),
+ 1302              txnCount = (num("txnCount") ?: 0L).toInt(),
+ 1303              appVersion = str("appVersion") ?: "?"
+ 1304          )
+ 1305      }
+ 1306      private fun ledgerToJson(l: LedgerEntity) = JSONObject().apply {
+ 1307          put("id", l.id)
+ 1308          put("name", l.name)
+ 1309          put("sceneKey", l.sceneKey)
+ 1310          put("emoji", l.emoji)
+ 1311          put("colorHex", l.colorHex)
+ 1312          put("budgetCents", l.budgetCents)
+ 1313          put("note", l.note)
+ 1314          put("archived", l.archived)
+ 1315          put("sortOrder", l.sortOrder)
+ 1316          put("createdAt", l.createdAt)
+ 1317      }
+ 1318      private fun categoryToJson(c: CategoryEntity) = JSONObject().apply {
+ 1319          put("id", c.id)
+ 1320          put("ledgerId", c.ledgerId)
+ 1321          put("name", c.name)
+ 1322          put("emoji", c.emoji)
+ 1323          put("direction", c.direction)
+ 1324          put("sortOrder", c.sortOrder)
+ 1325          put("builtIn", c.builtIn)
+ 1326          put("budgetCents", c.budgetCents)
+ 1327      }
+ 1328      private fun txnToJson(t: TransactionEntity) = JSONObject().apply {
+ 1329          put("id", t.id)
+ 1330          put("ledgerId", t.ledgerId)
+ 1331          if (t.categoryId == null) put("categoryId", JSONObject.NULL) else put("categoryId", t.categoryId)
+ 1332          put("categoryName", t.categoryName)
+ 1333          put("categoryEmoji", t.categoryEmoji)
+ 1334          put("direction", t.direction)
+ 1335          put("amountCents", t.amountCents)
+ 1336          put("note", t.note)
+ 1337          put("occurredAt", t.occurredAt)
+ 1338          put("extraJson", t.extraJson)
+ 1339          put("reimburseState", t.reimburseState)
+ 1340          put("projectId", t.projectId)
+ 1341          put("accountId", t.accountId)
+ 1342          put("createdAt", t.createdAt)
+ 1343      }
+ 1344      private fun projectToJson(p: ProjectEntity) = JSONObject().apply {
+ 1345          put("id", p.id)
+ 1346          put("ledgerId", p.ledgerId)
+ 1347          put("name", p.name)
+ 1348          put("emoji", p.emoji)
+ 1349          put("colorHex", p.colorHex)
+ 1350          put("budgetCents", p.budgetCents)
+
+【滴水记账 V9.0 源程序】                                    第 28 页
+------------------------------------------------------------------------
+ 1351          put("note", p.note)
+ 1352          put("closed", p.closed)
+ 1353          put("createdAt", p.createdAt)
+ 1354      }
+ 1355      private fun accountToJson(a: AccountEntity) = JSONObject().apply {
+ 1356          put("id", a.id)
+ 1357          put("ledgerId", a.ledgerId)
+ 1358          put("name", a.name)
+ 1359          put("type", a.type)
+ 1360          put("emoji", a.emoji)
+ 1361          put("colorHex", a.colorHex)
+ 1362          put("initialBalanceCents", a.initialBalanceCents)
+ 1363          put("includeInNetWorth", a.includeInNetWorth)
+ 1364          put("note", a.note)
+ 1365          put("closed", a.closed)
+ 1366          put("createdAt", a.createdAt)
+ 1367      }
+ 1368      private fun recurringToJson(r: RecurringEntity) = JSONObject().apply {
+ 1369          put("id", r.id)
+ 1370          put("ledgerId", r.ledgerId)
+ 1371          put("name", r.name)
+ 1372          put("categoryId", r.categoryId ?: JSONObject.NULL)
+ 1373          put("categoryName", r.categoryName)
+ 1374          put("categoryEmoji", r.categoryEmoji)
+ 1375          put("direction", r.direction)
+ 1376          put("amountCents", r.amountCents)
+ 1377          put("note", r.note)
+ 1378          put("intervalKind", r.intervalKind)
+ 1379          put("nextDueAt", r.nextDueAt)
+ 1380          put("enabled", r.enabled)
+ 1381          put("projectId", r.projectId)
+ 1382          put("createdAt", r.createdAt)
+ 1383      }
+ 1384      private inline fun <T> JSONArray?.toList(map: (JSONObject) -> T): List<T> {
+ 1385          if (this == null) return emptyList()
+ 1386          val out = ArrayList<T>(length())
+ 1387          for (i in 0 until length()) {
+ 1388              val o = optJSONObject(i) ?: continue
+ 1389              out += map(o)
+ 1390          }
+ 1391          return out
+ 1392      }
+ 1393  }
+ 1394  
+ 1395  /* 文件: app/src/main/java/com/foldledger/data/backup/BackupManager.kt */
+ 1396  package com.foldledger.data.backup
+ 1397  import android.content.Context
+ 1398  import android.net.Uri
+ 1399  import com.foldledger.core.DripCore
+ 1400  import com.foldledger.data.export.ExcelExporter
+
+【滴水记账 V9.0 源程序】                                    第 29 页
+------------------------------------------------------------------------
+ 1401  import com.foldledger.data.repo.LedgerRepository
+ 1402  import com.foldledger.data.repo.RestoreStats
+ 1403  import kotlinx.coroutines.Dispatchers
+ 1404  import kotlinx.coroutines.withContext
+ 1405  import java.text.SimpleDateFormat
+ 1406  import java.util.Date
+ 1407  import java.util.Locale
+ 1408  class BackupManager(
+ 1409      private val context: Context,
+ 1410      private val repo: LedgerRepository
+ 1411  ) {
+ 1412      private val saf = SafFolderStore(context)
+ 1413      companion object {
+ 1414          const val MIME_JSON = "application/json"
+ 1415          const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+ 1416          const val KEEP_MANUAL = 10
+ 1417      }
+ 1418      data class ExportOutcome(
+ 1419          val folderLabel: String,
+ 1420          val jsonName: String,
+ 1421          val xlsxName: String,
+ 1422          val ledgerCount: Int,
+ 1423          val txnCount: Int,
+ 1424          val totalBytes: Int,
+ 1425          val prunedFiles: Int,
+ 1426          val isAuto: Boolean
+ 1427      )
+ 1428      data class BackupEntry(
+ 1429          val docId: String,
+ 1430          val fileName: String,
+ 1431          val savedAt: Long,
+ 1432          val ledgerCount: Int,
+ 1433          val txnCount: Int,
+ 1434          val appVersion: String,
+ 1435          val sizeBytes: Long,
+ 1436          val isAuto: Boolean
+ 1437      )
+ 1438      fun hasPermission(treeUri: Uri): Boolean = saf.hasPermission(treeUri)
+ 1439      fun takePermission(treeUri: Uri): Boolean = saf.takePersistablePermission(treeUri)
+ 1440      fun folderLabel(treeUri: Uri): String = saf.folderLabel(treeUri)
+ 1441      fun release(treeUri: Uri) = saf.releasePermission(treeUri)
+ 1442      suspend fun export(treeUri: Uri, auto: Boolean): ExportOutcome = withContext(Dispatchers.IO) {
+ 1443          val snapshot = repo.snapshot()
+ 1444          if (snapshot.ledgerCount == 0 && !auto) {
+ 1445              error("还没有任何账本，没什么可备份的")
+ 1446          }
+ 1447          val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.CHINA)
+ 1448              .format(Date(snapshot.exportedAt))
+ 1449          val jsonName = if (auto) {
+ 1450              BackupFormat.AUTO_FILE_NAME
+
+【滴水记账 V9.0 源程序】                                    第 30 页
+------------------------------------------------------------------------
+ 1451          } else {
+ 1452              "${BackupFormat.FILE_PREFIX}备份-$stamp${BackupFormat.EXT_JSON}"
+ 1453          }
+ 1454          val xlsxName = jsonName.removeSuffix(BackupFormat.EXT_JSON) + BackupFormat.EXT_XLSX
+ 1455          val jsonBytes = BackupFormat.encode(snapshot)
+ 1456          val excelBytes = ExcelExporter(repo).build(snapshot.ledgers, snapshot.transactions).bytes
+ 1457          val okJson = saf.writeFile(treeUri, jsonName, MIME_JSON, jsonBytes)
+ 1458          if (!okJson) error("写入备份目录失败，请重新选择备份文件夹")
+ 1459          val okXlsx = saf.writeFile(treeUri, xlsxName, MIME_XLSX, excelBytes)
+ 1460          val pruned = if (auto) 0 else prune(treeUri)
+ 1461          ExportOutcome(
+ 1462              folderLabel = saf.folderLabel(treeUri),
+ 1463              jsonName = jsonName,
+ 1464              xlsxName = xlsxName,
+ 1465              ledgerCount = snapshot.ledgerCount,
+ 1466              txnCount = snapshot.txnCount,
+ 1467              totalBytes = jsonBytes.size + if (okXlsx) excelBytes.size else 0,
+ 1468              prunedFiles = pruned,
+ 1469              isAuto = auto
+ 1470          )
+ 1471      }
+ 1472      private fun prune(treeUri: Uri): Int {
+ 1473          val files = runCatching { saf.listFiles(treeUri) }.getOrDefault(emptyList())
+ 1474          val manualJson = files
+ 1475              .filter {
+ 1476                  BackupFormat.isBackupFileName(it.name) &&
+ 1477                      it.name != BackupFormat.AUTO_FILE_NAME
+ 1478              }
+ 1479              .sortedByDescending { it.lastModified }
+ 1480          var deleted = 0
+ 1481          manualJson.drop(KEEP_MANUAL).forEach { old ->
+ 1482              val base = old.name.removeSuffix(BackupFormat.EXT_JSON)
+ 1483              if (saf.delete(treeUri, old.docId)) deleted++
+ 1484              files.firstOrNull { it.name == base + BackupFormat.EXT_XLSX }?.let {
+ 1485                  if (saf.delete(treeUri, it.docId)) deleted++
+ 1486              }
+ 1487          }
+ 1488          return deleted
+ 1489      }
+ 1490      suspend fun listBackups(treeUri: Uri): List<BackupEntry> = withContext(Dispatchers.IO) {
+ 1491          val files = runCatching { saf.listFiles(treeUri) }.getOrDefault(emptyList())
+ 1492          files.asSequence()
+ 1493              .filter { BackupFormat.isBackupFileName(it.name) }
+ 1494              .mapNotNull { f ->
+ 1495                  val head = runCatching {
+ 1496                      context.contentResolver
+ 1497                          .openInputStream(
+ 1498                              android.provider.DocumentsContract
+ 1499                                  .buildDocumentUriUsingTree(treeUri, f.docId)
+ 1500                          )
+
+【滴水记账 V9.0 源程序】                                    第 31 页
+------------------------------------------------------------------------
+ 1501  /* …… 中间 414 页按登记要求省略 …… */
+ 1502      fun load(context: Context, fileName: String): Bitmap? {
+ 1503          cache.get(fileName)?.let { return it }
+ 1504          val f = fileOf(context, fileName)
+ 1505          if (!f.isFile) return null
+ 1506          val bmp = runCatching { BitmapFactory.decodeFile(f.absolutePath) }.getOrNull() ?: return null
+ 1507          cache.put(fileName, bmp)
+ 1508          return bmp
+ 1509      }
+ 1510      fun remove(context: Context, fileName: String) {
+ 1511          cache.remove(fileName)
+ 1512          runCatching { fileOf(context, fileName).delete() }
+ 1513      }
+ 1514      private fun decodeBounded(context: Context, uri: Uri): Bitmap? {
+ 1515          val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+ 1516          runCatching {
+ 1517              context.contentResolver.openInputStream(uri)?.use {
+ 1518                  BitmapFactory.decodeStream(it, null, bounds)
+ 1519              }
+ 1520          }
+ 1521          if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+ 1522          var sample = 1
+ 1523          while (bounds.outWidth / (sample * 2) >= TARGET_PX &&
+ 1524              bounds.outHeight / (sample * 2) >= TARGET_PX
+ 1525          ) {
+ 1526              sample *= 2
+ 1527          }
+ 1528          val opts = BitmapFactory.Options().apply {
+ 1529              inSampleSize = sample
+ 1530              inPreferredConfig = Bitmap.Config.ARGB_8888
+ 1531          }
+ 1532          return runCatching {
+ 1533              context.contentResolver.openInputStream(uri)?.use {
+ 1534                  BitmapFactory.decodeStream(it, null, opts)
+ 1535              }
+ 1536          }.getOrNull()
+ 1537      }
+ 1538      private fun cropToSquare(src: Bitmap, size: Int): Bitmap {
+ 1539          val side = minOf(src.width, src.height)
+ 1540          val x = (src.width - side) / 2
+ 1541          val y = (src.height - side) / 2
+ 1542          val cropped = Bitmap.createBitmap(src, x, y, side, side)
+ 1543          if (cropped.width == size && cropped.height == size) return cropped
+ 1544          val scaled = Bitmap.createScaledBitmap(cropped, size, size, true)
+ 1545          if (scaled !== cropped) cropped.recycle()
+ 1546          return scaled
+ 1547      }
+ 1548  }
+ 1549  
+ 1550  /* 文件: app/src/main/java/com/foldledger/util/MiuiSettings.kt */
+
+【滴水记账 V9.0 源程序】                                    第 32 页
+------------------------------------------------------------------------
+ 1551  package com.foldledger.util
+ 1552  import android.content.ActivityNotFoundException
+ 1553  import android.content.Context
+ 1554  import android.content.Intent
+ 1555  import android.net.Uri
+ 1556  import android.os.PowerManager
+ 1557  import android.provider.Settings
+ 1558  object MiuiSettings {
+ 1559      private const val PKG_SECURITY = "com.miui.securitycenter"
+ 1560      private fun tryStart(context: Context, candidates: List<Intent>): Boolean {
+ 1561          for (i in candidates) {
+ 1562              try {
+ 1563                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+ 1564                  context.startActivity(i)
+ 1565                  return true
+ 1566              } catch (_: ActivityNotFoundException) {
+ 1567              } catch (_: Exception) {
+ 1568              }
+ 1569          }
+ 1570          return false
+ 1571      }
+ 1572      fun openAutostart(context: Context): Boolean = tryStart(
+ 1573          context,
+ 1574          listOf(
+ 1575              Intent("miui.intent.action.OP_AUTO_START"),
+ 1576              Intent().setClassName(PKG_SECURITY, "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+ 1577              Intent().setClassName(PKG_SECURITY, "com.miui.permcenter.PrivacyAndAppsManagerActivity"),
+ 1578              appDetails(context)
+ 1579          )
+ 1580      )
+ 1581      fun openBatteryPolicy(context: Context): Boolean {
+ 1582          val pkg = context.packageName
+ 1583          return tryStart(
+ 1584              context,
+ 1585              listOf(
+ 1586                  Intent().setClassName(PKG_SECURITY, "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
+ 1587                      .putExtra("package_name", pkg)
+ 1588                      .putExtra("package_label", appName(context)),
+ 1589                  Intent("miui.intent.action.POWER_HIDE_MODE_APP_LIST"),
+ 1590                  Intent().setClassName(PKG_SECURITY, "com.miui.powerkeeper.PowerSavePolicyActivity"),
+ 1591                  appDetails(context)
+ 1592              )
+ 1593          )
+ 1594      }
+ 1595      fun openBatteryOptimizationSettings(context: Context): Boolean =
+ 1596          tryStart(context, listOf(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS), appDetails(context)))
+ 1597      fun requestIgnoreBatteryOptimizations(context: Context): Boolean =
+ 1598          tryStart(
+ 1599              context,
+ 1600              listOf(
+
+【滴水记账 V9.0 源程序】                                    第 33 页
+------------------------------------------------------------------------
+ 1601                  Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+ 1602                      .setData(Uri.parse("package:${context.packageName}")),
+ 1603                  Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+ 1604                  appDetails(context)
+ 1605              )
+ 1606          )
+ 1607      fun openInstallUnknownApps(context: Context): Boolean =
+ 1608          tryStart(
+ 1609              context,
+ 1610              listOf(
+ 1611                  Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+ 1612                      .setData(Uri.parse("package:${context.packageName}")),
+ 1613                  Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES),
+ 1614                  appDetails(context)
+ 1615              )
+ 1616          )
+ 1617      fun openNotificationAccess(context: Context): Boolean =
+ 1618          tryStart(context, listOf(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), appDetails(context)))
+ 1619      fun appDetails(context: Context): Intent =
+ 1620          Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+ 1621              .setData(Uri.parse("package:${context.packageName}"))
+ 1622      fun ignoringBatteryOptimizations(context: Context): Boolean =
+ 1623          runCatching {
+ 1624              val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+ 1625              pm.isIgnoringBatteryOptimizations(context.packageName)
+ 1626          }.getOrDefault(false)
+ 1627      private fun appName(context: Context): String = runCatching {
+ 1628          val info = context.applicationInfo
+ 1629          context.packageManager.getApplicationLabel(info).toString()
+ 1630      }.getOrDefault("滴水记账")
+ 1631  }
+ 1632  
+ 1633  /* 文件: app/src/main/java/com/foldledger/util/Money.kt */
+ 1634  package com.foldledger.util
+ 1635  import java.math.BigDecimal
+ 1636  import java.math.RoundingMode
+ 1637  import kotlin.math.abs
+ 1638  object Money {
+ 1639      fun centsToPlain(cents: Long): String {
+ 1640          val neg = cents < 0
+ 1641          val v = abs(cents)
+ 1642          val s = "${v / 100}.${(v % 100).toString().padStart(2, '0')}"
+ 1643          return if (neg) "-$s" else s
+ 1644      }
+ 1645      fun format(cents: Long, symbol: Boolean = true): String {
+ 1646          val neg = cents < 0
+ 1647          val v = abs(cents)
+ 1648          val yuan = v / 100
+ 1649          val fen = v % 100
+ 1650          val grouped = yuan.toString().reversed().chunked(3).joinToString(",").reversed()
+
+【滴水记账 V9.0 源程序】                                    第 34 页
+------------------------------------------------------------------------
+ 1651          val sb = StringBuilder()
+ 1652          if (neg) sb.append('-')
+ 1653          if (symbol) sb.append('¥')
+ 1654          sb.append(grouped)
+ 1655          if (fen != 0L) sb.append('.').append(fen.toString().padStart(2, '0'))
+ 1656          return sb.toString()
+ 1657      }
+ 1658      fun formatCompact(cents: Long): String {
+ 1659          val yuan = abs(cents) / 100.0
+ 1660          val sign = if (cents < 0) "-" else ""
+ 1661          return when {
+ 1662              yuan >= 100_000_000 -> sign + trimZero(yuan / 100_000_000) + "亿"
+ 1663              yuan >= 10_000 -> sign + trimZero(yuan / 10_000) + "万"
+ 1664              else -> format(cents)
+ 1665          }
+ 1666      }
+ 1667      private fun trimZero(v: Double): String {
+ 1668          val s = String.format("%.2f", v)
+ 1669          return s.trimEnd('0').trimEnd('.')
+ 1670      }
+ 1671      fun parseToCents(input: String): Long? {
+ 1672          val t = input.trim().replace("¥", "").replace(",", "")
+ 1673          if (t.isEmpty() || t == "." || t == "-") return null
+ 1674          return try {
+ 1675              BigDecimal(t)
+ 1676                  .setScale(2, RoundingMode.HALF_UP)
+ 1677                  .movePointRight(2)
+ 1678                  .longValueExact()
+ 1679          } catch (_: Exception) {
+ 1680              null
+ 1681          }
+ 1682      }
+ 1683      fun percent(part: Long, total: Long): String {
+ 1684          if (total <= 0) return "0%"
+ 1685          val p = part.toDouble() / total.toDouble() * 100
+ 1686          return String.format("%.1f%%", p)
+ 1687      }
+ 1688  }
+ 1689  
+ 1690  /* 文件: app/src/main/java/com/foldledger/util/NLParser.kt */
+ 1691  package com.foldledger.util
+ 1692  import com.foldledger.data.db.Direction
+ 1693  import java.time.LocalDate
+ 1694  import java.time.ZoneId
+ 1695  object NLParser {
+ 1696      data class NlIntent(
+ 1697          val direction: Int,
+ 1698          val amountCents: Long,
+ 1699          val dateMillis: Long,
+ 1700          val categoryHint: String?,
+
+【滴水记账 V9.0 源程序】                                    第 35 页
+------------------------------------------------------------------------
+ 1701          val note: String,
+ 1702          val confidence: Float
+ 1703      )
+ 1704      private val CATEGORY_HINTS = listOf(
+ 1705          "打车" to "交通", "滴滴" to "交通", "出租车" to "交通", "网约车" to "交通",
+ 1706          "高铁" to "交通", "火车票" to "交通", "机票" to "交通", "飞机" to "交通",
+ 1707          "地铁" to "交通", "公交" to "交通", "加油" to "交通", "停车" to "交通",
+ 1708          "过路费" to "交通", "etc" to "交通", "etc卡" to "交通", "单车" to "交通",
+ 1709          "外卖" to "餐饮", "午餐" to "餐饮", "晚餐" to "餐饮", "早餐" to "餐饮",
+ 1710          "吃饭" to "餐饮", "午饭" to "餐饮", "晚饭" to "餐饮", "夜宵" to "餐饮",
+ 1711          "麦当劳" to "餐饮", "肯德基" to "餐饮", "星巴克" to "餐饮", "瑞幸" to "餐饮",
+ 1712          "奶茶" to "餐饮", "咖啡" to "餐饮", "食堂" to "餐饮", "聚餐" to "餐饮",
+ 1713          "火锅" to "餐饮", "烧烤" to "餐饮", "面条" to "餐饮", "面馆" to "餐饮",
+ 1714          "超市" to "买菜", "买菜" to "买菜", "菜市场" to "买菜", "生鲜" to "买菜",
+ 1715          "水果" to "买菜", "蔬菜" to "买菜", "日用品" to "日用品", "纸巾" to "日用品",
+ 1716          "洗发水" to "日用品", "牙膏" to "日用品", "洗衣液" to "日用品",
+ 1717          "房租" to "居家", "物业" to "居家", "水费" to "居家", "电费" to "居家",
+ 1718          "燃气" to "居家", "水费电费" to "居家", "取暖" to "居家", "物业费" to "居家",
+ 1719          "话费" to "通讯网费", "流量" to "通讯网费", "宽带费" to "通讯网费", "充值" to "通讯网费",
+ 1720          "会员" to "娱乐", "订阅" to "娱乐", "游戏" to "娱乐", "电影" to "娱乐",
+ 1721          "健身" to "娱乐", "演唱会" to "娱乐",
+ 1722          "药" to "医疗买药", "看病" to "医疗买药", "医院" to "医疗买药", "挂号" to "医疗买药",
+ 1723          "体检" to "医疗买药", "牙医" to "医疗买药",
+ 1724          "衣服" to "服饰", "鞋" to "服饰", "裤子" to "服饰", "优衣库" to "服饰",
+ 1725          "书" to "学习", "课程" to "学习", "学费" to "学习", "培训" to "学习",
+ 1726          "红包" to "人情往来", "份子钱" to "人情往来", "请客" to "人情往来",
+ 1727          "猫粮" to "宠物", "狗粮" to "宠物", "猫砂" to "宠物", "宠物医院" to "宠物",
+ 1728          "工资" to "其他收入", "薪水" to "其他收入", "奖金" to "其他收入",
+ 1729          "报销" to "其他收入", "退款" to "其他收入", "红包收到" to "其他收入",
+ 1730          "还花呗" to "还款", "信用卡还款" to "还款", "房贷" to "还款", "车贷" to "还款"
+ 1731      )
+ 1732      private val INCOME_WORDS = listOf(
+ 1733          "工资", "薪水", "奖金", "收入", "收到", "收款", "红包", "报销", "退款",
+ 1734          "返现", "利息", "分红", "转我", "入账", "到账", "卖了", "赚了"
+ 1735      )
+ 1736      private val EXPENSE_WORDS = listOf(
+ 1737          "花", "付", "买", "充", "缴", "交", "打车", "请客", "还", "转给", "消费",
+ 1738          "点", "订", "送", "捐", "报名"
+ 1739      )
+ 1740      private val CN_DIGITS = mapOf(
+ 1741          '零' to 0, '〇' to 0, '一' to 1, '壹' to 1, '二' to 2, '两' to 2, '贰' to 2,
+ 1742          '三' to 3, '叁' to 3, '四' to 4, '肆' to 4, '五' to 5, '伍' to 5,
+ 1743          '六' to 6, '陆' to 6, '七' to 7, '柒' to 7, '八' to 8, '捌' to 8,
+ 1744          '九' to 9, '玖' to 9
+ 1745      )
+ 1746      private val CN_UNITS = mapOf('十' to 10, '拾' to 10, '百' to 100, '佰' to 100, '千' to 1000, '仟' to 1000)
+ 1747      private val RE_ARABIC = Regex("""(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块钱|块|钱|圆|币|¥|￥)""")
+ 1748      private val RE_ARABIC_BARE = Regex("""(?<![\d.])(\d{1,7}(?:\.\d{1,2})?)(?![\d.])""")
+ 1749      private val RE_CN_NUMBER = Regex("""([零〇一壹二两贰三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟]{1,8})\s*(?:元|块钱|块|钱|圆|币)""")
+ 1750      private val RE_CN_DECIMAL = Regex("""([零〇一壹二两贰三叁四肆五伍六陆七柒八捌九玖]{1,3})\s*(?:块|元|钱)\s*([零〇一壹二两贰三叁四肆五伍六陆七柒八捌九玖]{1,2})""")
+
+【滴水记账 V9.0 源程序】                                    第 36 页
+------------------------------------------------------------------------
+ 1751      private val RE_CN_BARE = Regex("""([零〇一壹二两贰三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟]{1,8})""")
+ 1752      private val DATE_PATTERNS: List<Pair<Regex, (MatchResult, LocalDate) -> LocalDate>> = listOf(
+ 1753          Regex("大前天") to { _, d -> d.minusDays(3) },
+ 1754          Regex("前天") to { _, d -> d.minusDays(2) },
+ 1755          Regex("昨天|昨儿|昨晚") to { _, d -> d.minusDays(1) },
+ 1756          Regex("今天|今日|今儿|今晚") to { _, d -> d },
+ 1757          Regex("""(上|这|本)?(?:周|星期|礼拜)([一二三四五六日天1-7])?""") to { m, d ->
+ 1758              val weeksBack = if (m.groupValues[1] == "上") 1L else 0L
+ 1759              weekAnchor(d, m.groupValues.getOrNull(2), weeksBack)
+ 1760          },
+ 1761          Regex("""(\d{1,2})月(\d{1,2})[号日]""") to { m, d ->
+ 1762              val mo = m.groupValues[1].toIntOrNull() ?: return@to d
+ 1763              val day = m.groupValues[2].toIntOrNull() ?: return@to d
+ 1764              if (mo !in 1..12 || day !in 1..31) d
+ 1765              else runCatching { LocalDate.of(d.year, mo, day) }.getOrDefault(d)
+ 1766          },
+ 1767          Regex("""(\d{1,2})[号日]""") to { m, d ->
+ 1768              val day = m.groupValues[1].toIntOrNull() ?: return@to d
+ 1769              if (day !in 1..31) d
+ 1770              else runCatching { LocalDate.of(d.year, d.monthValue, day) }.getOrDefault(d)
+ 1771          }
+ 1772      )
+ 1773      private val WEEKDAY_MAP = mapOf(
+ 1774          "一" to 1, "二" to 2, "三" to 3, "四" to 4, "五" to 5, "六" to 6, "日" to 7, "天" to 7,
+ 1775          "1" to 1, "2" to 2, "3" to 3, "4" to 4, "5" to 5, "6" to 6, "7" to 7
+ 1776      )
+ 1777      fun parse(
+ 1778          text: String,
+ 1779          now: Long,
+ 1780          zone: ZoneId = ZoneId.systemDefault()
+ 1781      ): NlIntent? {
+ 1782          val raw = text.trim()
+ 1783          if (raw.isEmpty()) return null
+ 1784          val today = LocalDate.ofInstant(java.time.Instant.ofEpochMilli(now), zone)
+ 1785          val (date, dateRanges) = extractDate(raw, today)
+ 1786          var work = raw
+ 1787          dateRanges.sortedByDescending { it.first }.forEach { r ->
+ 1788              val s = r.first
+ 1789              val e = r.last + 1
+ 1790              if (s in 0..work.length && e in 0..work.length && e > s) {
+ 1791                  work = work.removeRange(s, e)
+ 1792              }
+ 1793          }
+ 1794          val amount = extractAmount(work) ?: return null
+ 1795          val direction = extractDirection(raw)
+ 1796          val hint = extractCategoryHint(raw)
+ 1797          val note = work
+ 1798              .replace(RE_ARABIC, "")
+ 1799              .replace(RE_CN_NUMBER, "")
+ 1800              .replace(RE_CN_DECIMAL, "")
+
+【滴水记账 V9.0 源程序】                                    第 37 页
+------------------------------------------------------------------------
+ 1801              .replace(RE_ARABIC_BARE, "")
+ 1802              .replace(RE_CN_BARE, "")
+ 1803              .trim()
+ 1804              .trim('，', ',', '。', '.', ' ', '\t', '的', '了', '花', '付')
+ 1805              .take(40)
+ 1806          val millis = applyTimeOfDay(date, raw, zone)
+ 1807          val confidence = when {
+ 1808              hint != null && amount > 0 -> 0.9f
+ 1809              hint != null -> 0.7f
+ 1810              else -> 0.4f
+ 1811          }
+ 1812          return NlIntent(
+ 1813              direction = direction,
+ 1814              amountCents = amount,
+ 1815              dateMillis = millis,
+ 1816              categoryHint = hint,
+ 1817              note = note,
+ 1818              confidence = confidence
+ 1819          )
+ 1820      }
+ 1821      fun extractAmount(text: String): Long? {
+ 1822          RE_ARABIC.find(text)?.let {
+ 1823              val v = it.groupValues[1].toDoubleOrNull()
+ 1824              if (v != null && v > 0) return toCents(v)
+ 1825          }
+ 1826          RE_CN_DECIMAL.find(text)?.let {
+ 1827              val a = cnToInt(it.groupValues[1])
+ 1828              val b = cnToInt(it.groupValues[2])
+ 1829              if (a != null && b != null && a > 0 && b in 0..9) return toCents(a + b / 10.0)
+ 1830          }
+ 1831          RE_CN_NUMBER.find(text)?.let {
+ 1832              val v = cnToInt(it.groupValues[1])
+ 1833              if (v != null && v > 0) return v * 100
+ 1834          }
+ 1835          RE_ARABIC_BARE.findAll(text).lastOrNull()?.let {
+ 1836              val v = it.groupValues[1].toDoubleOrNull()
+ 1837              if (v != null && v > 0) return toCents(v)
+ 1838          }
+ 1839          RE_CN_BARE.findAll(text).lastOrNull()?.let {
+ 1840              val v = cnToInt(it.groupValues[1])
+ 1841              if (v != null && v > 0) return v * 100
+ 1842          }
+ 1843          return null
+ 1844      }
+ 1845      private fun toCents(v: Double): Long = Math.round(v * 100).toLong()
+ 1846      fun cnToInt(s: String): Long? {
+ 1847          if (s.isBlank()) return null
+ 1848          if (s.length == 3 && (s[1] == '百' || s[1] == '佰')) {
+ 1849              val h = CN_DIGITS[s[0]] ?: return null
+ 1850              val t = CN_DIGITS[s[2]] ?: return null
+
+【滴水记账 V9.0 源程序】                                    第 38 页
+------------------------------------------------------------------------
+ 1851              if (t > 0) return h * 100L + t * 10L
+ 1852          }
+ 1853          var total = 0L
+ 1854          var section = 0L
+ 1855          var number = 0L
+ 1856          var any = false
+ 1857          for (ch in s) {
+ 1858              when {
+ 1859                  CN_DIGITS.containsKey(ch) -> {
+ 1860                      number = CN_DIGITS.getValue(ch).toLong()
+ 1861                      any = true
+ 1862                  }
+ 1863                  CN_UNITS.containsKey(ch) -> {
+ 1864                      val unit = CN_UNITS.getValue(ch).toLong()
+ 1865                      any = true
+ 1866                      section += (if (number == 0L) 1L else number) * unit
+ 1867                      number = 0L
+ 1868                      if (unit >= 1000L) {
+ 1869                          total += section
+ 1870                          section = 0L
+ 1871                      }
+ 1872                  }
+ 1873                  else -> return null
+ 1874              }
+ 1875          }
+ 1876          if (!any) return null
+ 1877          val result = total + section + number
+ 1878          return if (result > 0) result else null
+ 1879      }
+ 1880      private fun extractDate(text: String, today: LocalDate): Pair<LocalDate, List<IntRange>> {
+ 1881          for ((re, resolve) in DATE_PATTERNS) {
+ 1882              val m = re.find(text) ?: continue
+ 1883              val date = resolve(m, today)
+ 1884              if (date != today || m.value.isNotEmpty()) {
+ 1885                  return date to listOf(m.range)
+ 1886              }
+ 1887          }
+ 1888          return today to emptyList()
+ 1889      }
+ 1890      private fun weekAnchor(today: LocalDate, weekdayRaw: String?, weeksBack: Long): LocalDate {
+ 1891          val w = weekdayRaw?.let { WEEKDAY_MAP[it] }
+ 1892          if (w == null) {
+ 1893              return today.minusWeeks(weeksBack.coerceAtLeast(1))
+ 1894          }
+ 1895          val todayIdx = today.dayOfWeek.value // 周一=1..周日=7
+ 1896          var delta = (todayIdx - w).toLong()
+ 1897          if (delta < 0) delta += 7
+ 1898          var date = today.minusDays(delta)
+ 1899          if (weeksBack > 0) date = date.minusWeeks(weeksBack)
+ 1900          return date
+
+【滴水记账 V9.0 源程序】                                    第 39 页
+------------------------------------------------------------------------
+ 1901      }
+ 1902      private fun applyTimeOfDay(date: LocalDate, text: String, zone: ZoneId): Long {
+ 1903          val hour = when {
+ 1904              text.contains("早上") || text.contains("上午") -> 9
+ 1905              text.contains("中午") -> 12
+ 1906              text.contains("下午") -> 15
+ 1907              text.contains("晚上") || text.contains("傍晚") || text.contains("夜里") -> 20
+ 1908              text.contains("凌晨") -> 2
+ 1909              else -> 12
+ 1910          }
+ 1911          return date.atTime(hour, 0).atZone(zone).toInstant().toEpochMilli()
+ 1912      }
+ 1913      fun extractDirection(text: String): Int {
+ 1914          val income = INCOME_WORDS.any { text.contains(it) }
+ 1915          val expense = EXPENSE_WORDS.any { text.contains(it) }
+ 1916          return when {
+ 1917              income && !expense -> Direction.INCOME
+ 1918              income && expense -> {
+ 1919                  val i = INCOME_WORDS.map { text.indexOf(it) }.filter { it >= 0 }.minOrNull() ?: Int.MAX_VALUE
+ 1920                  val e = EXPENSE_WORDS.map { text.indexOf(it) }.filter { it >= 0 }.minOrNull() ?: Int.MAX_VALUE
+ 1921                  if (i <= e) Direction.INCOME else Direction.EXPENSE
+ 1922              }
+ 1923              else -> Direction.EXPENSE
+ 1924          }
+ 1925      }
+ 1926      fun extractCategoryHint(text: String): String? {
+ 1927          val lower = text.lowercase()
+ 1928          for ((kw, cat) in CATEGORY_HINTS) {
+ 1929              if (lower.contains(kw.lowercase())) return cat
+ 1930          }
+ 1931          return null
+ 1932      }
+ 1933  }
+ 1934  
+ 1935  /* 文件: app/src/main/java/com/foldledger/util/PaymentParser.kt */
+ 1936  package com.foldledger.util
+ 1937  import com.foldledger.data.db.Direction
+ 1938  object PaymentParser {
+ 1939      data class ParsedPayment(
+ 1940          val direction: Int,
+ 1941          val amountCents: Long,
+ 1942          val merchant: String,
+ 1943          val source: String,
+ 1944          val atMillis: Long?
+ 1945      )
+ 1946      private val PKG_SOURCES = mapOf(
+ 1947          "com.tencent.mm" to "微信支付",
+ 1948          "com.eg.android.AlipayGphone" to "支付宝",
+ 1949          "com.unionpay" to "云闪付",
+ 1950          "com.tencent.mobileqq" to "QQ钱包",
+
+【滴水记账 V9.0 源程序】                                    第 40 页
+------------------------------------------------------------------------
+ 1951          "com.chinamworld.bocmbci" to "中国银行",
+ 1952          "cmb.pb" to "招商银行",
+ 1953          "com.icbc" to "工商银行",
+ 1954          "com.android.bankabc" to "农业银行",
+ 1955          "com.chinamworld.citic" to "中信银行",
+ 1956          "com.yitong.mbank.psbc" to "邮储银行",
+ 1957          "com.spdbccc" to "浦发银行",
+ 1958          "cmbc.cc.mbank" to "民生银行"
+ 1959      )
+ 1960      private val PAYMENT_HINTS = listOf(
+ 1961          "支付", "付款", "收款", "转账", "支出", "收入", "到账", "入账", "扣款",
+ 1962          "消费", "退款", "提现", "账单", "交易", "人民币", "尾号", "储蓄卡",
+ 1963          "信用卡", "银行卡", "银联", "余额"
+ 1964      )
+ 1965      private val INCOME_HINTS = listOf("收入", "收款", "到账", "入账", "转入", "退款", "存入", "汇入", "已入账")
+ 1966      private val EXPENSE_HINTS = listOf("支出", "付款", "支付", "转出", "消费", "扣款", "扣费", "缴费", "取出", "汇出")
+ 1967      private val AMOUNT_PATTERNS = listOf(
+ 1968          Regex("""[¥￥]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)"""),
+ 1969          Regex("""人民币\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)"""),
+ 1970          Regex("""(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)\s*元""")
+ 1971      )
+ 1972      private val MERCHANT_PATTERNS = listOf(
+ 1973          Regex("""付款给\s*[「『]?(.{1,24}?)[」』]?(\s|$|，|,|。)"""),
+ 1974          Regex("""向\s*[「『]?(.{1,24}?)[」』]?\s*付款"""),
+ 1975          Regex("""收款方[:：]?\s*[「『]?(.{1,24}?)[」』]?(\s|$|，|,|。)"""),
+ 1976          Regex("""商户[:：]?\s*[「『]?(.{1,24}?)[」』]?(\s|$|，|,|。)"""),
+ 1977          Regex("""来自\s*[「『]?(.{1,24}?)[」』]?(\s|$|，|,|。)""")
+ 1978      )
+ 1979      private val CARD_TAIL = Regex("""尾号\s*(\d{3,6})""")
+ 1980      fun parseNotification(pkg: String, title: String, text: String, postTime: Long): ParsedPayment? {
+ 1981          val all = "$title $text".trim()
+ 1982          if (all.isEmpty()) return null
+ 1983          if (!looksLikePayment(all)) return null
+ 1984          val amount = extractAmount(all) ?: return null
+ 1985          val direction = extractDirection(all)
+ 1986          val source = PKG_SOURCES[pkg] ?: title.ifBlank { "支付通知" }
+ 1987          return ParsedPayment(
+ 1988              direction = direction,
+ 1989              amountCents = amount,
+ 1990              merchant = extractMerchant(all) ?: source,
+ 1991              source = source,
+ 1992              atMillis = if (postTime > 0) postTime else null
+ 1993          )
+ 1994      }
+ 1995      fun parseSms(body: String): ParsedPayment? {
+ 1996          val all = body.trim()
+ 1997          if (all.isEmpty()) return null
+ 1998          if (!looksLikePayment(all)) return null
+ 1999          val amount = extractAmount(all) ?: return null
+ 2000          val direction = extractDirection(all)
+
+【滴水记账 V9.0 源程序】                                    第 41 页
+------------------------------------------------------------------------
+ 2001          val card = CARD_TAIL.find(all)?.groupValues?.get(1)
+ 2002          val merchant = extractMerchant(all)
+ 2003              ?: (if (card != null) "尾号${card}银行卡" else "银行短信")
+ 2004          return ParsedPayment(
+ 2005              direction = direction,
+ 2006              amountCents = amount,
+ 2007              merchant = merchant,
+ 2008              source = "银行短信",
+ 2009              atMillis = null // 短信解析文本里的日期不可靠，用接收时间（调用方给）
+ 2010          )
+ 2011      }
+ 2012      fun looksLikePayment(text: String): Boolean =
+ 2013          PAYMENT_HINTS.any { text.contains(it) }
+ 2014      fun extractAmount(text: String): Long? {
+ 2015          for (p in AMOUNT_PATTERNS) {
+ 2016              val m = p.find(text) ?: continue
+ 2017              val v = m.groupValues[1].replace(",", "").toDoubleOrNull() ?: continue
+ 2018              if (v <= 0 || v > 10_000_000) continue // 0 元/离谱大数不是正常支付
+ 2019              return (v * 100).toLong()
+ 2020          }
+ 2021          return null
+ 2022      }
+ 2023      fun extractDirection(text: String): Int {
+ 2024          val income = INCOME_HINTS.any { text.contains(it) }
+ 2025          if (income) return Direction.INCOME
+ 2026          return Direction.EXPENSE
+ 2027      }
+ 2028      fun extractMerchant(text: String): String? {
+ 2029          for (p in MERCHANT_PATTERNS) {
+ 2030              val m = p.find(text) ?: continue
+ 2031              val raw = m.groupValues[1].trim().trim('「', '」', '『', '』', ':', '：', ' ', '\t')
+ 2032              if (raw.isNotBlank() && !raw.all { it.isDigit() }) return raw.take(24)
+ 2033          }
+ 2034          return null
+ 2035      }
+ 2036  }
+ 2037  
+ 2038  /* 文件: app/src/main/java/com/foldledger/util/RecurringDetector.kt */
+ 2039  package com.foldledger.util
+ 2040  import com.foldledger.data.db.Direction
+ 2041  import com.foldledger.data.db.RecurringInterval
+ 2042  import com.foldledger.data.db.TransactionEntity
+ 2043  object RecurringDetector {
+ 2044      data class Suggestion(
+ 2045          val name: String,
+ 2046          val categoryEmoji: String,
+ 2047          val categoryId: Long?,
+ 2048          val direction: Int,
+ 2049          val amountCents: Long,
+ 2050          val intervalKind: Int,
+
+【滴水记账 V9.0 源程序】                                    第 42 页
+------------------------------------------------------------------------
+ 2051          val occurrences: Int,
+ 2052          val lastAt: Long,
+ 2053          val predictedNextAt: Long,
+ 2054          val avgGapDays: Int
+ 2055      )
+ 2056      fun detect(
+ 2057          txns: List<TransactionEntity>,
+ 2058          now: Long,
+ 2059          excludeNames: Set<String> = emptySet(),
+ 2060          lookbackDays: Int = 210
+ 2061      ): List<Suggestion> {
+ 2062          val since = now - lookbackDays * 24L * 3600 * 1000
+ 2063          val candidates = txns.filter {
+ 2064              it.occurredAt in since..now && it.categoryName.isNotBlank()
+ 2065          }
+ 2066          return candidates
+ 2067              .groupBy { it.categoryName to it.direction }
+ 2068              .mapNotNull { (key, group) ->
+ 2069                  if (group.size < 3 || key.first in excludeNames) return@mapNotNull null
+ 2070                  analyze(group)
+ 2071              }
+ 2072              .sortedByDescending { it.occurrences }
+ 2073      }
+ 2074      private fun analyze(group: List<TransactionEntity>): Suggestion? {
+ 2075          val sorted = group.sortedBy { it.occurredAt }
+ 2076          val amounts = sorted.map { it.amountCents }.sorted()
+ 2077          val median = amounts[amounts.size / 2]
+ 2078          if (median <= 0L) return null
+ 2079          val spread = (amounts.last() - amounts.first()).toFloat() / median
+ 2080          if (spread > 0.35f) return null
+ 2081          val gaps = ArrayList<Int>(sorted.size - 1)
+ 2082          for (i in 1 until sorted.size) {
+ 2083              val d = ReimburseAging.ageDays(sorted[i - 1].occurredAt, sorted[i].occurredAt)
+ 2084              if (d <= 0) return null // 同天多笔不是周期
+ 2085              gaps += d
+ 2086          }
+ 2087          val gapMedian = gaps.sorted()[gaps.size / 2]
+ 2088          if (gapMedian <= 0) return null
+ 2089          if (gaps.any { it < gapMedian * 0.65 || it > gapMedian * 1.35 + 1 }) return null
+ 2090          val kind = when (gapMedian) {
+ 2091              in 4..10 -> RecurringInterval.WEEKLY
+ 2092              in 24..38 -> RecurringInterval.MONTHLY
+ 2093              in 330..400 -> RecurringInterval.YEARLY
+ 2094              else -> return null // 什么周期都不是（比如 15 天一次）
+ 2095          }
+ 2096          val last = sorted.last()
+ 2097          return Suggestion(
+ 2098              name = last.categoryName,
+ 2099              categoryEmoji = last.categoryEmoji,
+ 2100              categoryId = last.categoryId,
+
+【滴水记账 V9.0 源程序】                                    第 43 页
+------------------------------------------------------------------------
+ 2101              direction = last.direction,
+ 2102              amountCents = median,
+ 2103              intervalKind = kind,
+ 2104              occurrences = sorted.size,
+ 2105              lastAt = last.occurredAt,
+ 2106              predictedNextAt = last.occurredAt + gapMedian * 24L * 3600 * 1000,
+ 2107              avgGapDays = gapMedian
+ 2108          )
+ 2109      }
+ 2110  }
+ 2111  
+ 2112  /* 文件: app/src/main/java/com/foldledger/util/ReimburseAging.kt */
+ 2113  package com.foldledger.util
+ 2114  import com.foldledger.data.db.ReimburseState
+ 2115  import com.foldledger.data.db.TransactionEntity
+ 2116  object ReimburseAging {
+ 2117      data class Bucket(
+ 2118          val label: String,
+ 2119          val daysFrom: Int,
+ 2120          val daysTo: Int,
+ 2121          val cents: Long,
+ 2122          val count: Int
+ 2123      ) {
+ 2124          val isOverdue: Boolean get() = daysFrom >= 31
+ 2125      }
+ 2126      data class Summary(
+ 2127          val buckets: List<Bucket>,
+ 2128          val oldestDays: Int,
+ 2129          val overdueCents: Long,
+ 2130          val overdueCount: Int
+ 2131      ) {
+ 2132          companion object {
+ 2133              val EMPTY = Summary(List(4) { Bucket("", 0, 0, 0L, 0) }, 0, 0L, 0)
+ 2134          }
+ 2135      }
+ 2136      fun ageDays(occurredAt: Long, now: Long): Int {
+ 2137          val d1 = java.time.Instant.ofEpochMilli(occurredAt)
+ 2138              .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+ 2139          val d2 = java.time.Instant.ofEpochMilli(now)
+ 2140              .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+ 2141          return java.time.temporal.ChronoUnit.DAYS.between(d1, d2).toInt().coerceAtLeast(0)
+ 2142      }
+ 2143      fun summarize(outstanding: List<TransactionEntity>, now: Long): Summary {
+ 2144          if (outstanding.isEmpty()) return Summary.EMPTY
+ 2145          val b1 = ArrayList<TransactionEntity>() // 0-7
+ 2146          val b2 = ArrayList<TransactionEntity>() // 8-30
+ 2147          val b3 = ArrayList<TransactionEntity>() // 31-90
+ 2148          val b4 = ArrayList<TransactionEntity>() // 91+
+ 2149          var oldest = 0
+ 2150          outstanding.forEach { t ->
+
+【滴水记账 V9.0 源程序】                                    第 44 页
+------------------------------------------------------------------------
+ 2151              val d = ageDays(t.occurredAt, now)
+ 2152              if (d > oldest) oldest = d
+ 2153              when {
+ 2154                  d <= 7 -> b1 += t
+ 2155                  d <= 30 -> b2 += t
+ 2156                  d <= 90 -> b3 += t
+ 2157                  else -> b4 += t
+ 2158              }
+ 2159          }
+ 2160          fun agg(label: String, from: Int, to: Int, l: List<TransactionEntity>) = Bucket(
+ 2161              label = label, daysFrom = from, daysTo = to,
+ 2162              cents = l.sumOf { it.amountCents }, count = l.size
+ 2163          )
+ 2164          return Summary(
+ 2165              buckets = listOf(
+ 2166                  agg("7 天内", 0, 7, b1),
+ 2167                  agg("8–30 天", 8, 30, b2),
+ 2168                  agg("31–90 天", 31, 90, b3),
+ 2169                  agg("90 天+", 91, Int.MAX_VALUE, b4)
+ 2170              ),
+ 2171              oldestDays = oldest,
+ 2172              overdueCents = b3.sumOf { it.amountCents } + b4.sumOf { it.amountCents },
+ 2173              overdueCount = b3.size + b4.size
+ 2174          )
+ 2175      }
+ 2176      fun chaseSummary(
+ 2177          ledgerName: String,
+ 2178          outstanding: List<TransactionEntity>,
+ 2179          projectNames: Map<Long, String> = emptyMap(),
+ 2180          oldestFirst: Boolean = true,
+ 2181          maxItems: Int = 5,
+ 2182          now: Long = System.currentTimeMillis()
+ 2183      ): String {
+ 2184          if (outstanding.isEmpty()) return "【报销对账】$ledgerName\n当前没有未回款的垫付。"
+ 2185          val sorted = if (oldestFirst) outstanding.sortedBy { it.occurredAt } else outstanding
+ 2186          val pending = outstanding.filter { it.reimburseState == ReimburseState.PENDING }
+ 2187          val submitted = outstanding.filter { it.reimburseState == ReimburseState.SUBMITTED }
+ 2188          val oldestDays = sorted.maxOf { ageDays(it.occurredAt, now) }
+ 2189          val total = outstanding.sumOf { it.amountCents }
+ 2190          val sb = StringBuilder()
+ 2191          sb.appendLine("【报销对账】$ledgerName")
+ 2192          if (pending.isNotEmpty()) {
+ 2193              sb.appendLine("待提交 ${pending.size} 笔 ${Money.format(pending.sumOf { it.amountCents })}")
+ 2194          }
+ 2195          if (submitted.isNotEmpty()) {
+ 2196              sb.appendLine("已提交 ${submitted.size} 笔 ${Money.format(submitted.sumOf { it.amountCents })}")
+ 2197          }
+ 2198          sb.appendLine("合计未回款 ${Money.format(total)}（最久已垫付 $oldestDays 天）")
+ 2199          sb.appendLine("明细（按垫付时间从久到近）：")
+ 2200          sorted.take(maxItems).forEach { t ->
+
+【滴水记账 V9.0 源程序】                                    第 45 页
+------------------------------------------------------------------------
+ 2201              val d = ageDays(t.occurredAt, now)
+ 2202              val project = projectNames[t.projectId]?.takeIf { it.isNotBlank() }?.let { "·$it" } ?: ""
+ 2203              sb.appendLine(
+ 2204                  "· ${DateExt.shortDay(t.occurredAt)} ${t.categoryName}$project " +
+ 2205                      "${Money.format(t.amountCents)}（压了 $d 天）"
+ 2206              )
+ 2207          }
+ 2208          if (sorted.size > maxItems) {
+ 2209              sb.appendLine("· …等共 ${sorted.size} 笔")
+ 2210          }
+ 2211          sb.append("麻烦帮忙跟进一下，谢谢～")
+ 2212          return sb.toString()
+ 2213      }
+ 2214  }
+ 2215  
+ 2216  /* 文件: app/src/main/java/com/foldledger/util/XlsxWriter.kt */
+ 2217  package com.foldledger.util
+ 2218  import java.io.ByteArrayOutputStream
+ 2219  import java.util.zip.ZipEntry
+ 2220  import java.util.zip.ZipOutputStream
+ 2221  object XlsxWriter {
+ 2222      const val STYLE_DEFAULT = 0
+ 2223      const val STYLE_HEADER = 1
+ 2224      const val STYLE_TEXT = 2
+ 2225      const val STYLE_MONEY = 3
+ 2226      const val STYLE_DATETIME = 4
+ 2227      data class Cell(val value: Any?, val style: Int = STYLE_TEXT)
+ 2228      class Sheet(
+ 2229          val name: String,
+ 2230          val freezeFirstRow: Boolean = true
+ 2231      ) {
+ 2232          internal val rows = mutableListOf<List<Cell>>()
+ 2233          internal var widths: List<Double>? = null
+ 2234          fun widths(vararg w: Double) = apply { widths = w.toList() }
+ 2235          fun row(vararg cells: Cell) = apply { rows += cells.toList() }
+ 2236          fun row(cells: List<Cell>) = apply { rows += cells }
+ 2237          val columnCount: Int get() = maxOf(widths?.size ?: 0, rows.maxOfOrNull { it.size } ?: 0)
+ 2238      }
+ 2239      fun text(v: String?): Cell = Cell(v ?: "", STYLE_TEXT)
+ 2240      fun money(yuan: Double): Cell = Cell(yuan, STYLE_MONEY)
+ 2241      fun dateTime(epochMillis: Long): Cell = Cell(toExcelSerial(epochMillis), STYLE_DATETIME)
+ 2242      fun header(v: String): Cell = Cell(v, STYLE_HEADER)
+ 2243      fun headerRow(vararg v: String): List<Cell> = v.map { Cell(it, STYLE_HEADER) }
+ 2244      fun build(sheets: List<Sheet>): ByteArray {
+ 2245          require(sheets.isNotEmpty()) { "至少需要一个工作表" }
+ 2246          val used = mutableSetOf<String>()
+ 2247          val safeNames = sheets.mapIndexed { i, s ->
+ 2248              sanitizeSheetName(s.name.ifBlank { "Sheet${i + 1}" }, used)
+ 2249          }
+ 2250          val out = ByteArrayOutputStream(64 * 1024)
+
+【滴水记账 V9.0 源程序】                                    第 46 页
+------------------------------------------------------------------------
+ 2251          ZipOutputStream(out).use { zip ->
+ 2252              zip.putNextEntry(ZipEntry("[Content_Types].xml"))
+ 2253              zip.write(contentTypes(sheets.size))
+ 2254              zip.closeEntry()
+ 2255              zip.putNextEntry(ZipEntry("_rels/.rels"))
+ 2256              zip.write(rootRels())
+ 2257              zip.closeEntry()
+ 2258              zip.putNextEntry(ZipEntry("docProps/core.xml"))
+ 2259              zip.write(coreProps())
+ 2260              zip.closeEntry()
+ 2261              zip.putNextEntry(ZipEntry("docProps/app.xml"))
+ 2262              zip.write(appProps())
+ 2263              zip.closeEntry()
+ 2264              zip.putNextEntry(ZipEntry("xl/workbook.xml"))
+ 2265              zip.write(workbook(safeNames))
+ 2266              zip.closeEntry()
+ 2267              zip.putNextEntry(ZipEntry("xl/_rels/workbook.xml.rels"))
+ 2268              zip.write(workbookRels(sheets.size))
+ 2269              zip.closeEntry()
+ 2270              zip.putNextEntry(ZipEntry("xl/styles.xml"))
+ 2271              zip.write(styles())
+ 2272              zip.closeEntry()
+ 2273              sheets.forEachIndexed { index, sheet ->
+ 2274                  zip.putNextEntry(ZipEntry("xl/worksheets/sheet${index + 1}.xml"))
+ 2275                  zip.write(worksheet(sheet))
+ 2276                  zip.closeEntry()
+ 2277              }
+ 2278          }
+ 2279          return out.toByteArray()
+ 2280      }
+ 2281      private fun contentTypes(sheetCount: Int): ByteArray {
+ 2282          val sb = StringBuilder(1024)
+ 2283          sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
+ 2284          sb.append("""<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">""")
+ 2285          sb.append("""<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>""")
+ 2286          sb.append("""<Default Extension="xml" ContentType="application/xml"/>""")
+ 2287          sb.append("""<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>""")
+ 2288          sb.append("""<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>""")
+ 2289          sb.append("""<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>""")
+ 2290          sb.append("""<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>""")
+ 2291          for (i in 1..sheetCount) {
+ 2292              sb.append("""<Override PartName="/xl/worksheets/sheet$i.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>""")
+ 2293          }
+ 2294          sb.append("</Types>")
+ 2295          return sb.toUtf8()
+ 2296      }
+ 2297      private fun rootRels(): ByteArray = ("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
+ 2298          """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">""" +
+ 2299          """<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>""" +
+ 2300          """<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>""" +
+
+【滴水记账 V9.0 源程序】                                    第 47 页
+------------------------------------------------------------------------
+ 2301          """<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>""" +
+ 2302          """</Relationships>""").toUtf8()
+ 2303      private fun coreProps(): ByteArray {
+ 2304          val now = isoNow()
+ 2305          return ("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
+ 2306              """<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" """ +
+ 2307              """xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" """ +
+ 2308              """xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">""" +
+ 2309              """<dc:title>滴水记账 数据导出</dc:title>""" +
+ 2310              """<dc:creator>滴水记账</dc:creator>""" +
+ 2311              """<cp:lastModifiedBy>滴水记账</cp:lastModifiedBy>""" +
+ 2312              """<dcterms:created xsi:type="dcterms:W3CDTF">$now</dcterms:created>""" +
+ 2313              """<dcterms:modified xsi:type="dcterms:W3CDTF">$now</dcterms:modified>""" +
+ 2314              """</cp:coreProperties>""").toUtf8()
+ 2315      }
+ 2316      private fun appProps(): ByteArray = ("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
+ 2317          """<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" """ +
+ 2318          """xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">""" +
+ 2319          """<Application>滴水记账</Application>""" +
+ 2320          """<AppVersion>1.0</AppVersion>""" +
+ 2321          """</Properties>""").toUtf8()
+ 2322      private fun workbook(sheetNames: List<String>): ByteArray {
+ 2323          val sb = StringBuilder(512)
+ 2324          sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
+ 2325          sb.append("""<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" """)
+ 2326          sb.append("""xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">""")
+ 2327          sb.append("<sheets>")
+ 2328          sheetNames.forEachIndexed { i, name ->
+ 2329              sb.append("""<sheet name="${esc(name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>""")
+ 2330          }
+ 2331          sb.append("</sheets></workbook>")
+ 2332          return sb.toUtf8()
+ 2333      }
+ 2334      private fun workbookRels(sheetCount: Int): ByteArray {
+ 2335          val sb = StringBuilder(512)
+ 2336          sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
+ 2337          sb.append("""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">""")
+ 2338          for (i in 1..sheetCount) {
+ 2339              sb.append("""<Relationship Id="rId$i" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet$i.xml"/>""")
+ 2340          }
+ 2341          sb.append("""<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>""")
+ 2342          sb.append("</Relationships>")
+ 2343          return sb.toUtf8()
+ 2344      }
+ 2345      private fun styles(): ByteArray {
+ 2346          return ("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
+ 2347              """<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""" +
+ 2348              """<numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy\-mm\-dd\ hh:mm"/></numFmts>""" +
+ 2349              """<fonts count="2">""" +
+ 2350              """<font><sz val="11"/><color theme="1"/><name val="等线"/><charset val="134"/></font>""" +
+
+【滴水记账 V9.0 源程序】                                    第 48 页
+------------------------------------------------------------------------
+ 2351              """<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="等线"/><charset val="134"/></font>""" +
+ 2352              """</fonts>""" +
+ 2353              """<fills count="3">""" +
+ 2354              """<fill><patternFill patternType="none"/></fill>""" +
+ 2355              """<fill><patternFill patternType="gray125"/></fill>""" +
+ 2356              """<fill><patternFill patternType="solid"><fgColor rgb="FF1F6FEB"/><bgColor indexed="64"/></patternFill></fill>""" +
+ 2357              """</fills>""" +
+ 2358              """<borders count="2">""" +
+ 2359              """<border><left/><right/><top/><bottom/><diagonal/></border>""" +
+ 2360              """<border><left style="thin"><color rgb="FFD9DEE7"/></left><right style="thin"><color rgb="FFD9DEE7"/></right>""" +
+ 2361              """<top style="thin"><color rgb="FFD9DEE7"/></top><bottom style="thin"><color rgb="FFD9DEE7"/></bottom><diagonal/></border>""" +
+ 2362              """</borders>""" +
+ 2363              """<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>""" +
+ 2364              """<cellXfs count="5">""" +
+ 2365              """<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>""" +
+ 2366              """<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">""" +
+ 2367              """<alignment horizontal="center" vertical="center" wrapText="1"/></xf>""" +
+ 2368              """<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">""" +
+ 2369              """<alignment vertical="center" wrapText="1"/></xf>""" +
+ 2370              """<xf numFmtId="4" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1">""" +
+ 2371              """<alignment horizontal="right" vertical="center"/></xf>""" +
+ 2372              """<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1">""" +
+ 2373              """<alignment horizontal="center" vertical="center"/></xf>""" +
+ 2374              """</cellXfs>""" +
+ 2375              """<cellStyles count="1"><cellStyle name="常规" xfId="0" builtinId="0"/></cellStyles>""" +
+ 2376              """</styleSheet>""").toUtf8()
+ 2377      }
+ 2378      private fun worksheet(sheet: Sheet): ByteArray {
+ 2379          val sb = StringBuilder(8 * 1024)
+ 2380          sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
+ 2381          sb.append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""")
+ 2382          sb.append("""<sheetViews><sheetView workbookViewId="0">""")
+ 2383          if (sheet.freezeFirstRow && sheet.rows.isNotEmpty()) {
+ 2384              sb.append("""<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>""")
+ 2385              sb.append("""<selection pane="bottomLeft" activeCell="A2" sqref="A2"/>""")
+ 2386          } else {
+ 2387              sb.append("""<selection activeCell="A1" sqref="A1"/>""")
+ 2388          }
+ 2389          sb.append("</sheetView></sheetViews>")
+ 2390          sb.append("""<sheetFormatPr defaultRowHeight="16.5"/>""")
+ 2391          sheet.widths?.let { ws ->
+ 2392              if (ws.isNotEmpty()) {
+ 2393                  sb.append("<cols>")
+ 2394                  ws.forEachIndexed { i, w ->
+ 2395                      sb.append("""<col min="${i + 1}" max="${i + 1}" width="$w" customWidth="1"/>""")
+ 2396                  }
+ 2397                  sb.append("</cols>")
+ 2398              }
+ 2399          }
+ 2400          sb.append("<sheetData>")
+
+【滴水记账 V9.0 源程序】                                    第 49 页
+------------------------------------------------------------------------
+ 2401          sheet.rows.forEachIndexed { rIndex, row ->
+ 2402              if (row.isEmpty()) {
+ 2403                  sb.append("""<row r="${rIndex + 1}"/>""")
+ 2404                  return@forEachIndexed
+ 2405              }
+ 2406              val isHeader = row.firstOrNull()?.style == STYLE_HEADER
+ 2407              sb.append("""<row r="${rIndex + 1}"""")
+ 2408              if (isHeader) sb.append(""" ht="24" customHeight="1"""")
+ 2409              sb.append(">")
+ 2410              row.forEachIndexed { cIndex, cell ->
+ 2411                  writeCell(sb, rIndex, cIndex, cell)
+ 2412              }
+ 2413              sb.append("</row>")
+ 2414          }
+ 2415          sb.append("</sheetData>")
+ 2416          sb.append("""<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>""")
+ 2417          sb.append("</worksheet>")
+ 2418          return sb.toUtf8()
+ 2419      }
+ 2420      private fun writeCell(sb: StringBuilder, rowIndex: Int, colIndex: Int, cell: Cell) {
+ 2421          val ref = "${colLetter(colIndex)}${rowIndex + 1}"
+ 2422          val v = cell.value
+ 2423          when (v) {
+ 2424              null -> sb.append("""<c r="$ref" s="${cell.style}"/>""")
+ 2425              is Number -> {
+ 2426                  val d = v.toDouble()
+ 2427                  if (d.isNaN() || d.isInfinite()) {
+ 2428                      sb.append("""<c r="$ref" s="${cell.style}" t="inlineStr"><is><t xml:space="preserve"></t></is></c>""")
+ 2429                  } else {
+ 2430                      sb.append("""<c r="$ref" s="${cell.style}"><v>${num(d)}</v></c>""")
+ 2431                  }
+ 2432              }
+ 2433              is Boolean -> sb.append("""<c r="$ref" s="${cell.style}" t="b"><v>${if (v) 1 else 0}</v></c>""")
+ 2434              else -> {
+ 2435                  val s = esc(v.toString())
+ 2436                  sb.append("""<c r="$ref" s="${cell.style}" t="inlineStr"><is><t xml:space="preserve">$s</t></is></c>""")
+ 2437              }
+ 2438          }
+ 2439      }
+ 2440      fun colLetter(index0: Int): String {
+ 2441          var n = index0 + 1
+ 2442          val sb = StringBuilder(2)
+ 2443          while (n > 0) {
+ 2444              val rem = (n - 1) % 26
+ 2445              sb.append(('A'.code + rem).toChar())
+ 2446              n = (n - 1) / 26
+ 2447          }
+ 2448          return sb.reverse().toString()
+ 2449      }
+ 2450      fun toExcelSerial(epochMillis: Long): Double {
+
+【滴水记账 V9.0 源程序】                                    第 50 页
+------------------------------------------------------------------------
+ 2451          val tzOffsetMinutes = java.util.TimeZone.getDefault().getOffset(epochMillis) / 60_000.0
+ 2452          return epochMillis / 86_400_000.0 + 25_569.0 + tzOffsetMinutes / 1_440.0
+ 2453      }
+ 2454      private fun num(d: Double): String {
+ 2455          val r = Math.round(d * 1_000_000.0) / 1_000_000.0
+ 2456          return if (r == r.toLong().toDouble()) r.toLong().toString() else r.toString()
+ 2457      }
+ 2458      private fun sanitizeSheetName(raw: String, used: MutableSet<String>): String {
+ 2459          var n = raw.replace(Regex("[\\[\\]:*?/\\\\]"), "_").trim().trim('\'').take(31)
+ 2460          if (n.isBlank()) n = "Sheet"
+ 2461          var candidate = n
+ 2462          var i = 2
+ 2463          while (!used.add(candidate)) {
+ 2464              val suffix = "_$i"
+ 2465              candidate = n.take(31 - suffix.length) + suffix
+ 2466              i++
+ 2467          }
+ 2468          return candidate
+ 2469      }
+ 2470      private fun isoNow(): String {
+ 2471          val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+ 2472          fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
+ 2473          return fmt.format(java.util.Date())
+ 2474      }
+ 2475      private fun esc(input: String): String {
+ 2476          val sb = StringBuilder(input.length + 16)
+ 2477          for (ch in input) {
+ 2478              when (ch) {
+ 2479                  '&' -> sb.append("&amp;")
+ 2480                  '<' -> sb.append("&lt;")
+ 2481                  '>' -> sb.append("&gt;")
+ 2482                  '"' -> sb.append("&quot;")
+ 2483                  '\'' -> sb.append("&apos;")
+ 2484                  '\n' -> sb.append("&#10;")
+ 2485                  '\r' -> sb.append("&#13;")
+ 2486                  '\t' -> sb.append("&#9;")
+ 2487                  else -> if (ch.code >= 0x20 || ch.code == 0x09) sb.append(ch)
+ 2488              }
+ 2489          }
+ 2490          return sb.toString()
+ 2491      }
+ 2492      private fun String.toUtf8(): ByteArray = toByteArray(Charsets.UTF_8)
+ 2493      private fun StringBuilder.toUtf8(): ByteArray = toString().toByteArray(Charsets.UTF_8)
+ 2494  }
+ 2495  
+ 2496  /* 文件: rust/drip-core/src/backup.rs */
+ 2497  pub fn fnv1a(data: &[u8]) -> u32 {
+ 2498      let mut h: u32 = 0x811c9dc5;
+ 2499      for &b in data {
+ 2500          h ^= b as u32;
+
+【滴水记账 V9.0 源程序】                                    第 51 页
+------------------------------------------------------------------------
+ 2501          h = h.wrapping_mul(0x01000193);
+ 2502      }
+ 2503      h
+ 2504  }
+ 2505  #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ 2506  pub struct BackupSummary {
+ 2507      pub is_drip_backup: bool,
+ 2508      pub version: i32,
+ 2509      pub ledger_count: i64,
+ 2510      pub txn_count: i64,
+ 2511  }
+ 2512  pub fn peek(json: &str) -> BackupSummary {
+ 2513      let is_drip = json.contains("\"format\":\"foldledger.backup\"");
+ 2514      BackupSummary {
+ 2515          is_drip_backup: is_drip,
+ 2516          version: json_int(json, "version").unwrap_or(0) as i32,
+ 2517          ledger_count: json_int(json, "ledgerCount").unwrap_or(0),
+ 2518          txn_count: json_int(json, "txnCount").unwrap_or(0),
+ 2519      }
+ 2520  }
+ 2521  pub fn validate(bytes: &[u8]) -> bool {
+ 2522      let s = String::from_utf8_lossy(bytes);
+ 2523      let summary = peek(&s);
+ 2524      summary.is_drip_backup
+ 2525          && (1..=2).contains(&summary.version)
+ 2526          && s.contains("\"ledgers\":")
+ 2527          && s.contains("\"transactions\":")
+ 2528  }
+ 2529  fn json_int(text: &str, key: &str) -> Option<i64> {
+ 2530      let pat = format!("\"{key}\":");
+ 2531      let idx = text.find(&pat)?;
+ 2532      let rest = &text[idx + pat.len()..];
+ 2533      let num: String = rest
+ 2534          .chars()
+ 2535          .take_while(|c| c.is_ascii_digit() || *c == '-')
+ 2536          .collect();
+ 2537      if num.is_empty() || num == "-" {
+ 2538          None
+ 2539      } else {
+ 2540          num.parse().ok()
+ 2541      }
+ 2542  }
+ 2543  #[cfg(test)]
+ 2544  mod tests {
+ 2545      use super::*;
+ 2546      #[test]
+ 2547      fn fnv1a_stable() {
+ 2548          assert_eq!(fnv1a(b""), 0x811c9dc5);
+ 2549          assert_eq!(fnv1a(b"a"), 0xe40c292c);
+ 2550          assert_eq!(fnv1a("滴水记账".as_bytes()), fnv1a("滴水记账".as_bytes()));
+
+【滴水记账 V9.0 源程序】                                    第 52 页
+------------------------------------------------------------------------
+ 2551          assert_ne!(fnv1a("滴水记账".as_bytes()), fnv1a("滴水记帐".as_bytes()));
+ 2552      }
+ 2553      #[test]
+ 2554      fn peek_reads_envelope() {
+ 2555          let s = r#"{"format":"foldledger.backup","version":2,"appVersion":"4.0.0","exportedAt":1,"ledgerCount":3,"txnCount":42,"ledgers":[],"categories":[],"transactions":[]}"#;
+ 2556          let s2 = peek(s);
+ 2557          assert!(s2.is_drip_backup);
+ 2558          assert_eq!(s2.version, 2);
+ 2559          assert_eq!(s2.ledger_count, 3);
+ 2560          assert_eq!(s2.txn_count, 42);
+ 2561      }
+ 2562      #[test]
+ 2563      fn validate_accepts_good_rejects_bad() {
+ 2564          let good = r#"{"format":"foldledger.backup","version":2,"ledgerCount":0,"txnCount":0,"ledgers":[],"transactions":[]}"#;
+ 2565          assert!(validate(good.as_bytes()));
+ 2566          assert!(!validate(b"not a backup"));
+ 2567          assert!(!validate(br#"{"format":"foldledger.backup","version":99,"ledgers":[],"transactions":[]}"#));
+ 2568      }
+ 2569  }
+ 2570  
+ 2571  /* 文件: rust/drip-core/src/lib.rs */
+ 2572  pub mod backup;
+ 2573  pub mod money;
+ 2574  pub mod stats;
+ 2575  pub use backup::{fnv1a, peek as backup_peek, validate as validate_backup, BackupSummary};
+ 2576  pub use money::{format_cents, format_compact, parse_to_cents, percent, to_plain};
+ 2577  pub use stats::{
+ 2578      expense_category_totals, expense_month_over_month, expense_total, income_total,
+ 2579      matches_query, search_indices, totals, totals_in_range, CategoryTotal, Totals, Txn,
+ 2580  };
+ 2581  pub const PARSE_INVALID: i64 = i64::MIN;
+ 2582  #[cfg(all(feature = "android", target_os = "android"))]
+ 2583  #[allow(non_snake_case)]
+ 2584  mod ffi {
+ 2585      use super::*;
+ 2586      use jni::objects::{JByteArray, JClass, JString};
+ 2587      use jni::sys::{jboolean, jint, jlong, jstring, JNI_FALSE, JNI_TRUE};
+ 2588      use jni::JNIEnv;
+ 2589      fn bool_to_j(b: bool) -> jboolean {
+ 2590          if b {
+ 2591              JNI_TRUE
+ 2592          } else {
+ 2593              JNI_FALSE
+ 2594          }
+ 2595      }
+ 2596      fn read_string(env: &mut JNIEnv, s: &JString) -> String {
+ 2597          env.get_string(s)
+ 2598              .map(|v| v.into())
+ 2599              .unwrap_or_else(|_| String::new())
+ 2600      }
+
+【滴水记账 V9.0 源程序】                                    第 53 页
+------------------------------------------------------------------------
+ 2601      #[no_mangle]
+ 2602      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeFormatCents(
+ 2603          mut env: JNIEnv<'_>,
+ 2604          _class: JClass<'_>,
+ 2605          cents: jlong,
+ 2606          symbol: jboolean,
+ 2607      ) -> jstring {
+ 2608          let s = format_cents(cents, symbol == JNI_TRUE);
+ 2609          env.new_string(s)
+ 2610              .map(|v| v.into_raw())
+ 2611              .unwrap_or(std::ptr::null_mut())
+ 2612      }
+ 2613      #[no_mangle]
+ 2614      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeToPlain(
+ 2615          mut env: JNIEnv<'_>,
+ 2616          _class: JClass<'_>,
+ 2617          cents: jlong,
+ 2618      ) -> jstring {
+ 2619          env.new_string(to_plain(cents))
+ 2620              .map(|v| v.into_raw())
+ 2621              .unwrap_or(std::ptr::null_mut())
+ 2622      }
+ 2623      #[no_mangle]
+ 2624      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeParseToCents(
+ 2625          mut env: JNIEnv<'_>,
+ 2626          _class: JClass<'_>,
+ 2627          input: JString<'_>,
+ 2628      ) -> jlong {
+ 2629          let s = read_string(&mut env, &input);
+ 2630          parse_to_cents(&s).unwrap_or(PARSE_INVALID)
+ 2631      }
+ 2632      #[no_mangle]
+ 2633      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeFnv1a(
+ 2634          mut env: JNIEnv<'_>,
+ 2635          _class: JClass<'_>,
+ 2636          data: JByteArray<'_>,
+ 2637      ) -> jint {
+ 2638          match env.convert_byte_array(&data) {
+ 2639              Ok(bytes) => fnv1a(&bytes) as jint,
+ 2640              Err(_) => 0,
+ 2641          }
+ 2642      }
+ 2643      #[no_mangle]
+ 2644      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeValidateBackup(
+ 2645          mut env: JNIEnv<'_>,
+ 2646          _class: JClass<'_>,
+ 2647          data: JByteArray<'_>,
+ 2648      ) -> jboolean {
+ 2649          match env.convert_byte_array(&data) {
+ 2650              Ok(bytes) => bool_to_j(validate_backup(&bytes)),
+
+【滴水记账 V9.0 源程序】                                    第 54 页
+------------------------------------------------------------------------
+ 2651              Err(_) => JNI_FALSE,
+ 2652          }
+ 2653      }
+ 2654      #[no_mangle]
+ 2655      pub extern "system" fn Java_com_foldledger_core_DripCore_nativeMatchesQuery(
+ 2656          mut env: JNIEnv<'_>,
+ 2657          _class: JClass<'_>,
+ 2658          name: JString<'_>,
+ 2659          note: JString<'_>,
+ 2660          amount_cents: jlong,
+ 2661          query: JString<'_>,
+ 2662      ) -> jboolean {
+ 2663          let n = read_string(&mut env, &name);
+ 2664          let nt = read_string(&mut env, &note);
+ 2665          let q = read_string(&mut env, &query);
+ 2666          bool_to_j(matches_query(&n, &nt, amount_cents, &q))
+ 2667      }
+ 2668  }
+ 2669  
+ 2670  /* 文件: rust/drip-core/src/money.rs */
+ 2671  pub fn to_plain(cents: i64) -> String {
+ 2672      let neg = cents < 0;
+ 2673      let v = cents.unsigned_abs();
+ 2674      let s = format!("{}.{:02}", v / 100, v % 100);
+ 2675      if neg {
+ 2676          format!("-{s}")
+ 2677      } else {
+ 2678          s
+ 2679      }
+ 2680  }
+ 2681  pub fn format_cents(cents: i64, symbol: bool) -> String {
+ 2682      let neg = cents < 0;
+ 2683      let v = cents.unsigned_abs();
+ 2684      let yuan = v / 100;
+ 2685      let fen = v % 100;
+ 2686      let grouped = group_thousands(yuan);
+ 2687      let mut out = String::with_capacity(grouped.len() + 6);
+ 2688      if neg {
+ 2689          out.push('-');
+ 2690      }
+ 2691      if symbol {
+ 2692          out.push('¥');
+ 2693      }
+ 2694      out.push_str(&grouped);
+ 2695      if fen != 0 {
+ 2696          out.push('.');
+ 2697          out.push_str(&format!("{fen:02}"));
+ 2698      }
+ 2699      out
+ 2700  }
+
+【滴水记账 V9.0 源程序】                                    第 55 页
+------------------------------------------------------------------------
+ 2701  pub fn format_compact(cents: i64) -> String {
+ 2702      let neg = cents < 0;
+ 2703      let sign = if neg { "-" } else { "" };
+ 2704      let yuan = cents.unsigned_abs() as f64 / 100.0;
+ 2705      if yuan >= 100_000_000.0 {
+ 2706          format!("{sign}{}亿", trim_zero(yuan / 100_000_000.0))
+ 2707      } else if yuan >= 10_000.0 {
+ 2708          format!("{sign}{}万", trim_zero(yuan / 10_000.0))
+ 2709      } else {
+ 2710          format_cents(cents, true)
+ 2711      }
+ 2712  }
+ 2713  pub fn parse_to_cents(input: &str) -> Option<i64> {
+ 2714      let t = input.trim().replace('¥', "").replace(',', "");
+ 2715      if t.is_empty() || t == "." || t == "-" {
+ 2716          return None;
+ 2717      }
+ 2718      let (int_part, frac_part) = match t.split_once('.') {
+ 2719          Some((i, f)) => (i, f),
+ 2720          None => (t.as_str(), ""),
+ 2721      };
+ 2722      let (neg, digits) = match int_part.strip_prefix('-') {
+ 2723          Some(rest) => (true, rest),
+ 2724          None => (false, int_part),
+ 2725      };
+ 2726      if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+ 2727          return None;
+ 2728      }
+ 2729      if !frac_part.bytes().all(|b| b.is_ascii_digit()) {
+ 2730          return None;
+ 2731      }
+ 2732      let mut frac = String::new();
+ 2733      frac.push(frac_part.as_bytes().get(0).map(|&c| c as char).unwrap_or('0'));
+ 2734      frac.push(frac_part.as_bytes().get(1).map(|&c| c as char).unwrap_or('0'));
+ 2735      let mut round_up = false;
+ 2736      if frac_part.len() > 2 {
+ 2737          round_up = frac_part.as_bytes()[2] >= b'5';
+ 2738      }
+ 2739      let yuan: i64 = digits.parse().ok()?;
+ 2740      let mut cents = yuan * 100 + frac.parse::<i64>().ok()?;
+ 2741      if round_up {
+ 2742          cents += 1;
+ 2743      }
+ 2744      Some(if neg { -cents } else { cents })
+ 2745  }
+ 2746  pub fn percent(part: i64, total: i64) -> String {
+ 2747      if total <= 0 {
+ 2748          return "0%".to_string();
+ 2749      }
+ 2750      let p = part as f64 / total as f64 * 100.0;
+
+【滴水记账 V9.0 源程序】                                    第 56 页
+------------------------------------------------------------------------
+ 2751      format!("{p:.1}%")
+ 2752  }
+ 2753  fn group_thousands(n: u64) -> String {
+ 2754      let s = n.to_string();
+ 2755      let bytes = s.as_bytes();
+ 2756      let mut out = String::with_capacity(s.len() + s.len() / 3);
+ 2757      for (i, &b) in bytes.iter().enumerate() {
+ 2758          if i > 0 && (bytes.len() - i) % 3 == 0 {
+ 2759              out.push(',');
+ 2760          }
+ 2761          out.push(b as char);
+ 2762      }
+ 2763      out
+ 2764  }
+ 2765  fn trim_zero(v: f64) -> String {
+ 2766      let s = format!("{v:.2}");
+ 2767      s.trim_end_matches('0').trim_end_matches('.').to_string()
+ 2768  }
+ 2769  #[cfg(test)]
+ 2770  mod tests {
+ 2771      use super::*;
+ 2772      #[test]
+ 2773      fn plain_formats() {
+ 2774          assert_eq!(to_plain(1234), "12.34");
+ 2775          assert_eq!(to_plain(5), "0.05");
+ 2776          assert_eq!(to_plain(0), "0.00");
+ 2777          assert_eq!(to_plain(-1234), "-12.34");
+ 2778      }
+ 2779      #[test]
+ 2780      fn format_with_symbol_and_commas() {
+ 2781          assert_eq!(format_cents(12345678, true), "¥123,456.78");
+ 2782          assert_eq!(format_cents(12345678, false), "123,456.78");
+ 2783          assert_eq!(format_cents(12300, true), "¥123");
+ 2784          assert_eq!(format_cents(-12300, true), "-¥123");
+ 2785          assert_eq!(format_cents(100000, true), "¥1,000");
+ 2786      }
+ 2787      #[test]
+ 2788      fn compact() {
+ 2789          assert_eq!(format_compact(12345678), "12.35万");
+ 2790          assert_eq!(format_compact(2_500_000), "2.5万");
+ 2791          assert_eq!(format_compact(12300), "¥123");
+ 2792          assert_eq!(format_compact(1_230_000_000_00), "12.3亿");
+ 2793      }
+ 2794      #[test]
+ 2795      fn parse_roundtrip() {
+ 2796          assert_eq!(parse_to_cents("12.34"), Some(1234));
+ 2797          assert_eq!(parse_to_cents("¥12.34"), Some(1234));
+ 2798          assert_eq!(parse_to_cents("1,234.56"), Some(123456));
+ 2799          assert_eq!(parse_to_cents("-12.34"), Some(-1234));
+ 2800          assert_eq!(parse_to_cents("12"), Some(1200));
+
+【滴水记账 V9.0 源程序】                                    第 57 页
+------------------------------------------------------------------------
+ 2801          assert_eq!(parse_to_cents("12.345"), Some(1235)); // HALF_UP
+ 2802          assert_eq!(parse_to_cents(""), None);
+ 2803          assert_eq!(parse_to_cents("abc"), None);
+ 2804          assert_eq!(parse_to_cents("."), None);
+ 2805      }
+ 2806      #[test]
+ 2807      fn percent_works() {
+ 2808          assert_eq!(percent(256, 1000), "25.6%");
+ 2809          assert_eq!(percent(1, 0), "0%");
+ 2810      }
+ 2811  }
+ 2812  
+ 2813  /* 文件: rust/drip-core/src/stats.rs */
+ 2814  #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ 2815  pub struct Txn {
+ 2816      pub amount_cents: i64,
+ 2817      pub direction: u8,
+ 2818      pub category_id: i64,
+ 2819      pub occurred_at: i64,
+ 2820  }
+ 2821  #[derive(Debug, Clone, PartialEq, Eq)]
+ 2822  pub struct CategoryTotal {
+ 2823      pub category_id: i64,
+ 2824      pub total_cents: i64,
+ 2825  }
+ 2826  #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+ 2827  pub struct Totals {
+ 2828      pub expense_cents: i64,
+ 2829      pub income_cents: i64,
+ 2830  }
+ 2831  impl Totals {
+ 2832      pub fn balance(&self) -> i64 {
+ 2833          self.income_cents - self.expense_cents
+ 2834      }
+ 2835  }
+ 2836  pub fn expense_category_totals(txns: &[Txn]) -> Vec<CategoryTotal> {
+ 2837      let mut map: std::collections::BTreeMap<i64, i64> = std::collections::BTreeMap::new();
+ 2838      for t in txns {
+ 2839          if t.direction == 0 {
+ 2840          }
+ 2841      }
+ 2842      map.into_iter()
+ 2843          .map(|(category_id, total_cents)| CategoryTotal {
+ 2844              category_id,
+ 2845              total_cents,
+ 2846          })
+ 2847          .collect()
+ 2848  }
+ 2849  pub fn income_total(txns: &[Txn]) -> i64 {
+ 2850      txns.iter()
+
+【滴水记账 V9.0 源程序】                                    第 58 页
+------------------------------------------------------------------------
+ 2851          .filter(|t| t.direction == 1)
+ 2852          .map(|t| t.amount_cents)
+ 2853          .sum()
+ 2854  }
+ 2855  pub fn expense_total(txns: &[Txn]) -> i64 {
+ 2856      txns.iter()
+ 2857          .filter(|t| t.direction == 0)
+ 2858          .map(|t| t.amount_cents)
+ 2859          .sum()
+ 2860  }
+ 2861  pub fn totals(txns: &[Txn]) -> Totals {
+ 2862      Totals {
+ 2863          expense_cents: expense_total(txns),
+ 2864          income_cents: income_total(txns),
+ 2865      }
+ 2866  }
+ 2867  pub fn totals_in_range(txns: &[Txn], start: i64, end: i64) -> Totals {
+ 2868      totals(&filter_range(txns, start, end))
+ 2869  }
+ 2870  fn filter_range(txns: &[Txn], start: i64, end: i64) -> Vec<Txn> {
+ 2871      txns.iter()
+ 2872          .filter(|t| t.occurred_at >= start && t.occurred_at < end)
+ 2873          .copied()
+ 2874          .collect()
+ 2875  }
+ 2876  pub fn expense_month_over_month(this_start: i64, this_end: i64, prev_start: i64, prev_end: i64, txns: &[Txn]) -> (i64, i64) {
+ 2877      (
+ 2878          expense_total(&filter_range(txns, this_start, this_end)),
+ 2879          expense_total(&filter_range(txns, prev_start, prev_end)),
+ 2880      )
+ 2881  }
+ 2882  pub fn matches_query(name: &str, note: &str, amount_cents: i64, query: &str) -> bool {
+ 2883      let q = query.trim();
+ 2884      if q.is_empty() {
+ 2885          return true;
+ 2886      }
+ 2887      let name_l = name.to_lowercase();
+ 2888      let note_l = note.to_lowercase();
+ 2889      let plain = crate::money::to_plain(amount_cents.abs());
+ 2890      let grouped = crate::money::format_cents(amount_cents.abs(), false);
+ 2891      for token in q.split_whitespace() {
+ 2892          let t = token.to_lowercase();
+ 2893          if t.is_empty() {
+ 2894              continue;
+ 2895          }
+ 2896          let mut hit = name_l.contains(&t) || note_l.contains(&t);
+ 2897          if !hit && is_numeric_token(&t) {
+ 2898              hit = plain.contains(&t) || grouped.contains(&t);
+ 2899          }
+ 2900          if !hit {
+
+【滴水记账 V9.0 源程序】                                    第 59 页
+------------------------------------------------------------------------
+ 2901              return false;
+ 2902          }
+ 2903      }
+ 2904      true
+ 2905  }
+ 2906  fn is_numeric_token(t: &str) -> bool {
+ 2907      !t.is_empty() && t.chars().all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+ 2908  }
+ 2909  pub fn search_indices(
+ 2910      names: &[String],
+ 2911      notes: &[String],
+ 2912      amounts: &[i64],
+ 2913      query: &str,
+ 2914  ) -> Vec<usize> {
+ 2915      names
+ 2916          .iter()
+ 2917          .enumerate()
+ 2918          .filter(|(i, n)| {
+ 2919              matches_query(
+ 2920                  n,
+ 2921                  notes.get(*i).map(|s| s.as_str()).unwrap_or(""),
+ 2922                  amounts.get(*i).copied().unwrap_or(0),
+ 2923                  query,
+ 2924              )
+ 2925          })
+ 2926          .map(|(i, _)| i)
+ 2927          .collect()
+ 2928  }
+ 2929  #[cfg(test)]
+ 2930  mod tests {
+ 2931      use super::*;
+ 2932      fn t(amount: i64, dir: u8, cat: i64, at: i64) -> Txn {
+ 2933          Txn {
+ 2934              amount_cents: amount,
+ 2935              direction: dir,
+ 2936              category_id: cat,
+ 2937              occurred_at: at,
+ 2938          }
+ 2939      }
+ 2940      #[test]
+ 2941      fn totals_and_balance() {
+ 2942          let txns = vec![t(1000, 0, 1, 0), t(2000, 0, 2, 0), t(5000, 1, 3, 0)];
+ 2943          let tot = totals(&txns);
+ 2944          assert_eq!(tot.expense_cents, 3000);
+ 2945          assert_eq!(tot.income_cents, 5000);
+ 2946          assert_eq!(tot.balance(), 2000);
+ 2947      }
+ 2948      #[test]
+ 2949      fn expense_only_category_totals() {
+ 2950          let txns = vec![t(1000, 0, 1, 0), t(500, 0, 1, 0), t(999, 1, 1, 0)];
+
+【滴水记账 V9.0 源程序】                                    第 60 页
+------------------------------------------------------------------------
+ 2951          let cats = expense_category_totals(&txns);
+ 2952          assert_eq!(cats.len(), 1);
+ 2953          assert_eq!(cats[0].category_id, 1);
+ 2954          assert_eq!(cats[0].total_cents, 1500); // 不含收入那笔
+ 2955      }
+ 2956      #[test]
+ 2957      fn range_filter() {
+ 2958          let txns = vec![t(100, 0, 1, 10), t(200, 0, 1, 20), t(300, 0, 1, 30)];
+ 2959          let tot = totals_in_range(&txns, 15, 30);
+ 2960          assert_eq!(tot.expense_cents, 200);
+ 2961      }
+ 2962      #[test]
+ 2963      fn month_over_month() {
+ 2964          let txns = vec![t(100, 0, 1, 100), t(400, 0, 1, 300)];
+ 2965          let (this_m, prev_m) = expense_month_over_month(200, 400, 0, 200, &txns);
+ 2966          assert_eq!(this_m, 400);
+ 2967          assert_eq!(prev_m, 100);
+ 2968      }
+ 2969      #[test]
+ 2970      fn search_matches_name_or_note() {
+ 2971          assert!(matches_query("餐饮", "午餐", 0, "餐"));
+ 2972          assert!(matches_query("餐饮", "午餐", 0, "午餐"));
+ 2973          assert!(!matches_query("餐饮", "午餐", 0, "不相关"));
+ 2974          assert!(matches_query("餐饮", "午餐", 0, "")); // 空查询 = 全通过
+ 2975          assert!(matches_query("Cafe", "note", 0, "cafe")); // 不区分大小写
+ 2976      }
+ 2977      #[test]
+ 2978      fn search_multi_keyword_and() {
+ 2979          assert!(matches_query("餐饮", "公司午餐", 0, "餐饮 午餐"));
+ 2980          assert!(!matches_query("餐饮", "公司午餐", 0, "餐饮 打车"));
+ 2981          assert!(matches_query("餐饮", "午餐", 0, "  餐饮   午餐  "));
+ 2982      }
+ 2983      #[test]
+ 2984      fn search_matches_amount() {
+ 2985          assert!(matches_query("餐饮", "午饭", 3500, "35"));
+ 2986          assert!(matches_query("餐饮", "午饭", 123456, "1234.56"));
+ 2987          assert!(matches_query("餐饮", "午饭", 123456, "1,234"));
+ 2988          assert!(!matches_query("餐饮", "午饭", 3500, "36"));
+ 2989          assert!(!matches_query("交通", "", 3500, "午饭"));
+ 2990          assert!(matches_query("餐饮", "午饭", 3500, "餐饮 35"));
+ 2991      }
+ 2992      #[test]
+ 2993      fn search_indices_order() {
+ 2994          let names = vec!["餐饮".to_string(), "交通".to_string(), "餐饮酒".to_string()];
+ 2995          let notes = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+ 2996          let amounts = vec![100i64, 12345, 300];
+ 2997          assert_eq!(search_indices(&names, &notes, &amounts, "餐"), vec![0, 2]);
+ 2998          assert_eq!(search_indices(&names, &notes, &amounts, "123.45"), vec![1]);
+ 2999      }
+ 3000  }
+
+【滴水记账 V9.0 源程序】                                    第 61 页
+------------------------------------------------------------------------
+ 3001  
