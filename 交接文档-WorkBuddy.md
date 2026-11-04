@@ -202,6 +202,22 @@ C:\Users\16039\AppData\Local\滴水记账\        ← MSI 管理，勿手工改
 
 ---
 
+## 6.5 代码仓库 / NAS Gitea（2026-11-04 校正并验证）
+
+**远端当前状态**：`gitea` remote = `https://t2-nas-1.tail2b73fa.ts.net:8444/litong/foldledger.git`，master = `f97e8d8`（与本地 HEAD、`backup` 裸仓库一致）；`git push gitea master` 已实测成功。
+
+⚠️ **别再用旧地址** `https://t2-nas.tail2b73fa.ts.net/litong/foldledger.git`：该 MagicDNS 名已不解析；新节点 `t2-nas-1`（100.105.27.52）的 **443 端口是 AdGuard Home**，根路径 302 → `/login.html`、其余路径一律空体 401 —— 看着像「反代登录门」，其实是撞错了服务。服务端口表以 Dashy 的 `https://t2-nas-1.tail2b73fa.ts.net:8443/conf.yml` 为准（8444=Gitea、8445=Uptime Kuma、8446=File Browser、8451=同步服务…）。Gitea 28.2.0 的 ROOT_URL 仍写成失效的旧域名，只影响网页里显示的 clone 地址，不影响 git push。
+
+**换令牌 / 配置要点**：
+
+1. PAT 单行存 `~/.gitea-pat`（40-hex + 换行）；建库 API 需 `write:user`，建议直接勾全权限。
+2. 针对**带端口的 URL** 单独配置，不能只配主机名：`http.https://t2-nas-1.tail2b73fa.ts.net:8444.proxy` = 空（绕开本机 `https_proxy`）、`.sslVerify=false`、`credential.<URL>.provider=generic`、`.username=litong`。
+3. `credential.<URL>.helper` 必须**按顺序 add 两条**：先一条空值（清空此前注册的 helper，把 PortableGit 系统级 `helper=manager` 挤掉），再挂只读函数 `!f() { if [ "$1" = get ]; then echo username=litong; echo password=$(cat "$HOME/.gitea-pat"); fi; }; f`。只挂函数时 GCM 会抢先返回别的账号（实测 `160397620@qq.com`）。
+4. 校验：**不要 clone**（DERP 中继太慢）。用 `git ls-remote gitea` 比对 HEAD，再用 `GET /api/v1/repos/litong/foldledger/git/trees/master` 取 `sha` 与本地 `git rev-parse HEAD^{tree}` 比对，相等即逐字节一致。
+5. SSH 仍不可行：Tailscale IP 只开 443 + 8443~8451，无 SSH 端口，本机 `~/.ssh/` 为空。
+
+---
+
 ## 7. 手机端打包发布流程
 
 ```powershell
@@ -327,4 +343,4 @@ adb install -r <apk>   # -r 保留数据
 
 ---
 
-*最后状态（2026-11-04 10:05）：桌面 16.2.5 已打包部署（需用户双击确认能开）；手机 16.2.5 已装机；NAS 同步正常（无 token 门禁）。祝顺利。*
+*最后状态（2026-11-04 17:45）：桌面 16.2.9 安装包已装、手机 16.2.8 已装机；app 203 + desktopTest 51 全绿；代码 `f97e8d8` 已推送 `backup` 与 NAS Gitea（8444），tree SHA 校验一致；NAS 同步正常（无 token 门禁）。祝顺利。*
