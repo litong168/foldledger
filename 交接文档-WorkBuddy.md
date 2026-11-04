@@ -52,12 +52,14 @@
 
 ---
 
-## 3. 当前版本与双端状态（2026-11-04，已更新到 16.2.9）
+## 3. 当前版本与双端状态（2026-11-04，已更新到 16.3.0）
 
 | 端 | 版本 | 状态 |
 |---|---|---|
-| 桌面 | 16.2.9 (222) | ✅ **安装包分发**：`dist/滴水记账-v16.2.9-win-x64-setup.exe`（88MB），已装到 `%LOCALAPPDATA%\滴水记账`（无需管理员）；桌面 + 开始菜单快捷方式、ARP 卸载项齐全 |
-| 手机 | 16.2.8 (221) | ✅ 已装机（`adb install -r`）；`dist/滴水记账-v16.2.8-release.apk` 4.2MB（本轮只动桌面，手机未重打） |
+| 桌面 | 16.3.0 (223) | ✅ **安装包分发**：`dist/滴水记账-v16.3.0-win-x64-setup.exe`（89.9MB），静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
+| 手机 | 16.3.0 (223) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.3.0-release.apk` 4.0MB，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
+
+> **16.3.0 双端一致性 + 性能**（详见 §5 首节）：桌面补齐三处空桩（速记输入槽、自定义分类图标、备份回收站），并合并重复订阅 / 收敛重复重算。全程**不新增 DB 列、不改备份格式、不触发迁移**。测试 app 203 + desktopTest **55**。
 
 > **16.2.9 改分发形态**（详见 §13 末）：桌面端不再提供绿色免安装版，统一走安装包；安装 / 升级 / 卸载三条链路均已实测。唯一随之变化的行为：应用内「更新到 vX 并重启」（解压替换安装目录）会写坏 MSI 组件表，已改为「退出并安装」。
 
@@ -94,6 +96,28 @@ $env:JAVA_HOME="C:\Users\16039\.workbuddy\binaries\jdk\17.0.2"
 .\gradlew.bat :app:testDebugUnitTest :common:desktopTest --no-daemon
 # 预期：app 203 项 + desktopTest 41 项全绿
 ```
+
+---
+
+### 16.3.0（同日，A 双端一致性补齐 + B 列表/统计性能）
+
+用户从 4 个候选中选了 **A+B**。硬约束由接手方定：**零新依赖、不动 DB schema、不动备份格式、不改余额口径与视觉规范**。
+
+**A · 桌面三处空桩（都在 `:common` 的 expect/actual 上，双端共振，必须双端各自 build）**
+
+1. **速记语音槽**：JVM 没有 `RecognizerIntent`，真语音要引本地模型 + 麦克风权限，收益远小于风险 → 做**能力对齐式降级**：`SpeedEntryPanel.desktop.kt` 从空 Composable 换成同尺寸（48dp 命中区 / 36dp 圆盘）的玻璃钮，点击从剪贴板取文本、去句尾标点后走同一个 `onSpoken`；空剪贴板仍回调 `onVoiceUnavailable` 保留共享回执，再换成桌面专属提示。解析 / 确认卡 / 6 秒撤销双端完全一致。
+2. **自定义分类图标**：新建 `util/IconStore.desktop.kt`（`ImageIO` 居中裁剪→256×256 PNG，存 `~/.foldledger/category_icons/`，`BufferedImage.toComposeImageBitmap()`）；`Platform.desktop.kt` 的 `loadIconBitmap` / `deleteIconFile` 不再是 null / no-op；`CategoryManageScreen.desktop.kt` 补「上传图片」（JFileChooser 沿用 v16.2.5 的 `invokeLater` + 父窗口防吞机制），列表与编辑框改走共享 `CategoryIcon`。**仍只存 `emoji` 字段里的 `img:<fileName>`**，无迁移、无备份格式变更。
+3. **备份回收站**：桌面以前 `confirmDelete()` 直接删 `.json` + `.xlsx`，且 `onOpenRecycleBin` 参数收了却没接（页面根本进不去）→ 新建 `DesktopRecycleStore`（副本在 `~/.foldledger/recycle/backup/`），删除改「写副本 → `mutateRecycledBackups` 原子记清单 → 删原件」；`BackupRecycler.desktop.kt` 接上清单 / 还原 / 铲除；设置页加回收站入口；`BackupSection` 的「此操作不可撤销」改成「可在回收站找回」（commonMain，双端生效）。顺手修了 `.crypt` 加密备份的 xlsx 配对名（原来只剥 `.foldledger.json` 后缀会拼错）。
+
+**B · 取数与重组（不改视觉、字阶、玻璃三条门槛、余额口径、Room schema）**
+
+- `DetailViewModels`：`grouped` 从 `transactions` 派生（**同一条 SQL 的 Room observer 由 2 降到 1**）；`accountBalances` 从 filter→groupBy→每组两次 sum 收敛成**一次遍历**（口径分毫不变：`initial + Σ收 − Σ支`、余额不落库）；`monthlyTotals` 抽出共享 StateFlow，`monthlyTrend` 与 `annual` 复用（observer 2→1）。
+- `LedgerDetailScreen`：筛选条的笔数/合计改 `remember(filteredGroups)`（原来两处分支每次重组都 `flatMap` 出中间 List 再全表 sum）；`items` 补 `contentType`、`stickyHeader` 补 contentType；`TxnListViews` 日内行按 `txn.id` 加 `key`，增删改账时未变行可复用。
+- `StatsScreen`：分类占比分母、饼图 slices、年度 12 个月索引、年度最大月 —— 全部改成按输入 `remember` 缓存。原来排行里**每一行**都 `totals.sumOf{}` 扫一遍全表，`YearOverviewCard` 每帧做 24 次 `firstOrNull` 线性查找。
+- **明确放弃**：把 `donutSweep/trendGrow/yearGrow` 下推到绘制期读取。查过 `YearBars` 是用 `.fillMaxHeight(fraction)` 在**布局期**消费进度的，改成绘制期要重写图表、风险高于收益；也没动 `GlassGlow` 的绘制期 sweep 机制（那本来就是正确实现）。
+- **没做**：引入 Paging（会推翻 groupByDay / 内存过滤 / 多选批量改账整套语义）、把余额落库、把搜索改写成拼 SQL（会与 `DripCore.matchesQuery` 形成两套语义）、跨页共享 VM 聚合结果（三页生命周期与锚点不同，容易串状态）。
+
+**验证**：`check_type_scale.py` 706 个字号点无越界、`verify_migrations.py` 1→11 全通过；新增 4 项 `DesktopRecycleStoreTest`（明文+xlsx 成对还原 / `.crypt` 配对名 / 老清单 `xlsxStoredName=null` 回退 / 铲除不误伤别人的副本）→ **app 203 + desktopTest 55 = 258 全绿**；双端编译 + assembleRelease + 安装包全通过；真机 16.3.0 启动存活、logcat 无 FATAL；桌面静默升级 10 项安装态核验全绿、用户数据保留。
 
 ---
 
@@ -266,7 +290,7 @@ adb install -r <apk>   # -r 保留数据
 
 1. ~~**手机 APK 发版对齐**~~（✅ 2026-11-04 已对齐到 16.2.5(218)，`adb install -r` 覆盖安装，数据保留）
 2. **NAS token 门禁**（§8 末，用户 NAS UI 操作，无法代劳）
-3. **单文件安装器 exe**：需本机装 WiX 3.x（wixtoolset.org 之前下载失败）或换网络环境；当前用 `--type app-image` 绿色版
+3. ~~**单文件安装器 exe**~~（✅ 16.2.9 已完成：WiX 3.14 走 `gh-proxy.com` 镜像下载，脚本 `scripts/build_installer.ps1`；绿色版已退役）
 4. 用户可选迭代方向：语音记账（v14.2 已做）、预算+超支提醒、年度账单、专项账本统计、同步状态页、导出 CSV/Excel
 
 ---
@@ -345,4 +369,4 @@ adb install -r <apk>   # -r 保留数据
 
 ---
 
-*最后状态（2026-11-04 17:45）：桌面 16.2.9 安装包已装、手机 16.2.8 已装机；app 203 + desktopTest 51 全绿；代码 `f97e8d8` 已推送 `backup` 与 NAS Gitea（8444），tree SHA 校验一致；NAS 同步正常（无 token 门禁）。祝顺利。*
+*最后状态（2026-11-04 18:45）：双端 16.3.0 (223) 已发版装机（桌面安装包 + 手机 APK）；app 203 + desktopTest 55 = 258 全绿；字阶 / 迁移闸门通过；安装态 10 项核验全绿、真机启动无崩溃；代码已推送 `backup` 与 NAS Gitea（8444），tree SHA 校验一致；NAS 同步正常（无 token 门禁）。祝顺利。*

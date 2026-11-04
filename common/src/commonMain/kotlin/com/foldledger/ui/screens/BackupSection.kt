@@ -449,7 +449,7 @@ private fun DeleteConfirmDialog(
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "会同时删除配对的 .xlsx 文件（如果有）。此操作不可撤销，但**不会**影响 App 里当前的数据。",
+                    "会同时删除配对的 .xlsx 文件（如果有）。删除后可在「回收站」里找回，但**不会**影响 App 里当前的数据。",
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )

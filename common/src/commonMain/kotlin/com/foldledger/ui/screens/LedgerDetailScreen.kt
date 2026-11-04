@@ -390,6 +390,20 @@ private fun LedgerDetailBody(
     val visibleIds = remember(filteredGroups) {
         filteredGroups.flatMap { g -> g.items.map { it.id } }
     }
+    /**
+     * v16.3：筛选提示条的「笔数 / 合计」只随 filteredGroups 变化算一次。
+     * 原来双栏 / 单栏两处分支每次重组都 `flatMap` 出一份中间 List 再 `sumOf`，
+     * 滚动光相或任意状态刷新都会把全表重扫一遍。口径不变，仍是过滤后全部流水之和。
+     */
+    val filterSummary = remember(filteredGroups) {
+        var count = 0
+        var amount = 0L
+        filteredGroups.forEach { g ->
+            count += g.items.size
+            g.items.forEach { amount += it.amountCents }
+        }
+        count to amount
+    }
 
     // v5.2：看板数字要跟随当前项目 —— 否则"看板 3000、点进去只有 800"会让人以为数据错了
     // v7.1：scoping 已收进 VM 的 reimburseSummaryScoped（board），这里不再手算
@@ -592,8 +606,8 @@ private fun LedgerDetailBody(
                                 item {
                                     FilterActiveBar(
                                         filter = txnFilter,
-                                        count = filteredGroups.sumOf { it.items.size },
-                                        amount = filteredGroups.flatMap { it.items }.sumOf { it.amountCents },
+                                        count = filterSummary.first,
+                                        amount = filterSummary.second,
                                         onClear = vm::clearFilter
                                     )
                                 }
@@ -615,7 +629,11 @@ private fun LedgerDetailBody(
                             filteredGroups.isEmpty() && !settledHidden -> item {
                                 FilteredEmptyHint(searchQuery, projectFilter, reimburseFilter)
                             }
-                            else -> items(filteredGroups, key = { it.dayKey }) { g ->
+                            else -> items(
+                                filteredGroups,
+                                key = { it.dayKey },
+                                contentType = { "dayGroup" }
+                            ) { g ->
                                 DayGroupCard(
                                     group = g,
                                     sceneKey = ledger?.sceneKey ?: ScenePresets.CUSTOM_KEY,
@@ -803,7 +821,7 @@ private fun LedgerDetailBody(
                     if (groups.isNotEmpty()) {
                         // v10.1.0：工具条 + 搜索**常驻**（sticky）——
                         // 原来它们跟着列表滚走，滚到流水中间就看不出"列表被筛过"，只会觉得账少了。
-                        stickyHeader(key = "detail-tools") {
+                        stickyHeader(key = "detail-tools", contentType = "tools") {
                             Column(
                                 Modifier
                                     .fillMaxWidth()
@@ -873,8 +891,8 @@ private fun LedgerDetailBody(
                                     Spacer(Modifier.height(Space.sm))
                                     FilterActiveBar(
                                         filter = txnFilter,
-                                        count = filteredGroups.sumOf { it.items.size },
-                                        amount = filteredGroups.flatMap { it.items }.sumOf { it.amountCents },
+                                        count = filterSummary.first,
+                                        amount = filterSummary.second,
                                         onClear = vm::clearFilter
                                     )
                                 }
@@ -967,7 +985,11 @@ private fun LedgerDetailBody(
                         filteredGroups.isEmpty() && !settledHidden -> item {
                             FilteredEmptyHint(searchQuery, projectFilter, reimburseFilter)
                         }
-                        else -> items(filteredGroups, key = { it.dayKey }) { g ->
+                        else -> items(
+                            filteredGroups,
+                            key = { it.dayKey },
+                            contentType = { "dayGroup" }
+                        ) { g ->
                             DayGroupCard(
                                 group = g,
                                 sceneKey = ledger?.sceneKey ?: ScenePresets.CUSTOM_KEY,

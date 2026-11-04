@@ -209,20 +209,30 @@ private class DesktopBackupViewModel(
         val entry = _state.value.pendingDelete ?: return
         val dir = folderPath?.let { File(it) } ?: return
         _state.value = _state.value.copy(pendingDelete = null)
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在删除…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在移入回收站…")
         scope.launch {
             runCatching {
-                if (!BackupFormat.isBackupFileName(entry.fileName)) {
-                    error("这个文件不是滴水记账的备份，已拒绝删除")
+                withContext(Dispatchers.IO) {
+                    if (!BackupFormat.isBackupFileName(entry.fileName)) {
+                        error("这个文件不是滴水记账的备份，已拒绝删除")
+                    }
+                    val json = File(dir, entry.fileName)
+                    if (!json.isFile) error("删除失败，可能文件已被移除")
+
+                    // v16.3：与 Android 一样「先留副本 → 记清单 → 最后才删原件」。
+                    // 顺序不能反：副本写失败就绝不删用户的文件；清单用原子读改写，
+                    // 一次瞬时读失败不会把整张回收站清单清空。
+                    val item = DesktopRecycleStore.stash(dir, entry.fileName)
+                    prefs.mutateRecycledBackups { current -> current + item }
+
+                    File(dir, DesktopRecycleStore.xlsxNameOf(entry.fileName)).delete()
+                    if (!json.delete()) error("删除失败，可能文件已被移除")
                 }
-                val base = entry.fileName.removeSuffix(BackupFormat.EXT_JSON)
-                File(dir, base + BackupFormat.EXT_XLSX).delete()
-                if (!File(dir, entry.fileName).delete()) error("删除失败，可能文件已被移除")
             }
                 .onSuccess {
                     _state.value = _state.value.copy(
                         phase = BackupPhase.DONE,
-                        message = "已删除备份：${entry.fileName}"
+                        message = "已移入回收站：${entry.fileName}"
                     )
                     refreshListInternal()
                 }

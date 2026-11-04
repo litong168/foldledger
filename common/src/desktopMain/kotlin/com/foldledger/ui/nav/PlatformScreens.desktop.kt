@@ -164,6 +164,19 @@ private object DesktopPlatformScreens : PlatformScreens {
                     BackupSection(backupVm = backupVm, hasData = cards.isNotEmpty())
                 }
 
+                // v16.3：桌面以前收了 onOpenRecycleBin 却没接，回收站页面根本进不去
+                // （虽然共享的 RecycleBinScreen 与 OverlayTarget 早就注册好了）。
+                item {
+                    SectionCard(overline = "数据", title = "回收站") {
+                        DesktopToolRow(
+                            emoji = "🗑️",
+                            title = "查看回收站",
+                            subtitle = "删掉的账本、存钱目标和备份文件，都能在这里找回",
+                            onClick = onOpenRecycleBin
+                        )
+                    }
+                }
+
                 item {
                     SectionCard(
                         overline = "提醒",

@@ -71,9 +71,13 @@ class LedgerDetailViewModel(
     val transactions: StateFlow<List<TransactionEntity>> =
         repo.transactions(ledgerId).stateIn(viewModelScope, STOP_EAGER, emptyList())
 
+    /**
+     * v16.3：从同一个 [transactions] 派生，不再第二次订阅 DAO Flow。
+     * 原来 `transactions` 与 `grouped` 各注册一个 Room observer，同一条 SQL 查两遍、
+     * 各持一份全表 List；一次写操作会同时触发两条下游链重算。
+     */
     val grouped: StateFlow<List<DayGroup>> =
-        repo.transactions(ledgerId)
-            .map { list -> groupByDay(list) }
+        transactions.map { list -> groupByDay(list) }
             .stateIn(viewModelScope, STOP_EAGER, emptyList())
 
     // ---- 流水搜索（v2.0）----
@@ -202,13 +206,16 @@ class LedgerDetailViewModel(
      */
     val accountBalances: StateFlow<List<Pair<AccountEntity, Long>>> =
         combine(accountsList, transactions) { accs, txns ->
-            val sums = txns.filter { it.accountId > 0 }
-                .groupBy { it.accountId }
-                .mapValues { (_, v) ->
-                    val inc = v.filter { it.direction == Direction.INCOME }.sumOf { it.amountCents }
-                    val exp = v.filter { it.direction == Direction.EXPENSE }.sumOf { it.amountCents }
-                    inc - exp
+            // v16.3：一次遍历算完所有账户，替代 filter → groupBy → 每组两次 filter+sumOf
+            // （原来要建 3 个中间集合、对每笔流水判断 4 次）。口径分毫不变：
+            // initialBalance + Σ收入 − Σ支出，余额依旧不落库。
+            val sums = HashMap<Long, Long>()
+            txns.forEach { t ->
+                if (t.accountId > 0) {
+                    val delta = if (t.direction == Direction.INCOME) t.amountCents else -t.amountCents
+                    sums[t.accountId] = (sums[t.accountId] ?: 0L) + delta
                 }
+            }
             accs.map { a -> a to (a.initialBalanceCents + (sums[a.id] ?: 0L)) }
         }.stateIn(viewModelScope, STOP_EAGER, emptyList())
 
@@ -661,8 +668,14 @@ class StatsViewModel(
             repo.transactionsInRange(ledgerId, range.first, range.second).map { it.size }
         }.stateIn(viewModelScope, STOP_EAGER, 0)
 
-    val monthlyTrend: StateFlow<List<MonthTotal>> =
+    /**
+     * v16.3：月度汇总只订阅一次，[monthlyTrend] 与 [annual] 共用。
+     * 原来两处各调一次 `repo.monthlyTotals(ledgerId)`，同一条全表 GROUP BY 注册两个 observer。
+     */
+    private val monthlyTotals: StateFlow<List<MonthTotal>> =
         repo.monthlyTotals(ledgerId).stateIn(viewModelScope, STOP_EAGER, emptyList())
+
+    val monthlyTrend: StateFlow<List<MonthTotal>> = monthlyTotals
 
     /** 本月支出分类（固定支出方向，供「消费洞察」用，不跟随方向切换） */
     val expenseCategoryTotals: StateFlow<List<CategoryTotal>> =
@@ -734,7 +747,7 @@ class StatsViewModel(
      * 前者管节流，后者管复盘。这是记账 App 从工具变成「财务习惯」的关键一屏。
      */
     val annual: StateFlow<AnnualSummary> = combine(
-        repo.monthlyTotals(ledgerId),
+        monthlyTotals,
         anchor
     ) { monthly, ts ->
         val year = java.time.Instant.ofEpochMilli(ts)

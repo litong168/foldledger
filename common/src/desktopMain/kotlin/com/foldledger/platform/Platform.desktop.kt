@@ -13,6 +13,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.foldledger.data.db.AppDatabase
 import com.foldledger.data.db.AppDatabase_Impl
 import com.foldledger.ui.vm.BackupViewModel
+import com.foldledger.util.DesktopIconStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,8 +42,9 @@ actual suspend fun <R> AppDatabase.runInDbTransaction(block: suspend () -> R): R
         }
     }
 
+/** v16.3：桌面自定义分类图标走本地文件存储，与 Android 的 `img:` 引用完全兼容。 */
 actual suspend fun loadIconBitmap(fileName: String): ImageBitmap? =
-    null // 桌面端暂不存自定义分类图标（IconStore 是 Android 专属），后续接入
+    withContext(Dispatchers.IO) { DesktopIconStore.load(fileName) }
 
 actual fun dynamicColorSchemeIfAvailable(dark: Boolean): ColorScheme? =
     null // 桌面无壁纸取色，恒走固定色板
@@ -70,7 +72,7 @@ actual fun PlatformClearDialogDim() {
 }
 
 actual fun deleteIconFile(fileName: String) {
-    // 桌面端暂不存自定义图标（IconStore 是 Android 专属），无需清理
+    DesktopIconStore.remove(fileName)
 }
 
 actual fun fileBackupSupported(): Boolean = true

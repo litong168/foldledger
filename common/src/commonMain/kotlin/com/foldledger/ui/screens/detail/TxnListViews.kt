@@ -53,6 +53,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -222,33 +223,37 @@ internal fun DayGroupCard(
         // ⚠️ 缝 5dp → 3dp：一屏十几行时 5dp 的亮缝会长成斑马纹，碎得不像玻璃。
         Column(Modifier.fillMaxWidth()) {
             group.items.forEachIndexed { index, txn ->
-                val rowShape = RoundedCornerShape(Radius.md)
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .glassSurface(
-                            shape = rowShape,
-                            elevation = 1.dp,
-                            fill = glassRowColor(),
-                            specular = 0.55f
+                // v16.3：给行一个稳定身份。原来一天内所有流水是普通 forEachIndexed，
+                // 增删/改账时整天的行都得跟着重组；现在未变的行可被 Compose 复用。
+                key(txn.id) {
+                    val rowShape = RoundedCornerShape(Radius.md)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .glassSurface(
+                                shape = rowShape,
+                                elevation = 1.dp,
+                                fill = glassRowColor(),
+                                specular = 0.55f
+                            )
+                            .padding(horizontal = 14.dp)
+                    ) {
+                        TxnRow(
+                            txn = txn,
+                            sceneKey = sceneKey,
+                            projectName = projectNames[txn.projectId],
+                            accountName = accountNames[txn.accountId],
+                            multiSelect = multiSelect,
+                            selected = txn.id in selectedIds,
+                            onToggle = { onToggle(txn.id) },
+                            onEdit = { onEdit(txn.id) },
+                            onDelete = { onDelete(txn.id) },
+                            onReimburse = { onReimburse(txn.id, it) },
+                            quickConfirm = quickConfirm?.let { qc -> { qc(txn.id) } }
                         )
-                        .padding(horizontal = 14.dp)
-                ) {
-                    TxnRow(
-                        txn = txn,
-                        sceneKey = sceneKey,
-                        projectName = projectNames[txn.projectId],
-                        accountName = accountNames[txn.accountId],
-                        multiSelect = multiSelect,
-                        selected = txn.id in selectedIds,
-                        onToggle = { onToggle(txn.id) },
-                        onEdit = { onEdit(txn.id) },
-                        onDelete = { onDelete(txn.id) },
-                        onReimburse = { onReimburse(txn.id, it) },
-                        quickConfirm = quickConfirm?.let { qc -> { qc(txn.id) } }
-                    )
+                    }
+                    if (index != group.items.lastIndex) Spacer(Modifier.height(3.dp))
                 }
-                if (index != group.items.lastIndex) Spacer(Modifier.height(3.dp))
             }
         }
     }

@@ -232,7 +232,8 @@ fun StatsScreen(
                                 )
                             } else {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    val sum = totals.sumOf { it.totalCents }
+                                    // v16.3：只在 totals 变化时算一次，别让动画每帧重扫整张分类表
+                                    val sum = remember(totals) { totals.sumOf { it.totalCents } }
                                     totals.take(10).forEachIndexed { i, t ->
                                         RankingRow(i, t, sum, direction)
                                     }
@@ -627,7 +628,9 @@ private fun BudgetHealthRow(item: BudgetHealth) {
 private fun AnnualCard(summary: AnnualSummary) {
     val dc = LocalDirectionColors.current
     val net = summary.totalNet
-    val maxMonth = (summary.monthlyExpense.maxOrNull() ?: 0L).coerceAtLeast(1L)
+    val maxMonth = remember(summary) {
+        (summary.monthlyExpense.maxOrNull() ?: 0L).coerceAtLeast(1L)
+    }
 
     SectionCard(
         overline = "年度",
@@ -797,9 +800,13 @@ private fun CategoryPanel(
             )
 
             Spacer(Modifier.height(16.dp))
+            // v16.3：饼图数据与占比分母只随 totals 重算一次。
+            // 原来排行里每一行都 `totals.sumOf{}` 重新扫一遍全表。
+            val slices = remember(totals) { totals.map { it.name to it.totalCents } }
+            val totalSum = remember(totals) { totals.sumOf { it.totalCents } }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 DonutChart(
-                    slices = totals.map { it.name to it.totalCents },
+                    slices = slices,
                     colors = SceneColors,
                     modifier = Modifier.size(132.dp),
                     strokeWidth = 16.dp,
@@ -840,7 +847,7 @@ private fun CategoryPanel(
                                     )
                                 }
                                 Text(
-                                    Money.percent(t.totalCents, totals.sumOf { it.totalCents }),
+                                    Money.percent(t.totalCents, totalSum),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1087,16 +1094,21 @@ private fun YearOverviewCard(
 ) {
     val dc = LocalDirectionColors.current
     val year = Calendar.getInstance().get(Calendar.YEAR)
-    val months = (1..12).map { m ->
-        val key = "%04d-%02d".format(year, m)
-        val exp = trend.firstOrNull { it.month == key && it.direction == Direction.EXPENSE }
-            ?.totalCents ?: 0L
-        val inc = trend.firstOrNull { it.month == key && it.direction == Direction.INCOME }
-            ?.totalCents ?: 0L
-        Triple(m, exp, inc)
+    // v16.3：原来 12 个月各做 2 次线性查找（24 次全表扫）+ 两次 sumOf，
+    // 且在动画每帧重组时全跑一遍。改成按 trend 建一次索引，只在数据/年份变化时重算。
+    val months = remember(trend, year) {
+        val byKey = HashMap<String, Pair<Long, Long>>()
+        trend.forEach { m ->
+            val (exp, inc) = byKey[m.month] ?: (0L to 0L)
+            byKey[m.month] = if (m.direction == Direction.EXPENSE) (m.totalCents to inc) else (exp to m.totalCents)
+        }
+        (1..12).map { m ->
+            val pair = byKey["%04d-%02d".format(year, m)] ?: (0L to 0L)
+            Triple(m, pair.first, pair.second)
+        }
     }
-    val totalExp = months.sumOf { it.second }
-    val totalInc = months.sumOf { it.third }
+    val totalExp = remember(months) { months.sumOf { it.second } }
+    val totalInc = remember(months) { months.sumOf { it.third } }
 
     SectionCard(
         overline = "回顾",

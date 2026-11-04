@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * 回收站里「备份文件」那一类的平台实现。
- * Android 用 SAF + BackupManager 把删除的备份搬进私有目录再还原；桌面端删除为直接删文件（无回收站）。
+ * 双端都是「删除前先留副本」：Android 走 SAF + BackupManager，桌面走普通文件搬运。
+ * 清单统一存 DataStore（[RecycledBackupCodec]），与 Room / 备份 JSON 无关。
  */
 interface BackupRecycler {
     /** 回收站里的备份文件 */

@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import com.foldledger.data.db.Direction
 import com.foldledger.ui.adaptive.AdaptiveScaffold
 import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.anim.clickableScale
+import com.foldledger.ui.components.CategoryIcon
 import com.foldledger.ui.components.GlassDialog
 import com.foldledger.ui.components.PillTag
 import com.foldledger.ui.theme.CoolGreen
@@ -55,14 +57,24 @@ import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.pendingTone
 import com.foldledger.ui.vm.CategoryViewModel
+import com.foldledger.util.DesktopIconStore
 import com.foldledger.util.IconRef
 import com.foldledger.util.Money
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.File
+import javax.swing.JFileChooser
+import javax.swing.SwingUtilities
+import javax.swing.filechooser.FileNameExtensionFilter
+import kotlin.coroutines.resume
 
 /**
  * 分类管理（桌面版，M3）。
  *
- * 覆盖核心交互：收支切换 / 增删改 / 图标选择器（预置库可搜索，无上传）/
+ * 覆盖核心交互：收支切换 / 增删改 / 图标选择器（预置库可搜索 + 上传自定义图片）/
  * 支出预算（近三月月均作锚点）/ 一键恢复场景预置分类。
+ *
+ * v16.3 起自定义图片与 Android 共用 `img:<fileName>` 引用，显示走共享 `CategoryIcon`。
  */
 @Composable
 fun DesktopCategoryManageScreen(
@@ -119,7 +131,8 @@ fun DesktopCategoryManageScreen(
                 }
                 items(list, key = { it.id }) { c ->
                     val dc = LocalDirectionColors.current
-                    val emoji = if (IconRef.isCustom(c.emoji)) "🏷️" else c.emoji
+                    // v16.3：走共享 CategoryIcon，自定义图片与 Android 一样显示真实图标，
+                    // 图片文件缺失时由共享组件降级成 🖼️（不再一律画成 🏷️）
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -130,7 +143,7 @@ fun DesktopCategoryManageScreen(
                             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(emoji, fontSize = 20.sp)
+                        CategoryIcon(ref = c.emoji, size = 24.dp, fontSize = 20)
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -297,12 +310,13 @@ private fun CategoryEditDialog(
 ) {
     val isEdit = category != null
     var name by remember(category) { mutableStateOf(category?.name ?: "") }
-    var icon by remember(category) { mutableStateOf(
-        if (category != null && !IconRef.isCustom(category.emoji)) category.emoji else "🏷️"
-    ) }
+    // v16.3：桌面也能保留 / 编辑自定义图片引用（以前一律降级成 🏷️）
+    var icon by remember(category) { mutableStateOf(category?.emoji ?: "🏷️") }
     var budgetCents by remember(category) { mutableStateOf(category?.budgetCents ?: 0L) }
     var search by remember { mutableStateOf("") }
     var groupIndex by remember { mutableStateOf(0) }
+    val uploadScope = rememberCoroutineScope()
+    var uploadHint by remember { mutableStateOf<String?>(null) }
 
     val groups = CategoryIconLibrary.groups
     val query = search.trim()
@@ -390,6 +404,40 @@ private fun CategoryEditDialog(
                         }
                     }
                 }
+                // v16.3：桌面补齐「上传自定义图标」，与 Android 的 Photo Picker 对齐。
+                // 仍走共享的 `img:<fileName>` 引用，不改 schema / 备份格式。
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = {
+                        uploadScope.launch {
+                            val picked = pickIconFile()
+                            if (picked == null) {
+                                uploadHint = "已取消选择图片"
+                                return@launch
+                            }
+                            val name = DesktopIconStore.import(picked)
+                            if (name == null) {
+                                uploadHint = "这张图片读不出来，换一张试试"
+                            } else {
+                                icon = IconRef.of(name)
+                                uploadHint = null
+                            }
+                        }
+                    }) { Text("上传图片", fontSize = 13.sp) }
+                    if (IconRef.isCustom(icon)) {
+                        Spacer(Modifier.width(8.dp))
+                        CategoryIcon(ref = icon, size = 24.dp, fontSize = 20)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "已选自定义图标",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                uploadHint?.let {
+                    Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
                 if (direction == Direction.EXPENSE && isEdit) {
                     Spacer(Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -442,4 +490,37 @@ private fun CategoryEditDialog(
             TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
+}
+
+/**
+ * 选一张本地图片做分类图标。
+ *
+ * ⚠️ 与备份目录选择同款防吞机制（v16.2.5 修「点了导出没反应」）：JFileChooser 必须在
+ * EDT 上、用 `invokeLater` 排到本次鼠标释放之后，并挂到主窗口做模态，绝不能在
+ * 事件派发栈里同步 `showOpenDialog(null)`。
+ */
+private suspend fun pickIconFile(): File? = suspendCancellableCoroutine { cont ->
+    SwingUtilities.invokeLater {
+        val picked = runCatching {
+            val chooser = JFileChooser().apply {
+                dialogTitle = "选一张分类图标"
+                isAcceptAllFileFilterUsed = false
+                fileFilter = FileNameExtensionFilter(
+                    "图片 (PNG / JPG / WEBP / BMP)", "png", "jpg", "jpeg", "webp", "bmp"
+                )
+                File(System.getProperty("user.home"), "Pictures").takeIf { it.isDirectory }
+                    ?.let { currentDirectory = it }
+            }
+            if (chooser.showOpenDialog(appWindow()) == JFileChooser.APPROVE_OPTION) {
+                chooser.selectedFile
+            } else null
+        }.getOrNull()
+        if (cont.isActive) cont.resume(picked)
+    }
+}
+
+private fun appWindow(): java.awt.Window? {
+    val windows = java.awt.Window.getWindows()
+    return windows.firstOrNull { it is java.awt.Frame && it.isVisible && it.title == "滴水记账" }
+        ?: windows.firstOrNull { it is java.awt.Frame && it.isVisible }
 }
