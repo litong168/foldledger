@@ -206,7 +206,7 @@ C:\Users\16039\AppData\Local\滴水记账\        ← MSI 管理，勿手工改
 
 **远端当前状态**：`gitea` remote = `https://t2-nas-1.tail2b73fa.ts.net:8444/litong/foldledger.git`，master = `f97e8d8`（与本地 HEAD、`backup` 裸仓库一致）；`git push gitea master` 已实测成功。
 
-⚠️ **别再用旧地址** `https://t2-nas.tail2b73fa.ts.net/litong/foldledger.git`：该 MagicDNS 名已不解析；新节点 `t2-nas-1`（100.105.27.52）的 **443 端口是 AdGuard Home**，根路径 302 → `/login.html`、其余路径一律空体 401 —— 看着像「反代登录门」，其实是撞错了服务。服务端口表以 Dashy 的 `https://t2-nas-1.tail2b73fa.ts.net:8443/conf.yml` 为准（8444=Gitea、8445=Uptime Kuma、8446=File Browser、8451=同步服务…）。Gitea 28.2.0 的 ROOT_URL 仍写成失效的旧域名，只影响网页里显示的 clone 地址，不影响 git push。
+⚠️ **别再用旧地址** `https://t2-nas.tail2b73fa.ts.net/litong/foldledger.git`：该 MagicDNS 名已不解析；新节点 `t2-nas-1`（100.105.27.52）的 **443 端口是 AdGuard Home**，根路径 302 → `/login.html`、其余路径一律空体 401 —— 看着像「反代登录门」，其实是撞错了服务。服务端口表以 Dashy 的 `https://t2-nas-1.tail2b73fa.ts.net:8443/conf.yml` 为准（8444=Gitea、8445=Uptime Kuma、8446=File Browser、8451=同步服务…）。Gitea 28.2.0 的 `ROOT_URL` / `SSH_DOMAIN` 确实仍写成失效的旧域名（API 401 报错里的 swagger 链接、`ssh_url` 可见），但 **Gitea 会按请求的 Host 头动态生成 HTTPS clone 地址**：用 `https://t2-nas-1...:8444/` 访问时，网页和 API 里的 `clone_url` 都是正确的 8444 新地址（把 Host 改成 `example.com` 会跟着变），所以 push / clone 完全不受影响。真正显示错的只有 SSH 那条 `ssh://git@t2-nas.tail2b73fa.ts.net:10022/...`，而 10022 端口从未打通、SSH 本来就不可用（见下方第 5 点）。
 
 **换令牌 / 配置要点**：
 
@@ -215,6 +215,8 @@ C:\Users\16039\AppData\Local\滴水记账\        ← MSI 管理，勿手工改
 3. `credential.<URL>.helper` 必须**按顺序 add 两条**：先一条空值（清空此前注册的 helper，把 PortableGit 系统级 `helper=manager` 挤掉），再挂只读函数 `!f() { if [ "$1" = get ]; then echo username=litong; echo password=$(cat "$HOME/.gitea-pat"); fi; }; f`。只挂函数时 GCM 会抢先返回别的账号（实测 `160397620@qq.com`）。
 4. 校验：**不要 clone**（DERP 中继太慢）。用 `git ls-remote gitea` 比对 HEAD，再用 `GET /api/v1/repos/litong/foldledger/git/trees/master` 取 `sha` 与本地 `git rev-parse HEAD^{tree}` 比对，相等即逐字节一致。
 5. SSH 仍不可行：Tailscale IP 只开 443 + 8443~8451，无 SSH 端口，本机 `~/.ssh/` 为空。
+
+**关于「改 ROOT_URL / SSH_DOMAIN」（2026-11-04 评估，结论：暂不动）**：彻底修需要动 Gitea 容器的 `app.ini` 或环境变量（`GITEA__server__ROOT_URL` / `SSH_DOMAIN`），而 NAS 只放行 443 + 8443~8451，**Docker API 未暴露、SSH 不通、管理界面需要登录**，无法从本机自动完成，只能由用户在 NAS UI 操作。按以往踩坑记录，用「编辑」容器必撞 `Conflict: container name "/gitea" is already in use` 且会把旧容器停在「已停止」，须走「停 → 只删容器 → 新建」；数据在宿主机 `个人空间/gitea/` 挂 `/data`，**挂载路径填错 = 仓库数据永久丢失**。而收益仅是修一个本来就点不通的 SSH 地址 + 一个只出现在错误响应里的 swagger 链接，风险明显大于收益。**当前建议：不动容器，网页里选 HTTPS 即可**。若确要重建，先做镜像备份（本地仓库 + D 盘裸仓库 + Gitea 已是三份，另可 `git bundle create` 出一份便携包），再逐项核对镜像版本、端口映射、`/data` 挂载、UID/GID、重启策略后操作。
 
 ---
 
