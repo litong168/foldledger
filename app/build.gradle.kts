@@ -39,8 +39,8 @@ android {
         applicationId = "com.foldledger"
         minSdk = 26
         targetSdk = 35
-        versionCode = 209
-        versionName = "15.1.1"
+        versionCode = 222
+        versionName = "16.2.9"
 
         vectorDrawables { useSupportLibrary = true }
     }
@@ -248,6 +248,9 @@ tasks.matching {
 }
 
 dependencies {
+    // 双端共享逻辑/UI（数据层、解析器、ViewModel、Rust 核心回退）已抽到 :common
+    implementation(project(":common"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

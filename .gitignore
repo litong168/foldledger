@@ -26,3 +26,18 @@ dist/*.aab
 rust/drip-core/target/
 .workbuddy/
 generated-images/
+
+# 桌面交付二进制（安装包/绿色包/服务端 tar）——体积大且可由源码重建，绝不入版本库
+dist/*.exe
+dist/*.zip
+dist/*.tar
+dist/legacy-green/
+
+# 临时脚本产物与运行日志
+scripts/*.log
+scripts/ui.xml
+
+# 各模块的构建产物（KSP 生成代码、intermediates、日志都不该进版本库）
+common/build/
+desktop/build/
+app/build/

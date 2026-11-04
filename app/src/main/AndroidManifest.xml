@@ -2,10 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 记账本为纯本地应用：不联网、不上传。以下权限均为本机功能所需 -->
+    <!-- 记账本以纯本地为主，不上传任何数据到第三方。M4.5 起支持自托管双端同步：
+         用户自填服务器地址（多为内网 http），故允许明文流量；数据只发往用户自己的服务器。 -->
 
     <!-- 每日记账提醒的通知权限（Android 13+ 需运行时请求） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- M4.5 双端同步：用户自填服务器地址（内网 http / 自配 HTTPS），HttpURLConnection 需要联网权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- v5.0：数字键盘与按钮的触感反馈（普通权限，无需运行时申请） -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- v8.1 自动记账：接收银行动账短信（运行时请求；不读历史短信、不外传） -->
@@ -40,6 +43,7 @@
         android:largeHeap="false"
         android:hardwareAccelerated="true"
         android:resizeableActivity="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.FoldLedger"
         tools:targetApi="35">
 

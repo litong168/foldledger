@@ -2,16 +2,29 @@
 
 > 滴水穿石，每日记账。
 
-一个为折叠屏深度适配的安卓记账 App：**分账本** + **场景化记账** + **一键备份/恢复（卸载重装也能找回）**。
+双端记账 App：**Android 手机（Compose）+ Windows 桌面（Compose Multiplatform，复用 70%+ 代码）**，通过自托管 Node 同步服务做记录级增量同步。核心能力：**分账本** + **场景化记账** + **一键备份/恢复（卸载重装也能找回）**。
 
 - **包名**：`com.foldledger`（沿用旧包名，保证老版本升级安装时数据与签名连续）
-- **版本**：15.1.1 (versionCode 209)
-- **产物**：`dist/滴水记账-v15.1.1-release.apk`（已签名，R8 混淆后 3.8MB）
+- **版本**：16.2.9 (versionCode 222)
+- **产物**：
+  - 手机：`dist/滴水记账-v16.2.8-release.apk`（已签名，R8 混淆后 ~4MB）
+  - 桌面：`dist/滴水记账-v16.2.9-win-x64-setup.exe`（**安装包**，双击安装到 `%LOCALAPPDATA%\滴水记账`，无需管理员；带桌面/开始菜单快捷方式与卸载项，卸载会清掉开机自启残留、保留 `~/.foldledger` 数据）
+- **代码结构**：`common/`（KMP 共享业务与 UI）+ `desktop/`（桌面壳）+ `app/`（Android 壳）+ `sync-server/`（同步服务端）+ `rust/`（DripCore）
 - **附带**：`dist/预置图标库预览.html`（不用装机就能看全 328 个预置图标 + 搜索）、
   `dist/应用图标预览.html`、`dist/Excel导出格式样例.xlsx`、`dist/备份文件格式样例.foldledger.json`
 - **签名**：正式签名库 `drip-ledger-release.jks`，证书 SHA-256 `3F:00:15:53:1B:C7:BD:6E:AC:7E:B1:06:96:9D:D7:F1:78:10:99:3E:2D:83:95:37:CA:28:D2:0A:97:51:32:E2`
 - **兼容**：Android 8.0 (API 26) ~ Android 15 (API 35)，ABI 覆盖 arm64-v8a / armeabi-v7a / x86 / x86_64
 
+> v16.2.9 变更摘要（桌面改为安装包分发）：**不再提供绿色免安装版**，桌面端统一用 jpackage + WiX 生成的安装包（`滴水记账-vX.Y.Z-win-x64-setup.exe`）。安装到 `%LOCALAPPDATA%\滴水记账`（无需管理员），生成桌面/开始菜单快捷方式与「应用和功能」卸载项；**升级**用同一个 UpgradeCode（`FA0CF5BB-...`）走 MSI 升级，装新版自动替换旧版，快捷方式与卸载项一并更新；**卸载**会清掉运行时写入的开机自启注册表项（MSI 的 `RemoveRegistryValue` 只在安装时执行、卸载不跑，实测会反向清掉用户开关，所以改由卸载序列里调应用自身 `uninstall-cleanup` 复用 `AutoStartRegistry.remove()`），并保留 `~/.foldledger` 数据不删。**随之调整的唯一行为**：原「更新到 vX 并重启」（解压替换安装目录）会写坏 MSI 组件表、导致卸载留残文件，故改为「检查更新 → 退出并安装」（自动退出后启动安装包）。构建脚本 `scripts/build_installer.ps1` + `scripts/verify_desktop_install.ps1`（安装态核验）+ `scripts/jpackage/main.wxs`（WiX 模板，含卸载清理）。
+>
+> v16.2.8 变更摘要（同步可观测，双端）：**同步卡只会说"上行 3 行 · 下行 0 行"，出问题时只能猜**。新增「同步记录」二级页：最近 20 次的时间/触发方式（手动·自动·后台）/上下行行数/新增·更新·本地胜出·跳过/耗时/结果，失败条目给出**可执行的下一步**（密钥不对去哪改、域名解析失败查什么）。冲突可展开看到**哪张表、哪条 id、两边各是什么时间戳、远端是哪台设备**——这层明细由 `SyncEngine.applyIncoming` 顺手产出（它本来就在算 `localWins`，不新增查询）。存储走 prefs 的一个 JSON（`SyncLogStore`，环形 20 条、单条冲突上限 12 条），**不动 DB schema**；写日志用 `runCatching` 兜住，日志坏了绝不影响同步本身。「重置同步身份」会一并清空记录（换服务器后旧记录只会误导）。测试 +6（编解码往返/坏数据兜底/环形上限/失败提示映射/本地胜出记冲突/远端胜出不记）。app 203 + desktopTest **51**。
+>
+> v16.2.7 变更摘要（备份闭环，双端）：**① 备份目录可换**——以前选错目录/换盘/目录被删就再也没入口，只能卸载重装；现在备份位置旁有「更换」（桌面 JFileChooser / 手机 SAF 重授权）和「打开」（桌面用资源管理器直接定位到文件夹，Android 无稳定入口故隐藏）。**② 恢复不再只有"覆盖"一条路**——新增 `restoreAsNewLedgers()`：把备份当作**新账本**追加进来，id 全量重映射、账本名加「（恢复）」，当前数据一条不动。恢复确认框改成双动作（作为新账本 / 覆盖当前数据），并把两种后果写清楚；加密备份输完密码后同样能选。**③ 导出有回执**——备份卡位置行会显示「上次导出：时间」，不用再靠猜。**零 DB 改动**；app 203 + desktopTest 45 全过（新增 `RestoreAsNewTest` 2 项：追加不动原数据 / 覆盖仍还原成一份）。
+>
+> v16.2.6 变更摘要（桌面三修）：**① 桌面「导出备份」点了没反应**——`pickFolderBlocking()` 在 **AWT EDT 里同步** `showOpenDialog(null)`，两个致命点：弹窗没有父窗口（不模态、不置顶，被主窗口盖住就是"什么都没发生"），而且它是在**鼠标释放事件的派发栈里**弹的，同一次 release 会落到新对话框上把它吞掉。改成 `SwingUtilities.invokeLater` 排到当前事件之后 + 挂主窗口做父级 + 挂起函数等结果（不阻塞 EDT）；取消也有了回执（"已取消选择备份文件夹"），自动备份开关在没选目录时会回弹并说明原因。**② 界面切换不流畅**——实测**没有掉帧**（点击→首帧 129ms、空闲 CPU 0ms、12 次滚动 94ms、GPU 无变化），是动效本身慢半拍：切页 280ms 位移 + 220ms 淡入 + 内容错落（最多 7×36ms）叠起来要 0.5s 才落定。`Motion` 收紧为 PAGE_ENTER 280→220、PAGE_EXIT 210→160、错落 36→22 / 上限 7→4。**③ 桌面图标与手机不一致**——原来是满铺直角方块，任务栏里和手机圆角图标完全两样。新增 `scripts/GenIcon.java`：直接按 `ic_launcher_background/foreground.xml` 的矢量原稿（同一份 108vp 坐标）用 Java2D 重绘，再套 23.5% 圆角遮罩，产出 1024 窗口图标 PNG + 7 帧 ICO（256 PNG / 128~16 BMP）。exe 里提取出的 32×32 帧已确认四角透明。**零数据库改动**；app 203 + desktopTest 43 全过（新增导出链路 2 项）。
+>
+> v16.2.5 变更摘要（工程闸门修复 + 搜索结果可点）：**① 字阶闸门复活**——M1 拆 KMP 后 `scripts/check_type_scale.py` 仍扫 `app/src/main/java`（已空），**扫到 0 个文件也打 ✅**，闸门静默失效两个大版本。修：扫 `common/src` 三源集 + `desktop/src` + `app/src`，并让 `total==0` 直接判失败；允许字号改为从 `Type.kt` 的 `TypeScale.allowed` 实时解析，脚本与主题表不会再漂移。**② 16 处字号违规归位**——12.sp/14.sp/18.sp/22.sp 按档位归到 11/15/17/20.sp（含此前从未被查的桌面端 `PlatformScreens.desktop.kt`、`CategoryManageScreen.desktop.kt`）。**③ 全局搜索点结果没反应**——`onPickResult` 一直是 `TODO` 空实现，点搜索结果毫无反馈；改为带 `txnId` 回传，切到该笔所在账本并直接打开「编辑这一笔」浮层。**④ 软著源程序脚本同样因 KMP 迁移扫空**——改扫 `common/desktop/app + rust`，版本号从 `AppInfo.kt` 自动取（原来硬编码 V9.0），支持传参试跑。**零数据库改动、零新依赖**；203 + 41 项单测全过。
+>
 > v15.1.1 变更摘要（真机冒烟修加密备份恢复）：**加密备份导出后被 SAF 追加 `.json` 后缀**（产出 `xxx.foldledger.crypt.json`）——导出时用了 `application/json` MIME，DocumentsProvider 按 MIME 自动补扩展名，导致 `isBackupFileName` 匹配失败、**恢复列表永远扫不到加密备份**。修复：加密信封不是 JSON，改用 `application/octet-stream` 写入（`MIME_CRYPT`），回收站还原同一处一并修复。真机验证：设密导出产出正确的 `.foldledger.crypt` → 恢复列表可见（🔒 手标 + 明文头摘要）→ 输密码 → Rust 预检 →「已恢复 4 个账本 / 39 个分类 / 64 笔流水」。**零数据库改动、零新依赖**。
 >
 > v15.1.0 变更摘要（隐私强化 · 代码保护基线）：**① 关闭系统云备份**——`allowBackup=false`，移除 `dataExtractionRules`/`fullBackupContent`，`foldledger.db` 不再进入 Google 云备份 / 换机传输 / adb 外传；App 自带「一键导出」不受影响。**② 备份导出支持可选密码加密**——新增 `BackupCipher`（AES-256-GCM + PBKDF2-HMAC-SHA256 十万次迭代），信封 `[FLDC1][header][salt16][iv12][密文+GCM tag]`，密码不落库（导出/导入时临时输入），产出 `.foldledger.crypt`；内层 JSON schema 不变，旧 `.foldledger.json` 仍兼容，自动备份保持明文（静默、无密码入口）。**③ 开启 R8 混淆 + 资源收缩**（`isMinifyEnabled=true` + `isShrinkResources=true`，`-keep` DripCore JNI 入口防查找失败），APK 11MB → 3.8MB（体积降约 66%），并初始化 git 版本控制。**零数据库改动、零新依赖**。

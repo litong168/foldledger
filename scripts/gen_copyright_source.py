@@ -12,24 +12,48 @@
 """
 import os
 import re
+import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "dist", "软著-源程序文档-滴水记账.txt")
 
 SOFTWARE = "滴水记账"
-VERSION = "V9.0"
 LINES_PER_PAGE = 50
 
-# 参与提交的源文件：Kotlin 主源码 + Rust 核心（排除测试与构建产物）
+# 参与提交的源文件：KMP 共享源码 + 双端壳 + Rust 核心（排除测试与构建产物）
+# ⚠️ v16.2.5：M1 拆分 KMP 后主源码已从 app/src/main/java 迁到 common/src，
+# 旧版本只扫 app/src/main/java → 收集到 0 个 Kotlin 文件，软著文档只剩 rust。
+SOURCE_ROOTS = ("common/src", "desktop/src", "app/src", "rust/drip-core/src")
 SKIP_DIR_PARTS = {"test", "build", "dist", ".gradle", ".workbuddy", "jniLibs", "generated"}
+
+
+def detect_version() -> str:
+    """版本号从 AppInfo.kt 取，避免软著文档上印着过期的 V9.0。"""
+    app_info = os.path.join(ROOT, "common", "src", "commonMain", "kotlin",
+                            "com", "foldledger", "AppInfo.kt")
+    try:
+        with open(app_info, encoding="utf-8") as f:
+            m = re.search(r'APP_VERSION_NAME\s*=\s*"([^"]+)"', f.read())
+        if m:
+            return "V" + m.group(1)
+    except OSError:
+        pass
+    return "V0.0"
+
+
+def _skip_dir(name: str) -> bool:
+    # 同时挡掉 desktopTest / androidTest / commonTest 这类源集
+    return name in SKIP_DIR_PARTS or name.endswith("Test") or name.startswith("test")
 
 
 def collect_files():
     files = []
-    for base in ("app/src/main/java", "rust/drip-core/src"):
+    for base in SOURCE_ROOTS:
         top = os.path.join(ROOT, base)
+        if not os.path.isdir(top):
+            continue
         for dirpath, dirnames, filenames in os.walk(top):
-            dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_PARTS]
+            dirnames[:] = [d for d in dirnames if not _skip_dir(d)]
             for fn in sorted(filenames):
                 if fn.endswith((".kt", ".rs")):
                     files.append(os.path.join(dirpath, fn))
@@ -37,6 +61,7 @@ def collect_files():
 
 
 def main():
+    version = detect_version()
     lines_out = []
     for path in collect_files():
         rel = os.path.relpath(path, ROOT).replace("\\", "/")
@@ -66,19 +91,21 @@ def main():
         selected = head + [f"/* …… 中间 {pages_needed - 60} 页按登记要求省略 …… */"] + tail
         header_note = f"（源码共 {pages_needed} 页，按规定提交前 30 页与后 30 页）"
 
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w", encoding="utf-8") as f:
-        f.write(f"{SOFTWARE} {VERSION} 源程序\n{header_note}\n")
+    # 可传第 1 个参数指定输出路径（试跑用，避免覆盖已提交的软著文档）
+    out = sys.argv[1] if len(sys.argv) > 1 else OUT
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"{SOFTWARE} {version} 源程序\n{header_note}\n")
         f.write("=" * 72 + "\n\n")
         for i, ln in enumerate(selected):
             page = i // LINES_PER_PAGE + 1
             if i % LINES_PER_PAGE == 0:
-                f.write(f"\n【{SOFTWARE} {VERSION} 源程序】                                    第 {page} 页\n")
+                f.write(f"\n【{SOFTWARE} {version} 源程序】                                    第 {page} 页\n")
                 f.write("-" * 72 + "\n")
             f.write(f"{i + 1:5d}  {ln}\n")
 
-    print(f"已生成: {OUT}")
-    print(f"有效代码行 {total} 行 → {pages_needed} 页（{header_note}）")
+    print(f"已生成: {out}")
+    print(f"有效代码行 {total} 行 → {pages_needed} 页{header_note}")
 
 
 if __name__ == "__main__":

@@ -20,9 +20,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ---------------- 1. 从 KSP 产物抽期望 schema ----------------
 
 def load_expected_from_ksp():
-    paths = glob.glob(os.path.join(ROOT, "app/build/generated/ksp/release/kotlin/com/foldledger/data/db/AppDatabase_Impl.kt"))
+    # DB 已迁入 :common（KMP 模块）：androidTarget 的 KSP 产物在 common/build/generated/ksp/android/*/
+    paths = glob.glob(os.path.join(ROOT, "common/build/generated/ksp/android/*/kotlin/com/foldledger/data/db/AppDatabase_Impl.kt"))
     if not paths:
-        print("找不到 AppDatabase_Impl.kt —— 请先跑一次 :app:compileReleaseKotlin")
+        print("找不到 AppDatabase_Impl.kt —— 请先跑一次 :common:compileDebugKotlinAndroid")
         sys.exit(2)
     src = open(paths[0], encoding="utf-8").read()
     tables = {}
@@ -111,13 +112,39 @@ M910 = [
     "CREATE INDEX IF NOT EXISTS `index_goals_ledgerId` ON `goals` (`ledgerId`)",
 ]
 
-CHAIN = {1: [M12, M23, M34, M45, M56, M67, M78, M89, M910],
-         2: [M23, M34, M45, M56, M67, M78, M89, M910],
-         3: [M34, M45, M56, M67, M78, M89, M910],
-         4: [M45, M56, M67, M78, M89, M910],
-         5: [M56, M67, M78, M89, M910], 6: [M67, M78, M89, M910],
-         7: [M78, M89, M910], 8: [M89, M910], 9: [M910], 10: []}
-MAX_VER = 10
+# v10 -> v11（M4 双端同步）：全表加同步字段 —— 7 表 + updatedAt/updatedByDeviceId，
+# 5 表（categories/transactions/projects/accounts/recurring）补 deletedAt 墓碑。
+# 与 AppDatabase.kt 的 MIGRATION_10_11 保持同文（纯 ALTER 加列，无重建）。
+M1011 = [
+    "ALTER TABLE `ledgers` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `ledgers` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `categories` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `categories` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `categories` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `transactions` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `transactions` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `transactions` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `goals` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `goals` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `projects` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `projects` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `projects` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `recurring` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `recurring` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `recurring` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `accounts` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `accounts` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `accounts` ADD COLUMN `updatedByDeviceId` INTEGER NOT NULL DEFAULT 0",
+]
+
+CHAIN = {1: [M12, M23, M34, M45, M56, M67, M78, M89, M910, M1011],
+         2: [M23, M34, M45, M56, M67, M78, M89, M910, M1011],
+         3: [M34, M45, M56, M67, M78, M89, M910, M1011],
+         4: [M45, M56, M67, M78, M89, M910, M1011],
+         5: [M56, M67, M78, M89, M910, M1011], 6: [M67, M78, M89, M910, M1011],
+         7: [M78, M89, M910, M1011], 8: [M89, M910, M1011], 9: [M910, M1011],
+         10: [M1011], 11: []}
+MAX_VER = 11
 
 # ---------------- 3. 造旧库 ----------------
 
@@ -163,6 +190,12 @@ def build_old_db(path, ver):
             c.execute(s)
     if ver >= 9:
         for s in M89:
+            c.execute(s)
+    if ver >= 10:
+        for s in M910:
+            c.execute(s)
+    if ver >= 11:
+        for s in M1011:
             c.execute(s)
     db.commit()
     return db

@@ -2,6 +2,13 @@
 -keep class * extends androidx.room.RoomDatabase
 -dontwarn androidx.room.paging.**
 
+# ---- DataStore / protobuf（R8 反射初始化崩溃："No initializer set for given class"） ----
+# datastore-preferences 用反射初始化 protobuf 消息类，混淆后字段/构造器被改写即崩
+-keep class androidx.datastore.** { *; }
+-keep class androidx.datastore.preferences.protobuf.** { *; }
+-dontwarn androidx.datastore.**
+-dontwarn androidx.datastore.preferences.protobuf.**
+
 # ---- Kotlin / Coroutines ----
 -dontwarn kotlinx.coroutines.**
 -keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }

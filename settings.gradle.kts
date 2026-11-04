@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "FoldLedger"
 include(":app")
+include(":common")
+include(":desktop")

@@ -1,0 +1,420 @@
+package com.foldledger.ui.nav
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.foldledger.APP_VERSION_CODE
+import com.foldledger.APP_VERSION_NAME
+import com.foldledger.ServiceLocator
+import com.foldledger.data.prefs.DarkMode
+import com.foldledger.desktop.DesktopAutoUpdater
+import com.foldledger.ui.adaptive.AdaptiveScaffold
+import com.foldledger.ui.adaptive.FoldEnv
+import com.foldledger.ui.anim.clickableScale
+import com.foldledger.ui.components.SectionCard
+import com.foldledger.ui.screens.BackupSection
+import com.foldledger.ui.screens.BillImportScreen
+import com.foldledger.ui.screens.DesktopCategoryManageScreen
+import com.foldledger.ui.screens.SpeedEntryPanel
+import com.foldledger.ui.screens.SyncSectionCard
+import com.foldledger.ui.theme.Layout
+import com.foldledger.ui.theme.Radius
+import com.foldledger.ui.theme.Space
+import com.foldledger.ui.vm.AppViewModel
+import com.foldledger.ui.vm.BackupViewModel
+import com.foldledger.ui.vm.SpeedEntryViewModel
+
+/**
+ * 桌面端平台页。
+ *
+ * 「我的」Tab 是桌面完整设置页（备份卡走共享 BackupSection + 桌面文件备份实现；
+ * 外观/提醒/同步/关于为桌面专属卡）；依赖 Android 能力（系统权限 / 语音）的页面保持占位。
+ */
+private object DesktopPlatformScreens : PlatformScreens {
+    @Composable
+    override fun SettingsTab(
+        env: FoldEnv,
+        appVm: AppViewModel,
+        backupVm: BackupViewModel,
+        onOpenSystemAccess: () -> Unit,
+        onOpenRecycleBin: () -> Unit,
+        onOpenMoreSettings: () -> Unit,
+        onOpenSpeedEntry: (Long) -> Unit,
+        onOpenAssistant: () -> Unit,
+        onOpenGoal: (Long) -> Unit,
+        onOpenBillImport: (Long) -> Unit,
+        onOpenSyncLog: () -> Unit,
+        modifier: Modifier
+    ) {
+        val settings by appVm.settings.collectAsStateWithLifecycle()
+        val cards by appVm.ledgerCards.collectAsStateWithLifecycle()
+        val side = Layout.sidePadding(env.widthDp)
+
+        Box(modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = side, end = side, top = Space.sm, bottom = Space.huge
+                ),
+                verticalArrangement = Arrangement.spacedBy(Space.gapSection)
+            ) {
+                item {
+                    SectionCard(overline = "全局", title = "速记 · 助手 · 目标") {
+                        DesktopToolRow(
+                            emoji = "⚡",
+                            title = "一句话记账",
+                            subtitle = "打一句「昨天打车35」就记完",
+                            onClick = { onOpenSpeedEntry(settings.lastLedgerId) }
+                        )
+                        DesktopDivider()
+                        DesktopToolRow(
+                            emoji = "💡",
+                            title = "记账助手",
+                            subtitle = "全部账本的待办，一页说清",
+                            onClick = { onOpenAssistant() }
+                        )
+                        DesktopDivider()
+                        DesktopToolRow(
+                            emoji = "🎯",
+                            title = "存钱目标",
+                            subtitle = "所有账本的钱罐，攒钱不混进流水",
+                            onClick = { onOpenGoal(settings.lastLedgerId) }
+                        )
+                        DesktopDivider()
+                        DesktopToolRow(
+                            emoji = "📥",
+                            title = "导入账单",
+                            subtitle = "微信 / 支付宝导出的 Excel 或 CSV",
+                            onClick = { onOpenBillImport(settings.lastLedgerId) }
+                        )
+                    }
+                }
+
+                item {
+                    SectionCard(overline = "主题", title = "外观") {
+                        Text(
+                            "深色模式",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                DarkMode.FOLLOW_SYSTEM to "跟随系统",
+                                DarkMode.LIGHT to "浅色",
+                                DarkMode.DARK to "深色"
+                            ).forEach { (mode, label) ->
+                                val selected = settings.darkMode == mode
+                                Box(
+                                    Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .clickableScale { appVm.setDarkMode(mode) }
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        label,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    BackupSection(backupVm = backupVm, hasData = cards.isNotEmpty())
+                }
+
+                item {
+                    SectionCard(
+                        overline = "提醒",
+                        title = "记账提醒",
+                        subtitle = "每天定时提醒你记一笔"
+                    ) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("每日提醒", fontSize = 15.sp)
+                            Switch(
+                                checked = settings.reminderEnabled,
+                                onCheckedChange = { enable ->
+                                    appVm.setReminder(enable, settings.reminderHour, settings.reminderMinute)
+                                }
+                            )
+                        }
+                        if (settings.reminderEnabled) {
+                            Spacer(Modifier.height(10.dp))
+                            Text("提醒时间", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = settings.reminderHour.toString(),
+                                    onValueChange = { v ->
+                                        val h = v.filter { it.isDigit() }.toIntOrNull()
+                                        if (h != null && h in 0..23) {
+                                            appVm.setReminder(true, h, settings.reminderMinute)
+                                        }
+                                    },
+                                    label = { Text("时") },
+                                    singleLine = true,
+                                    modifier = Modifier.width(80.dp)
+                                )
+                                Text(":", fontSize = 20.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                                OutlinedTextField(
+                                    value = settings.reminderMinute.toString(),
+                                    onValueChange = { v ->
+                                        val m = v.filter { it.isDigit() }.toIntOrNull()
+                                        if (m != null && m in 0..59) {
+                                            appVm.setReminder(true, settings.reminderHour, m)
+                                        }
+                                    },
+                                    label = { Text("分") },
+                                    singleLine = true,
+                                    modifier = Modifier.width(80.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "到点会从系统托盘弹出气泡提醒；App 需在后台运行（最小化到托盘即可）",
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    // M5.15：启动（开机自启）与自动更新卡，桌面专属
+                    var updateDir by remember { mutableStateOf(settings.desktopUpdateDir ?: "") }
+                    LaunchedEffect(settings.desktopUpdateDir) {
+                        updateDir = settings.desktopUpdateDir ?: ""
+                    }
+                    SectionCard(overline = "启动", title = "开机自启与更新") {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("开机自启", fontSize = 15.sp)
+                            Switch(
+                                checked = settings.desktopAutoStart,
+                                onCheckedChange = { appVm.setDesktopAutoStart(it) }
+                            )
+                        }
+                        Text(
+                            "开机后后台启动（不弹窗），从托盘打开窗口",
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        DesktopDivider()
+                        Text("更新来源目录", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = updateDir,
+                            onValueChange = {
+                                updateDir = it
+                                appVm.setDesktopUpdateDir(it)
+                            },
+                            placeholder = { Text("留空 = 系统「下载」文件夹") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { DesktopAutoUpdater.checkNow() },
+                                enabled = !DesktopAutoUpdater.busy.value
+                            ) {
+                                Text(if (DesktopAutoUpdater.busy.value) "检查中…" else "检查更新")
+                            }
+                            DesktopAutoUpdater.updateInfo.value?.let { info ->
+                                if (info.isInstaller) {
+                                    Button(onClick = { DesktopAutoUpdater.installUpdate() }) {
+                                        Text("退出并安装 v${info.versionName}")
+                                    }
+                                } else {
+                                    Button(onClick = { DesktopAutoUpdater.openUpdateLocation() }) {
+                                        Text("打开位置")
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            DesktopAutoUpdater.updateInfo.value?.let {
+                                if (it.isInstaller) {
+                                    "发现新版本 v${it.versionName}；点右侧会关闭本程序并启动安装包，安装完成后重新打开即可（数据不受影响）"
+                                } else {
+                                    "发现新版本 v${it.versionName}（旧版绿色包）；请手动用安装包升级"
+                                }
+                            } ?: "当前版本 v$APP_VERSION_NAME（$APP_VERSION_CODE）；启动后自动检查",
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item {
+                    // M4.5：同步卡（注册 / 手动与自动同步），替代早期"开发中"占位
+                    SyncSectionCard(
+                        syncManager = ServiceLocator.syncManager,
+                        onOpenLog = onOpenSyncLog
+                    )
+                }
+
+                item {
+                    SectionCard(overline = "关于", title = "滴水记账") {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                "Windows 桌面版 · 版本 $APP_VERSION_NAME（$APP_VERSION_CODE）",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "数据保存在本机 ~/.foldledger/；启用同步后会上传到自托管服务器",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    override fun CategoryManage(env: FoldEnv, ledgerId: Long, onBack: () -> Unit) {
+        DesktopCategoryManageScreen(env = env, ledgerId = ledgerId, onBack = onBack)
+    }
+
+    @Composable
+    override fun SystemAccess(env: FoldEnv, onBack: () -> Unit) {
+        Placeholder("系统权限页仅 Android 需要，桌面无需此页")
+    }
+
+    @Composable
+    override fun SpeedEntry(env: FoldEnv, ledgerId: Long, onBack: () -> Unit) {
+        val vm: SpeedEntryViewModel = viewModel(
+            key = "speed-$ledgerId",
+            factory = SpeedEntryViewModel.factory(ledgerId)
+        )
+        AdaptiveScaffold(
+            env = env,
+            title = "一句话记账",
+            subtitle = "打一句「昨天打车35」就记完",
+            onBack = onBack,
+            showNavigation = false
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                SpeedEntryPanel(env = env, vm = vm, modifier = Modifier.fillMaxSize())
+            }
+        }
+    }
+
+    @Composable
+    override fun BillImport(env: FoldEnv, ledgerId: Long, onBack: () -> Unit) {
+        BillImportScreen(env = env, ledgerId = ledgerId, onBack = onBack)
+    }
+
+    @Composable
+    private fun Placeholder(text: String) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text, modifier = Modifier.padding(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun DesktopToolRow(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.sm))
+            .clickableScale { onClick() }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(emoji, fontSize = 17.sp)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                subtitle,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun DesktopDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+        modifier = Modifier.padding(vertical = 2.dp)
+    )
+}
+
+@Composable
+actual fun rememberPlatformScreens(): PlatformScreens = DesktopPlatformScreens
