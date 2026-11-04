@@ -633,13 +633,20 @@ private fun GlobalToolRow(
             .clickable { onClick() }
             .padding(vertical = 6.dp)
     ) {
-        Text(emoji, fontSize = 20.sp)
+        // v16.3.1：固定行盒，与桌面 DesktopToolRow 逐项对齐（字号 / 字重 / 行高 / 箭头）
+        Text(emoji, fontSize = 20.sp, lineHeight = 24.sp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                title,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.SemiBold
+            )
             Text(
                 subtitle,
                 fontSize = 11.sp,
+                lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -5,16 +5,18 @@
 双端记账 App：**Android 手机（Compose）+ Windows 桌面（Compose Multiplatform，复用 70%+ 代码）**，通过自托管 Node 同步服务做记录级增量同步。核心能力：**分账本** + **场景化记账** + **一键备份/恢复（卸载重装也能找回）**。
 
 - **包名**：`com.foldledger`（沿用旧包名，保证老版本升级安装时数据与签名连续）
-- **版本**：16.3.0 (versionCode 223)
+- **版本**：16.3.1 (versionCode 224)
 - **产物**：
-  - 手机：`dist/滴水记账-v16.3.0-release.apk`（已签名，R8 混淆后 ~4MB）
-  - 桌面：`dist/滴水记账-v16.3.0-win-x64-setup.exe`（**安装包**，双击安装到 `%LOCALAPPDATA%\滴水记账`，无需管理员；带桌面/开始菜单快捷方式与卸载项，卸载会清掉开机自启残留、保留 `~/.foldledger` 数据）
+  - 手机：`dist/滴水记账-v16.3.1-release.apk`（已签名，R8 混淆后 ~4MB）
+  - 桌面：`dist/滴水记账-v16.3.1-win-x64-setup.exe`（**安装包**，双击安装到 `%LOCALAPPDATA%\滴水记账`，无需管理员；带桌面/开始菜单快捷方式与卸载项，卸载会清掉开机自启残留、保留 `~/.foldledger` 数据）
 - **代码结构**：`common/`（KMP 共享业务与 UI）+ `desktop/`（桌面壳）+ `app/`（Android 壳）+ `sync-server/`（同步服务端）+ `rust/`（DripCore）
 - **附带**：`dist/预置图标库预览.html`（不用装机就能看全 328 个预置图标 + 搜索）、
   `dist/应用图标预览.html`、`dist/Excel导出格式样例.xlsx`、`dist/备份文件格式样例.foldledger.json`
 - **签名**：正式签名库 `drip-ledger-release.jks`，证书 SHA-256 `3F:00:15:53:1B:C7:BD:6E:AC:7E:B1:06:96:9D:D7:F1:78:10:99:3E:2D:83:95:37:CA:28:D2:0A:97:51:32:E2`
 - **兼容**：Android 8.0 (API 26) ~ Android 15 (API 35)，ABI 覆盖 arm64-v8a / armeabi-v7a / x86 / x86_64
 
+> v16.3.1 变更摘要（UI 精细打磨，双端统一标准，**不新增功能**）：① **选中态全部回到玻璃规范** —— 桌面深色模式开关、桌面分类方向 chip、Android 图标选择器分组/图标格、共享多选勾选圈、报销「复制催办摘要」主行动键，原来都是 `primary` 实色块（用户明确否过），现统一为「主色染膜浓度 + 内棱 + 1~2dp 影」，文字回 `onSurface`/主色；两端同功能用同一套表现。② **字体排版** —— 二级页面卡（备份 / 回收站 / 同步 / 存钱目标）主文本统一 15.sp SemiBold + 22.sp 行盒、副文本 11.sp；`SectionCard` 副标题行高交回 `bodySmall`(13/19)；`HeroNumber` 不再 copy 成 44/44（中文+tnum 下沿会被裁）；分类名 11/13 → 11/15；日期格 10/12 → 11/13、金额输入 `¥` 18/21 → 17/20、时间数字 23 → 24，全部归 8 档字阶；玻璃上的 `ExtraBold` 收成 `SemiBold`。③ **对齐与层次** —— 工具行双端统一（emoji 20 / 标题 13 SemiBold / 说明 11 / 尾部 › / 6dp 行距，且逐项固定行盒）；补 4 处缺失的 `verticalAlignment`、2 处 `textAlign`、空态文字补 `fillMaxWidth` 让居中生效、统计页双栏右栏留白 16/20 → 20/20；`GoalScreen` 去掉 `SectionCard(title="", subtitle="")` 造成的约 40dp 空白伪标题栏；桌面「更多设置」三处裸 Text 从继承 17.sp 显式降为 13/11.sp 次级墨色。④ **明确不动**：金额阶梯与折叠动画的连续插值、卡片内边距全量重排、装饰用小圆点字号（改动收益低于回归风险）。字阶闸门 709 点全绿，app 203 + desktopTest 55 = 258 全绿，双端装机与安装态 10 项核验通过。
+>
 > v16.3.0 变更摘要（双端一致性补齐 + 性能，双端）：**桌面三处空桩对齐手机**——① 一句话记账的输入槽从空 Composable 变成同尺寸玻璃钮（桌面无系统语音识别，改为从剪贴板填入一句话，解析/确认/撤销流程与手机完全相同，不引新依赖）；② 自定义分类图标补本地存储（256×256 PNG 落 `~/.foldledger/category_icons/`）+ 上传入口，列表与编辑框改走共享 `CategoryIcon`；③ 删除备份不再硬删，与手机一样「先留副本 → 记清单 → 删原件」，设置页补上此前收了却没接的回收站入口；顺手修了加密备份 `.crypt` 的 xlsx 配对名。**性能**：明细页同一条 SQL 的 Room observer 由 2 降到 1、账户余额改单次遍历、统计页月度汇总合并订阅；筛选合计/分类占比/年度 12 个月等重复聚合改为按输入缓存，日内流水行加稳定 key、列表补 contentType。**零 DB 改动、零备份格式改动、余额口径与视觉规范不变**。新增 4 项桌面回收站文件链路单测 → app 203 + desktopTest **55**（共 258）全绿；字阶 706 点、迁移 1→11 闸门通过；双端装机与安装态 10 项核验通过。
 >
 > v16.2.9 变更摘要（桌面改为安装包分发）：**不再提供绿色免安装版**，桌面端统一用 jpackage + WiX 生成的安装包（`滴水记账-vX.Y.Z-win-x64-setup.exe`）。安装到 `%LOCALAPPDATA%\滴水记账`（无需管理员），生成桌面/开始菜单快捷方式与「应用和功能」卸载项；**升级**用同一个 UpgradeCode（`FA0CF5BB-...`）走 MSI 升级，装新版自动替换旧版，快捷方式与卸载项一并更新；**卸载**会清掉运行时写入的开机自启注册表项（MSI 的 `RemoveRegistryValue` 只在安装时执行、卸载不跑，实测会反向清掉用户开关，所以改由卸载序列里调应用自身 `uninstall-cleanup` 复用 `AutoStartRegistry.remove()`），并保留 `~/.foldledger` 数据不删。**随之调整的唯一行为**：原「更新到 vX 并重启」（解压替换安装目录）会写坏 MSI 组件表、导致卸载留残文件，故改为「检查更新 → 退出并安装」（自动退出后启动安装包）。构建脚本 `scripts/build_installer.ps1` + `scripts/verify_desktop_install.ps1`（安装态核验）+ `scripts/jpackage/main.wxs`（WiX 模板，含卸载清理）。

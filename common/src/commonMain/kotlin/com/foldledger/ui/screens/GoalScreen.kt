@@ -268,7 +268,9 @@ private fun GoalCreateCard(onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(
                     "新建存钱目标",
-                    fontSize = 13.sp,
+                    // v16.3.1：入口卡主文本统一 15.sp + 固定行盒
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -299,7 +301,9 @@ private fun GoalCard(
         goal.savedCents, goal.targetCents, goal.targetDate, System.currentTimeMillis()
     )
 
-    SectionCard(title = "", subtitle = "") {
+    // v16.3.1：原来传空串给 title/subtitle，SectionHeader 仍会渲染两个空 Text + 约 40dp 空白；
+    // 现在不传标题，卡内自造的 15.sp 主文本就是唯一层级，头部不再留一段假空白。
+    SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(goal.emoji, fontSize = 24.sp)
             Spacer(Modifier.width(10.dp))
@@ -336,7 +340,9 @@ private fun GoalCard(
                 Text(
                     "$pct%",
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 24.sp,
+                    // 规范：玻璃上不用 ExtraBold，层级靠字号差 + 墨色深浅
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }

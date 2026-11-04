@@ -49,6 +49,7 @@ import com.foldledger.ui.components.CategoryIcon
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.Space
 import com.foldledger.ui.theme.glassChip
+import com.foldledger.ui.theme.glassSelectChip
 
 /**
  * 图标选择器。
@@ -190,13 +191,12 @@ fun IconPickerOverlay(
                 ) {
                     items(CategoryIconLibrary.groups, key = { it.name }) { g ->
                         val active = CategoryIconLibrary.groups[groupIndex].name == g.name
+                        // v16.3.1：与桌面图标选择器同款玻璃选中态（浓度 + 内棱 + 抬影），
+                        // 去掉 primary 实色块；文字层级也统一到「主色 / onSurfaceVariant」。
                         Box(
                             Modifier
+                                .glassSelectChip(active, shape = RoundedCornerShape(Radius.pill))
                                 .clip(RoundedCornerShape(Radius.pill))
-                                .background(
-                                    if (active) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                                )
                                 .clickableScale(pressedScale = 0.94f) {
                                     groupIndex = CategoryIconLibrary.groups.indexOf(g)
                                 }
@@ -205,9 +205,10 @@ fun IconPickerOverlay(
                             Text(
                                 "${g.emoji} ${g.name}",
                                 fontSize = 13.sp,
+                                lineHeight = 19.sp,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (active) MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSurface
+                                color = if (active) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -248,10 +249,10 @@ fun IconPickerOverlay(
                         Box(
                             Modifier
                                 .height(54.dp)
-                                .clip(RoundedCornerShape(Radius.md))
-                                .background(
-                                    if (active) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                .glassChip(
+                                    shape = RoundedCornerShape(Radius.md),
+                                    tint = if (active) MaterialTheme.colorScheme.primary else null,
+                                    strength = if (active) 1.1f else 0.4f
                                 )
                                 .clickableScale(pressedScale = 0.9f) { onPick(icon.emoji) },
                             contentAlignment = Alignment.Center

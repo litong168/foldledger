@@ -664,6 +664,7 @@ private fun DirectionChip(label: String, active: Boolean, onClick: () -> Unit) {
         Text(
             label,
             fontSize = 13.sp,
+            lineHeight = 19.sp,
             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
             color = if (active) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant,

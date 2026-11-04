@@ -258,7 +258,10 @@ private fun SearchResultRow(hit: GlobalSearchViewModel.SearchHit, onClick: () ->
                 (if (txn.direction == Direction.EXPENSE) "-" else "+") +
                     Money.format(txn.amountCents),
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                // v16.3.1：金额靠右且行末对齐，列表里正负号与数字不会左右晃
+                textAlign = TextAlign.End,
                 color = if (txn.direction == Direction.EXPENSE) dc.expense else dc.income
             )
         }

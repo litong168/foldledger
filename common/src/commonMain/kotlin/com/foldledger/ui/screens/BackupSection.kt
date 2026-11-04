@@ -93,8 +93,11 @@ fun BackupSection(
                         Text(
                             if (s.folderReady) "备份位置：${s.folderLabel ?: "已授权目录"}"
                             else "还没设置备份位置",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
+                            // v16.3.1：二级页面卡主文本统一 15.sp SemiBold + 固定行盒，
+                            // 与同步记录 / 全局搜索的列表主文本同层级，副文本仍 11.sp。
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(

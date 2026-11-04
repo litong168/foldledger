@@ -177,6 +177,8 @@ fun SyncSectionCard(
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.error,
+                    // v16.3.1：与上方 lastResult 用同一对齐口径（两者在同一位置轮换）
+                    textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -201,7 +203,13 @@ fun SyncSectionCard(
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("同步记录", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(
+                "同步记录",
+                // v16.3.1：入口行主文本与同页其它二级卡统一 15.sp + 固定行盒
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 if (history.isEmpty()) "还没有记录" else "最近 ${history.size} 次 · 冲突可展开",

@@ -492,9 +492,10 @@ private fun DayCell(
         ) {
             Text(
                 day.toString(),
+                // v16.3.1：10/12 是表外字号（10sp 中文在真机已糊），归到 11/13 档
                 fontSize = when {
-                    tiny -> 10.sp
-                    compact -> 12.sp
+                    tiny -> 11.sp
+                    compact -> 13.sp
                     else -> 13.sp
                 },
                 color = fg,
@@ -638,7 +639,8 @@ private fun TimeStepper(
                 StepButton("−", size = btn) { onChange((value - 1 + 60) % 60) }
                 Text(
                     String.format("%02d", value),
-                    fontSize = if (tight) 20.sp else 23.sp,
+                    // v16.3.1：23 是表外字号，归到 24 档
+                    fontSize = if (tight) 20.sp else 24.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,

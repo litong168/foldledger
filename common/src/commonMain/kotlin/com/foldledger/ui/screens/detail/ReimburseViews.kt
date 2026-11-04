@@ -496,11 +496,17 @@ internal fun ChaseListCard(
 
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
+            // v16.3.1：主行动键按规范改成主色染膜的玻璃（与共享 AccentPill 同款），
+            // 不再是实心 primary 色块；宽度、居中与点击逻辑保持原样。
+            Box(
+                Modifier
                     .weight(1f)
+                    .glassSurface(
+                        shape = RoundedCornerShape(50),
+                        elevation = 2.dp,
+                        fill = MaterialTheme.colorScheme.primary.copy(alpha = 0.90f),
+                        specular = 1.25f
+                    )
                     .clickableScale(
                         pressedScale = 0.95f,
                         clipShape = RoundedCornerShape(50)
@@ -511,11 +517,13 @@ internal fun ChaseListCard(
                             )
                         )
                         copied = true
-                    }
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     if (copied) "已复制 ✓ 粘贴发给财务" else "复制催办摘要",
                     fontSize = 13.sp,
+                    lineHeight = 19.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onPrimary,
                     textAlign = TextAlign.Center,

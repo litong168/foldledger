@@ -221,7 +221,8 @@ fun StatsScreen(
                             .weight(1f)
                             .fillMaxHeight()
                             .verticalScroll(statsRightScroll)
-                            .padding(start = 16.dp, end = 20.dp)
+                            // v16.3.1：双栏右栏左右留白对称（原 16/20 让内容整体偏左 4dp）
+                            .padding(start = 20.dp, end = 20.dp)
                     ) {
                         SectionCard(overline = "结构", title = "分类排行") {
                             if (totals.isEmpty()) {
@@ -677,9 +678,19 @@ private fun AnnualCard(summary: AnnualSummary) {
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // v16.3.1：月份刻度与上方柱图共用基线，显式垂直居中 + 固定行盒
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             listOf("1", "4", "7", "10", "12").forEach {
-                Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    it,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -796,7 +807,9 @@ private fun CategoryPanel(
             AmountText(
                 monthSum,
                 direction,
-                style = com.foldledger.ui.theme.HeroNumber.copy(fontSize = 44.sp, lineHeight = 44.sp)
+                // v16.3.1：HeroNumber 本身标定 44/50；原来 copy 成 44/44 把行盒余量压成 0，
+                // 中文 + tnum 数字下沿会被裁掉一道。直接用主题样式。
+                style = com.foldledger.ui.theme.HeroNumber
             )
 
             Spacer(Modifier.height(16.dp))

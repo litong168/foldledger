@@ -228,8 +228,10 @@ private fun TrashRow(
         Column(Modifier.weight(1f)) {
             Text(
                 title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
+                // v16.3.1：与备份 / 同步记录等二级页面卡的列表主文本统一层级
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

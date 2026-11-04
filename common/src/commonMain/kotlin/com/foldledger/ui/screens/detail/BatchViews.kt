@@ -133,7 +133,12 @@ import kotlinx.coroutines.delay
 //  批量改账（v5.6）
 // ============================================================
 
-/** 多选模式的勾选圆圈：选中实心 ✓，未选空心环 */
+/**
+ * 多选模式的勾选圆圈。
+ *
+ * v16.3.1：选中不再是 primary 实色块。22dp 属小尺寸玻璃，按规范只用 1dp 影，
+ * 靠「主色染膜浓度 + 主色内棱」表达，✓ 回到主色、字重收成 SemiBold（玻璃上不用 Bold）。
+ */
 @Composable
 internal fun SelectCircle(selected: Boolean) {
     val accent = MaterialTheme.colorScheme.primary
@@ -141,7 +146,14 @@ internal fun SelectCircle(selected: Boolean) {
         Modifier
             .size(22.dp)
             .clip(CircleShape)
-            .background(if (selected) accent else Color.Transparent)
+            .then(
+                if (selected) Modifier.glassChip(
+                    shape = CircleShape,
+                    tint = accent,
+                    strength = 1.4f,
+                    elevation = 1.dp
+                ) else Modifier
+            )
             .border(
                 1.5.dp,
                 if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
@@ -153,8 +165,8 @@ internal fun SelectCircle(selected: Boolean) {
             Text(
                 "✓",
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
+                fontWeight = FontWeight.SemiBold,
+                color = accent
             )
         }
     }

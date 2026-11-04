@@ -108,8 +108,9 @@ fun SectionHeader(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     subtitle,
+                    // v16.3.1：bodySmall 本身是 13/19，原来内联 18 覆盖会让所有卡片
+                    // 副标题与其它 13sp 文字行盒不一致。交回主题统一定。
                     style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

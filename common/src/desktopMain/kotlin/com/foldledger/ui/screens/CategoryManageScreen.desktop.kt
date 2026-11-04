@@ -55,6 +55,7 @@ import com.foldledger.ui.theme.CoolGreen
 import com.foldledger.ui.theme.LocalDirectionColors
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.glassChip
+import com.foldledger.ui.theme.glassSelectChip
 import com.foldledger.ui.theme.pendingTone
 import com.foldledger.ui.vm.CategoryViewModel
 import com.foldledger.util.DesktopIconStore
@@ -123,8 +124,12 @@ fun DesktopCategoryManageScreen(
                         Text(
                             "还没有${if (direction == Direction.EXPENSE) "支出" else "收入"}分类，点下面新建一个",
                             fontSize = 13.sp,
+                            lineHeight = 19.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 24.dp),
+                            // v16.3.1：textAlign 需要撑满宽度才生效，原来 wrap-content 仍靠左
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -284,17 +289,21 @@ fun DesktopCategoryManageScreen(
 
 @Composable
 private fun DirectionChip(label: String, active: Boolean, onClick: () -> Unit) {
+    // v16.3.1：与 Android DirectionChip 同款 —— 选中靠「浓度 + 内棱 + 抬影」三件事，
+    // 不再只有浓度一件；层级（字重 / 颜色 / 行高）也逐项对齐。
     Box(
         Modifier
-            .glassChip(shape = RoundedCornerShape(50), strength = if (active) 1.0f else 0.55f)
+            .glassSelectChip(active, shape = RoundedCornerShape(50))
             .clickableScale(pressedScale = 0.93f, clipShape = RoundedCornerShape(50)) { onClick() }
     ) {
         Text(
             label,
             fontSize = 13.sp,
-            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            lineHeight = 19.sp,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (active) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }

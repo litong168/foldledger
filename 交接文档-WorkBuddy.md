@@ -52,12 +52,12 @@
 
 ---
 
-## 3. 当前版本与双端状态（2026-11-04，已更新到 16.3.0）
+## 3. 当前版本与双端状态（2026-11-04，已更新到 16.3.1）
 
 | 端 | 版本 | 状态 |
 |---|---|---|
-| 桌面 | 16.3.0 (223) | ✅ **安装包分发**：`dist/滴水记账-v16.3.0-win-x64-setup.exe`（89.9MB），静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
-| 手机 | 16.3.0 (223) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.3.0-release.apk` 4.0MB，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
+| 桌面 | 16.3.1 (224) | ✅ **安装包分发**：`dist/滴水记账-v16.3.1-win-x64-setup.exe`（89.9MB），静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
+| 手机 | 16.3.1 (224) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.3.1-release.apk` 4.0MB，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
 
 > **16.3.0 双端一致性 + 性能**（详见 §5 首节）：桌面补齐三处空桩（速记输入槽、自定义分类图标、备份回收站），并合并重复订阅 / 收敛重复重算。全程**不新增 DB 列、不改备份格式、不触发迁移**。测试 app 203 + desktopTest **55**。
 
@@ -96,6 +96,26 @@ $env:JAVA_HOME="C:\Users\16039\.workbuddy\binaries\jdk\17.0.2"
 .\gradlew.bat :app:testDebugUnitTest :common:desktopTest --no-daemon
 # 预期：app 203 项 + desktopTest 41 项全绿
 ```
+
+---
+
+### 16.3.1（同日，UI 精细打磨 · 双端统一标准）
+
+用户本轮只要一件事：**不新增功能、不扩范围**，把现有功能与 UI 逐项打磨到双端同一套标准，重点校正字体排版（含各级二级页面卡）与居中／对齐／层次。
+
+**改动分三组**
+
+1. **选中态 / 主行动键统一到玻璃规范**（原来都是 `primary` 实色块，属 §6 明令禁止项）：
+   - 桌面深色模式 chip → 对齐 Android `ChipRow`（`glassChip(tint=primary, strength=2.6, elevation=2.dp)` / 未选中 `wellSurface()` 凹槽）。
+   - 桌面 `DirectionChip` → 共享 `glassSelectChip`，Android 同款 `DirectionChip` 补行盒，两端「浓度 + 内棱 + 抬影」一致。
+   - Android `IconPickerOverlay` 分组 chip / 图标格 → 玻璃（这是**唯一一处 Android 比桌面更违规**的反向差异）。
+   - 共享 `SelectCircle`（22dp 勾选圈）→ 主色染膜玻璃 + 1dp 影；`ReimburseViews` 的「复制催办摘要」→ 与 `AccentPill` 同款主色玻璃键。
+2. **字体排版**：备份／回收站／同步／存钱目标四张二级页面卡的主文本统一 **15.sp SemiBold / 22.sp 行盒**，副文本 11.sp；`Widgets.SectionHeader` 副标题去掉内联 18 覆盖、交回 `bodySmall`(13/19)；`StatsScreen` 主数字不再把 `HeroNumber` copy 成 44/44（行盒余量归零会裁中文+tnum 下沿）；分类名 11/13→11/15；归 8 档字阶：日期格 10/12→11/13、`¥` 18/21→17/20、时间数字 23→24；玻璃上 `ExtraBold`→`SemiBold`。
+3. **对齐 / 层次 / 精致度**：`DesktopToolRow` 与 `GlobalToolRow` 双端逐项统一（emoji 20 / 标题 13 SemiBold / 说明 11 / 尾部 › / 6dp），并给每级文字固定行盒；补 4 处 `verticalAlignment = CenterVertically`（桌面提醒行、助手提示行、统计月份刻度等）、2 处 `textAlign`（同步错误文案 Start、搜索金额 End）、桌面分类空态补 `fillMaxWidth()` 让居中生效；统计页双栏右栏 16/20 → 20/20 对称；`GoalScreen` 去掉 `SectionCard(title="", subtitle="")` 的约 40dp 空白伪标题栏；桌面「更多设置」三处裸 Text 从默认 `bodyLarge`(17sp) 显式改成 13.sp + 次级墨色。
+
+**明确不动（关键取舍）**：金额阶梯（34/42/28/34…）、`AdaptiveScaffold` 折叠动画的 `lerp` 连续插值、装饰用小圆点 8/12.sp、卡片内边距 14/16/18/20dp 全量重排、欢迎卡整块 primary 面 —— 这些改动会改变既有视觉尺寸或动画手感，回归风险高于打磨收益，本轮保留并登记为例外。
+
+**验证**：字阶闸门 709 点全绿（含 5 个源集、0 文件判失败）、迁移 1→11 全绿、双端编译 + **app 203 / desktopTest 55 = 258** 全绿；APK 224/16.3.1、真机启动无 FATAL，主屏与「我的」页截图复核（工具行层级、箭头对齐、无裁切）；桌面静默升级 exit=0、安装态 10 项全 OK。
 
 ---
 
@@ -369,4 +389,4 @@ adb install -r <apk>   # -r 保留数据
 
 ---
 
-*最后状态（2026-11-04 18:45）：双端 16.3.0 (223) 已发版装机（桌面安装包 + 手机 APK）；app 203 + desktopTest 55 = 258 全绿；字阶 / 迁移闸门通过；安装态 10 项核验全绿、真机启动无崩溃；代码已推送 `backup` 与 NAS Gitea（8444），tree SHA 校验一致；NAS 同步正常（无 token 门禁）。祝顺利。*
+*最后状态（2026-11-04 19:35）：双端 16.3.1 (224) 已发版装机（桌面安装包 + 手机 APK）；本轮为纯 UI 打磨，未新增功能；app 203 + desktopTest 55 = 258 全绿；字阶 709 点 / 迁移 1→11 闸门通过；安装态 10 项核验全绿、真机截图复核无裁切；代码已推送 `backup` 与 NAS Gitea（8444），tree SHA 校验一致；NAS 同步正常（无 token 门禁）。祝顺利。*

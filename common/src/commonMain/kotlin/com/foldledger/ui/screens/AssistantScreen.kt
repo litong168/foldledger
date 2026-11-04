@@ -231,10 +231,20 @@ private fun TipCard(tips: List<AssistantViewModel.Tip>) {
             )
         } else {
             tips.forEach { tip ->
-                Row(modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text(tip.emoji, fontSize = 15.sp)
+                // v16.3.1：15sp emoji 与可多行的 13sp 建议文字，默认 Top 会让图标顶在首行；
+                // 显式垂直居中 + 固定行盒，长文本的两端表现一致。
+                Row(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(tip.emoji, fontSize = 15.sp, lineHeight = 22.sp)
                     Spacer(Modifier.width(8.dp))
-                    Text(tip.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(
+                        tip.text,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }

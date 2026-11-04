@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +53,8 @@ import com.foldledger.ui.screens.SyncSectionCard
 import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.Space
+import com.foldledger.ui.theme.glassChip
+import com.foldledger.ui.theme.wellSurface
 import com.foldledger.ui.vm.AppViewModel
 import com.foldledger.ui.vm.BackupViewModel
 import com.foldledger.ui.vm.SpeedEntryViewModel
@@ -140,18 +141,30 @@ private object DesktopPlatformScreens : PlatformScreens {
                                 DarkMode.DARK to "深色"
                             ).forEach { (mode, label) ->
                                 val selected = settings.darkMode == mode
+                                // v16.3.1：与 Android ChipRow 同款 —— 选中 = 主色染浓的玻璃，
+                                // 未选中 = 墨色凹槽。不再用 primary 实色块（用户明确否过）。
                                 Box(
                                     Modifier
+                                        .then(
+                                            if (selected) Modifier.glassChip(
+                                                shape = RoundedCornerShape(50),
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                strength = 2.6f,
+                                                elevation = 2.dp
+                                            ) else Modifier
+                                                .clip(RoundedCornerShape(50))
+                                                .background(wellSurface())
+                                        )
                                         .clip(RoundedCornerShape(50))
-                                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                         .clickableScale { appVm.setDarkMode(mode) }
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Text(
                                         label,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                        lineHeight = 19.sp,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (selected) MaterialTheme.colorScheme.onSurface
                                         else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -395,29 +408,34 @@ private fun DesktopToolRow(
     subtitle: String,
     onClick: () -> Unit
 ) {
+    // v16.3.1：与 Android GlobalToolRow 用同一套层级（emoji 20 / 标题 13 SemiBold /
+    // 说明 11 / 尾部箭头 / 6dp 行距），并给每级文字固定行盒，两端行高不再随字体度量漂移。
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.sm))
             .clickableScale { onClick() }
-            .padding(vertical = 10.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(emoji, fontSize = 17.sp)
+        Text(emoji, fontSize = 20.sp, lineHeight = 24.sp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 subtitle,
                 fontSize = 11.sp,
+                lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Text("›", fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

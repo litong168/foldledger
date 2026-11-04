@@ -1026,7 +1026,9 @@ private fun CategoryChip(
                 fontSize = 11.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 13.sp,
+                // v16.3.1：11/13 只剩 2sp 余量且 maxLines=2，中文两行会挤；
+                // 对齐 OverlineLabel 的 11/15。
+                lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
             )
@@ -1191,7 +1193,8 @@ private fun KeyArea(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         "¥",
-                        fontSize = if (compact) 18.sp else 21.sp,
+                        // v16.3.1：18/21 是表外字号，归到最近的 17/20 档
+                        fontSize = if (compact) 17.sp else 20.sp,
                         fontWeight = FontWeight.Medium,
                         color = accent,
                         modifier = Modifier.padding(bottom = 6.dp)
