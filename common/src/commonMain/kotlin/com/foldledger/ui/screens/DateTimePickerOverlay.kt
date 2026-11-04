@@ -131,21 +131,23 @@ fun DateTimePickerOverlay(
                 Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🗓️", fontSize = 17.sp)
+                Text("🗓️", fontSize = 17.sp, lineHeight = 24.sp)
                 Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         DateExt.fullDateTime(previewMillis),
                         fontSize = 15.sp,
+                        lineHeight = 22.sp,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        // 窄栏里日期时间一行放不下，省略号截断好过硬裁半个字
+                        // v16.3.2：窄栏改成最多两行，不再把日期时间截成「2026年11月4日 1…」
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         DateExt.dayRelation(previewMillis),
                         fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -184,8 +186,8 @@ fun DateTimePickerOverlay(
             if (withTitle) {
                 Text(
                     "选择日期与时间",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    // v16.3.2：titleLarge 自带 24/31 SemiBold；再覆盖 Bold 会和玻璃高光糊在一起
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(Modifier.height(8.dp))
             }
@@ -333,6 +335,7 @@ private fun QuickRow(onNow: () -> Unit, onDaysAgo: (Int) -> Unit) {
             Text(
                 "🕒 现在",
                 fontSize = 13.sp,
+                lineHeight = 19.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
@@ -347,6 +350,7 @@ private fun QuickRow(onNow: () -> Unit, onDaysAgo: (Int) -> Unit) {
                 Text(
                     label,
                     fontSize = 13.sp,
+                    lineHeight = 19.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                 )
@@ -387,6 +391,7 @@ private fun CalendarCard(
                 Text(
                     "${month.year} 年 ${month.monthValue} 月",
                     fontSize = 15.sp,
+                    lineHeight = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
@@ -400,6 +405,7 @@ private fun CalendarCard(
                     Text(
                         w,
                         fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
@@ -492,12 +498,11 @@ private fun DayCell(
         ) {
             Text(
                 day.toString(),
-                // v16.3.1：10/12 是表外字号（10sp 中文在真机已糊），归到 11/13 档
-                fontSize = when {
-                    tiny -> 11.sp
-                    compact -> 13.sp
-                    else -> 13.sp
-                },
+                // v16.3.2：上一轮把 10/12/13 三档归并成 11/13/13，窄屏梯度被抹平
+                //（compact 不再降档，两位数又会顶到圆点边）。恢复两档：窄屏 11、常规 13，
+                // 都在 8 档字阶内；固定行盒让行高不随平台字体度量漂移。
+                fontSize = if (tiny || compact) 11.sp else 13.sp,
+                lineHeight = if (tiny || compact) 15.sp else 19.sp,
                 color = fg,
                 fontWeight = if (selected || isToday) FontWeight.SemiBold else FontWeight.Normal
             )
@@ -514,7 +519,12 @@ private fun MonthNav(label: String, onClick: () -> Unit) {
             .clickableScale(pressedScale = 0.88f) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            fontSize = 20.sp,
+            lineHeight = 24.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -547,6 +557,7 @@ private fun TimeCard(
                 Text(
                     if (stacked) "时间" else "时间（精确到分钟）",
                     fontSize = 13.sp,
+                    lineHeight = 19.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -562,7 +573,8 @@ private fun TimeCard(
                         Text(
                             ":",
                             fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
+                            lineHeight = 32.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
@@ -596,7 +608,10 @@ private fun TimeCard(
                         ) {
                             Text(
                                 String.format(":%02d", m),
-                                fontSize = 11.sp,
+                                // v16.3.2：与 QuickRow 的同类胶囊统一 13.sp；原 11.sp 三级字
+                                // 压在玻璃上几乎读不出。固定行盒，换行时高度不抖。
+                                fontSize = 13.sp,
+                                lineHeight = 19.sp,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (active) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -621,6 +636,7 @@ private fun TimeStepper(
         Text(
             label,
             fontSize = 11.sp,
+            lineHeight = 15.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(4.dp))
@@ -639,9 +655,10 @@ private fun TimeStepper(
                 StepButton("−", size = btn) { onChange((value - 1 + 60) % 60) }
                 Text(
                     String.format("%02d", value),
-                    // v16.3.1：23 是表外字号，归到 24 档
+                    // v16.3.2：20/24 两档各配对应行盒；字重收回 SemiBold（玻璃上不用 Bold）
                     fontSize = if (tight) 20.sp else 24.sp,
-                    fontWeight = FontWeight.Bold,
+                    lineHeight = if (tight) 28.sp else 32.sp,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     modifier = Modifier.weight(1f)
@@ -662,7 +679,12 @@ private fun StepButton(label: String, size: Dp = 32.dp, onClick: () -> Unit) {
             .clickableScale(pressedScale = 0.85f) { onClick() }
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(label, fontSize = if (size < 30.dp) 15.sp else 17.sp, fontWeight = FontWeight.Medium)
+            Text(
+                label,
+                fontSize = if (size < 30.dp) 15.sp else 17.sp,
+                lineHeight = if (size < 30.dp) 22.sp else 24.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -692,8 +714,23 @@ private fun PickerButton(
             )
             .clickableScale(pressedScale = 0.95f) { onClick() }
     ) {
-        Box(Modifier.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
-            Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = content)
+        // v16.3.2：内层 Box 原来只有 wrap-content 宽，contentAlignment=Center 只居中了它
+        // 自己，整颗按钮的文字仍靠左（截图里「取消 / 确定」明显偏左）。撑满宽度并让文字居中。
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 13.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                color = content,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
