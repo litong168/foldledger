@@ -189,7 +189,7 @@ fun SyncSectionCard(
             "同步会把账本数据发送到你填写的服务器（建议内网或自配 HTTPS）；" +
                 "「自动记账」账本不参与同步。\n" +
                 "地址只写到端口，例如 http://192.168.1.4:8451 —— 不要带 /sync，也不要带路径；" +
-                "端口是同步服务映射出来的那个（本项目自建服务默认 8701，NAS 上映射成了 8451）。",
+                "端口要填服务端映射出来的宿主端口（本项目自建服务容器内默认 8701，部署时可能被映射成别的，以 docker 端口表为准）。",
             fontSize = 11.sp,
             lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
