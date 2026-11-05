@@ -320,6 +320,23 @@ C:\Users\16039\AppData\Local\滴水记账\        ← MSI 管理，勿手工改
 
 ---
 
+## 6.6 NAS 改走 OpenVPN 内网（2026-11-05，地址已变）
+
+Tailscale 已从 PC 卸载，旧域名 `t2-nas-1.tail2b73fa.ts.net` 不再解析。现在全部走 OpenVPN 内网：
+
+| 服务 | 地址 | 说明 |
+|---|---|---|
+| NAS 本体 | `192.168.110.57` | 联想个人云，网关 192.168.110.1；**不是**群晖（没有 `/webman/index.cgi`） |
+| **同步服务** | `http://192.168.110.57:10097` | 宿主 10097 → 容器 8787；`SYNC_PORT=8787`、`SYNC_DATA=/data/ledger.json`、**未设 SYNC_TOKEN**（App 令牌留空） |
+| **Gitea** | `http://192.168.110.57:10091/litong/foldledger.git` | 局域网端口 10091（不是 8444） |
+| 其它 | 80=门户、3000=AdGuard、10090=Uptime Kuma、10099=LibreSpeed、10022=SSH | |
+
+OpenVPN 网段 `10.80.12.0/24`（网关 `10.80.12.1`，PC=`.2`、手机=`.4`），**并且 `192.168.110.0/24` 是被下发到客户端的**（PC 有 `192.168.110.0/24 → 10.80.12.1`，手机 tun0 也在 table 1039 里）。
+
+⚠️ 排查教训：上次判断「手机没有 NAS 网段路由」是错的 —— 当时只 `grep 192.168.1/192.168.31`，漏了 110 段。以后一律用 `ip route show table all | grep 192.168` 一次看全。
+
+git 凭据按 URL 配（`http.<url>.proxy=` 空 / `credential.<url>.provider=generic` / `.username=litong` + helper 先空值再 PAT 函数）；PAT 仍在 `~/.gitea-pat`。
+
 ## 7. 手机端打包发布流程
 
 ```powershell
