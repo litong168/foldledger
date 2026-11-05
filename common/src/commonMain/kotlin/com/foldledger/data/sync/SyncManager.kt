@@ -86,8 +86,11 @@ class SyncManager(
     }
 
     suspend fun setServerUrl(url: String) {
-        prefs.setSyncServerUrl(url)
-        http = if (url.isNotBlank()) SyncHttp(url) else null
+        // v16.4.2：落盘与建客户端都用**整理后**的地址（全角 → 半角、裁空白、补 http://）。
+        // 输入框里仍显示用户原样输入的文本，避免打字时光标乱跳；下次启动读到的是干净值。
+        val cleaned = normalizeServerUrl(url)
+        prefs.setSyncServerUrl(cleaned)
+        http = if (cleaned.isNotBlank()) SyncHttp(cleaned) else null
         _state.update { it.copy(serverUrl = url, lastError = null) }
     }
 
@@ -253,6 +256,8 @@ class SyncManager(
 
     /** 把底层异常翻译成用户能看懂的中文提示 */
     private fun describeError(e: Exception): String = when (e) {
+        // 地址不合法 / 空地址：消息本身就是给人看的话，不要再包一层
+        is SyncUrlException -> e.message ?: "服务器地址格式不对"
         is SyncHttpException -> when (e.code) {
             401 -> "密钥错误或未授权（401），检查访问密钥"
             404 -> "地址路径不对（404）：应为 http://域名:端口，不要带路径"
@@ -261,7 +266,9 @@ class SyncManager(
         is java.net.UnknownHostException -> "无法解析服务器域名，请检查地址或网络"
         is java.net.SocketTimeoutException -> "连接服务器超时，请检查网络后重试"
         is java.net.ConnectException -> "连不上服务器（连接被拒绝），检查地址、端口与服务是否在运行"
-        else -> e.message ?: "同步失败"
+        // 兜底带上异常类型：v16.4.1 遇到过一个只显示
+        // 「Error at index 5 in: ':10097'」的 JDK 解析异常，光看消息无法定位
+        else -> "${e.javaClass.simpleName}: ${e.message ?: "同步失败"}"
     }
 
     private fun startAutoSync() {

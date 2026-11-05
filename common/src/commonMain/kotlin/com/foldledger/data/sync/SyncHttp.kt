@@ -16,16 +16,76 @@ data class SyncResponse(val serverTime: Long, val rows: List<SyncRow>, val merge
 class SyncHttpException(val code: Int, body: String) :
     Exception("服务器返回 $code：${body.take(200)}")
 
+/** 地址本身不合法（给用户看的话，不是给堆栈看的） */
+class SyncUrlException(message: String) : Exception(message)
+
+/**
+ * 把用户填的服务器地址收拾成能用的形态（v16.4.2）。
+ *
+ * ### 为什么需要它
+ * 中文输入法下打 `:` 和数字，很容易打出**全角字符**（`：` `０` `．` `／`）——
+ * 屏幕上和半角几乎分辨不出来，但 `java.net.URL` 会直接抛
+ * `MalformedURLException: Error at index 5 in: ":10097"`：一句既看不出哪里错、
+ * 也看不出该怎么办的话。这个坑在 v16.4.1 里让用户连"注册此设备"都点不过去。
+ *
+ * 所以这里做三件事，全部是**静默自动纠正**，不打断用户：
+ *  1. 全角标点/数字 → 半角；
+ *  2. 裁掉首尾空白（复制粘贴最常带进来的东西）和零宽字符；
+ *  3. 没写协议时补 `http://`（自托管同步服务基本都是内网 http）。
+ *
+ * 仍然不合法的（比如 `http://` 后面什么都没有），由 [SyncHttp.post] 抛出
+ * [SyncUrlException]，把**当前值原样**带进消息里，方便一眼看出问题。
+ */
+internal fun normalizeServerUrl(raw: String): String {
+    val sb = StringBuilder(raw.length)
+    for (ch in raw) {
+        // 零宽字符直接丢掉（不是换成空格 —— 它本来就"看不见也不占位"）
+        if (ch == '\u200B' || ch == '\u200C' || ch == '\u200D' || ch == '\uFEFF') continue
+        sb.append(
+            when (ch) {
+                '：' -> ':'
+                '／' -> '/'
+                '．', '。' -> '.'
+                '－' -> '-'
+                '　' -> ' '
+                in '０'..'９' -> '0' + (ch - '０')
+                else -> ch
+            }
+        )
+    }
+    var s = sb.toString().trim().trimEnd('/')
+    if (s.isEmpty()) return s
+    // 没写协议就补 http://（写了 https:// 的原样保留）
+    val lower = s.lowercase()
+    if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+        s = "http://" + s.substringAfter("://")
+    }
+    return s
+}
+
 /**
  * 同步传输：POST JSON 到自托管服务端（[SyncHttp] 协议见 sync-server/server.js）。
  *
  * 用 java.net.HttpURLConnection —— 双端都是 JVM 目标，零新增依赖；
  * Android 需 manifest 允许明文 http（自托管多为内网 http，见 AndroidManifest 注释）。
  */
-class SyncHttp(private val baseUrl: String) {
+class SyncHttp(private val rawBaseUrl: String) {
+
+    /** 收拾过的地址：调用方填错的全角字符/首尾空白在这一层就被纠正 */
+    private val baseUrl: String = normalizeServerUrl(rawBaseUrl)
 
     private suspend fun post(path: String, body: JSONObject): JSONObject = withContext(Dispatchers.IO) {
-        val url = URL(baseUrl.trimEnd('/') + path)
+        if (baseUrl.isBlank()) {
+            throw SyncUrlException("服务器地址是空的：请填 http://主机:端口")
+        }
+        val url = try {
+            URL(baseUrl + path)
+        } catch (e: Exception) {
+            // 原始值原样回显 —— 全角/不可见字符肉眼看不出来，只能让用户自己去比对
+            throw SyncUrlException(
+                "服务器地址格式不对：请填 http://主机:端口（不要带路径）。当前值：「${rawBaseUrl.trim()}」"
+            )
+        }
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
