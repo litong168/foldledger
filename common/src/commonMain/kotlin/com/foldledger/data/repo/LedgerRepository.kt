@@ -61,13 +61,20 @@ class LedgerRepository(
     private fun device() = stamps.deviceId()
 
     // M4.3：统一 id 空间（未启用同步时返回 0 → Room 自增，行为与老版本一致）
-    private suspend fun nextLedgerId() = idAllocator.nextId(TableNames.LEDGERS) { ledgerDao.maxId() }
-    private suspend fun nextCategoryId() = idAllocator.nextId(TableNames.CATEGORIES) { categoryDao.maxId() }
-    private suspend fun nextTxnId() = idAllocator.nextId(TableNames.TRANSACTIONS) { txnDao.maxId() }
-    private suspend fun nextProjectId() = idAllocator.nextId(TableNames.PROJECTS) { projectDao.maxId() }
-    private suspend fun nextAccountId() = idAllocator.nextId(TableNames.ACCOUNTS) { accountDao.maxId() }
-    private suspend fun nextRecurringId() = idAllocator.nextId(TableNames.RECURRING) { recurringDao.maxId() }
-    private suspend fun nextGoalId() = idAllocator.nextId(TableNames.GOALS) { goalDao.maxId() }
+    private suspend fun nextLedgerId() =
+        idAllocator.nextId(TableNames.LEDGERS) { from, to -> ledgerDao.maxIdInRange(from, to) }
+    private suspend fun nextCategoryId() =
+        idAllocator.nextId(TableNames.CATEGORIES) { from, to -> categoryDao.maxIdInRange(from, to) }
+    private suspend fun nextTxnId() =
+        idAllocator.nextId(TableNames.TRANSACTIONS) { from, to -> txnDao.maxIdInRange(from, to) }
+    private suspend fun nextProjectId() =
+        idAllocator.nextId(TableNames.PROJECTS) { from, to -> projectDao.maxIdInRange(from, to) }
+    private suspend fun nextAccountId() =
+        idAllocator.nextId(TableNames.ACCOUNTS) { from, to -> accountDao.maxIdInRange(from, to) }
+    private suspend fun nextRecurringId() =
+        idAllocator.nextId(TableNames.RECURRING) { from, to -> recurringDao.maxIdInRange(from, to) }
+    private suspend fun nextGoalId() =
+        idAllocator.nextId(TableNames.GOALS) { from, to -> goalDao.maxIdInRange(from, to) }
 
     private fun LedgerEntity.touched() = copy(updatedAt = now(), updatedByDeviceId = device())
     private fun CategoryEntity.touched() = copy(updatedAt = now(), updatedByDeviceId = device())

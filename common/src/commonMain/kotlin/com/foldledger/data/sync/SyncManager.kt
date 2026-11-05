@@ -192,6 +192,10 @@ class SyncManager(
 
             if (resp.rows.isNotEmpty()) {
                 val stats = engine.applyIncoming(resp.rows, watermarks)
+                // v16.4.1：下行可能写进「本设备前缀」的行（重装后服务端分回同一 deviceId、
+                // 或从备份恢复），此时 id 分配器的进程内计数已经落后于库 —— 置脏，
+                // 下一次分配重新按本设备区间取 max，避免又撞主键。
+                repo.idAllocator.invalidate()
                 prefs.setSyncWatermarks(watermarks.toRawString())
                 _state.update {
                     it.copy(

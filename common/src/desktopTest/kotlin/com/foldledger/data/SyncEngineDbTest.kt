@@ -60,6 +60,13 @@ class SyncEngineDbTest {
     private suspend fun newLedger(name: String = "日常"): Long =
         repo.createLedger(name, "daily", "📒", "#1D3B57")
 
+    /** 直接落一行指定 id 的流水（模拟同步下来的其它设备行 / 历史行） */
+    private fun rawTxn(id: Long, ledgerId: Long) = TransactionEntity(
+        id = id, ledgerId = ledgerId, categoryId = null, categoryName = "餐饮",
+        categoryEmoji = "🍜", direction = Direction.EXPENSE, amountCents = 1, note = "",
+        occurredAt = 0L
+    )
+
     private suspend fun newTxn(ledgerId: Long, amountCents: Long, note: String = ""): Long =
         repo.addTransaction(
             ledgerId = ledgerId, categoryId = null, categoryName = "餐饮", categoryEmoji = "🍜",
@@ -226,7 +233,7 @@ class SyncEngineDbTest {
 
     @Test
     fun allocatorDisabledReturnsZeroForRoomAutoincrement() = runBlocking {
-        assertEquals(0L, allocator.nextId(TableNames.TRANSACTIONS) { 0L })
+        assertEquals(0L, allocator.nextId(TableNames.TRANSACTIONS) { _, _ -> 0L })
     }
 
     @Test
@@ -234,9 +241,9 @@ class SyncEngineDbTest {
         allocator.enabled = true
         SyncDeviceHolder.deviceId = 7L
         val base = 7L shl 40
-        assertEquals(base or 1L, allocator.nextId(TableNames.TRANSACTIONS) { 0L })
-        assertEquals(base or 2L, allocator.nextId(TableNames.TRANSACTIONS) { 0L })
-        assertEquals(base or 1L, allocator.nextId(TableNames.LEDGERS) { 0L })   // 每表独立计数
+        assertEquals(base or 1L, allocator.nextId(TableNames.TRANSACTIONS) { _, _ -> 0L })
+        assertEquals(base or 2L, allocator.nextId(TableNames.TRANSACTIONS) { _, _ -> 0L })
+        assertEquals(base or 1L, allocator.nextId(TableNames.LEDGERS) { _, _ -> 0L })   // 每表独立计数
     }
 
     @Test
@@ -245,9 +252,35 @@ class SyncEngineDbTest {
         assertTrue(lid < (1L shl 40))
         allocator.enabled = true
         SyncDeviceHolder.deviceId = 7L
-        val first = allocator.nextId(TableNames.LEDGERS) { repo.getLedger(lid)!!.id }
+        val first = allocator.nextId(TableNames.LEDGERS) { _, _ -> repo.getLedger(lid)!!.id }
         // 从 maxId 低位 + 1 起步，但落在设备前缀空间
         assertEquals((7L shl 40) or (lid + 1), first)
+    }
+
+    /**
+     * v16.4.1 回归：计数器必须按**本设备前缀区间**取 max。
+     *
+     * 线上事故现场：库里同时有设备 3/5/7 的行，全局 max 落在设备 7（低位 198）上，
+     * 而手机（设备 5）自己已经用到低位 200 —— 旧实现「全局 max 的低位 +1 = 199」
+     * 直接撞上手机已有的 5<<40|199，表现为「点保存闪退，无法记账」，
+     * 而且每次冷启动都重演（计数器重新初始化）。
+     */
+    @Test
+    fun allocatorSeedsFromOwnDeviceRangeNotGlobalMax() = runBlocking {
+        val dao = db.transactionDao()
+        val dev5 = 5L shl 40
+        val dev7 = 7L shl 40
+        val lid = repo.createLedger("日常", "daily", "📒", "#1D3B57")
+        // 本设备已用到低位 199 / 200
+        dao.insert(rawTxn(dev5 or 199L, lid))
+        dao.insert(rawTxn(dev5 or 200L, lid))
+        // 别的设备 id 数值更大，但低位只有 198
+        dao.insert(rawTxn(dev7 or 198L, lid))
+
+        allocator.enabled = true
+        SyncDeviceHolder.deviceId = 5L
+        val id = newTxn(lid, 300)
+        assertEquals(dev5 or 201L, id)
     }
 
     @Test
@@ -255,7 +288,7 @@ class SyncEngineDbTest {
         allocator.enabled = true
         SyncDeviceHolder.deviceId = 0L
         try {
-            allocator.nextId(TableNames.LEDGERS) { 0L }
+            allocator.nextId(TableNames.LEDGERS) { _, _ -> 0L }
             fail("未注册设备不应能分配同步 id")
         } catch (_: IllegalArgumentException) {
             // expected

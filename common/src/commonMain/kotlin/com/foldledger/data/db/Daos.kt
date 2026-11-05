@@ -65,6 +65,18 @@ interface LedgerDao {
     @Query("SELECT IFNULL(MAX(id), 0) FROM ledgers")
     suspend fun maxId(): Long
 
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: ledgers.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM ledgers WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
+
     /** v11 同步：接收端防御性过滤用（含墓碑的 auto 账本 id 也要） */
     @Query("SELECT id FROM ledgers WHERE sceneKey = 'auto'")
     suspend fun autoLedgerIds(): List<Long>
@@ -141,6 +153,18 @@ interface CategoryDao {
 
     @Query("SELECT IFNULL(MAX(id), 0) FROM categories")
     suspend fun maxId(): Long
+
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: categories.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM categories WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
 
     @Query("UPDATE categories SET budgetCents = :budgetCents, updatedAt = :at, updatedByDeviceId = :deviceId WHERE id = :id")
     suspend fun updateBudget(id: Long, budgetCents: Long, at: Long, deviceId: Long)
@@ -361,6 +385,18 @@ interface TransactionDao {
     @Query("SELECT IFNULL(MAX(id), 0) FROM transactions")
     suspend fun maxId(): Long
 
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: transactions.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM transactions WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
+
     @Query("UPDATE transactions SET reimburseState = :state, updatedAt = :at, updatedByDeviceId = :deviceId WHERE id IN (:ids)")
     suspend fun updateReimburseState(ids: List<Long>, state: Int, at: Long, deviceId: Long)
 
@@ -545,6 +581,18 @@ interface GoalDao {
     suspend fun maxId(): Long
 
     /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: goals.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM goals WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
+
+    /**
      * v10.3：只改元数据，**不碰 savedCents**。
      * v10.5：补 ledgerId —— 「编辑目标-改归属账本」原来被静默丢弃。
      */
@@ -625,6 +673,18 @@ interface ProjectDao {
     @Query("SELECT IFNULL(MAX(id), 0) FROM projects")
     suspend fun maxId(): Long
 
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: projects.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM projects WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
+
     /** v11 软删（删项目=墓碑，流水先退回未归类由仓库层负责） */
     @Query("UPDATE projects SET deletedAt = :at, updatedAt = :at, updatedByDeviceId = :deviceId WHERE id = :id")
     suspend fun softDelete(id: Long, at: Long, deviceId: Long)
@@ -691,6 +751,18 @@ interface RecurringDao {
     @Query("SELECT IFNULL(MAX(id), 0) FROM recurring")
     suspend fun maxId(): Long
 
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: recurring.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM recurring WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
+
     @Query("UPDATE recurring SET nextDueAt = :nextDue, updatedAt = :at, updatedByDeviceId = :deviceId WHERE id = :id")
     suspend fun setNextDue(id: Long, nextDue: Long, at: Long, deviceId: Long)
 
@@ -749,6 +821,18 @@ interface AccountDao {
 
     @Query("SELECT IFNULL(MAX(id), 0) FROM accounts")
     suspend fun maxId(): Long
+
+    /**
+     * 只在本设备的 id 前缀区间里取最大值（v16.4.1）。
+     *
+     * ⚠️ 不能用全表 [maxId]：同步把别的设备的行拉进来后，全局最大值往往落在
+     * **别人**的前缀上，而它的低 40 位可能比本设备已用过的低位还小 ——
+     * 于是「从全局最大值的低位 +1 起步」会直接撞上本设备已有的行，
+     * 表现为记一笔保存时 `UNIQUE constraint failed: accounts.id` 闪退。
+     * 区间用 BETWEEN 而不是位移运算：Android 8 自带的 SQLite 3.18 不支持 `>>`。
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM accounts WHERE id BETWEEN :from AND :to")
+    suspend fun maxIdInRange(from: Long, to: Long): Long
 
     /** v11 软删（墓碑保留供同步传播） */
     @Query("UPDATE accounts SET deletedAt = :at, updatedAt = :at, updatedByDeviceId = :deviceId WHERE id = :id")
