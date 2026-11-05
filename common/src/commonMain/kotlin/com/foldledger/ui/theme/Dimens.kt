@@ -75,15 +75,60 @@ object Radius {
  * 宽屏上把内容居中收在一列，单行字数也就舒服了。
  */
 object Layout {
+    /** 手机 / 折叠屏内屏单栏的阅读宽度上限 */
     val contentMaxWidth: Dp = 760.dp
-    val formMaxWidth: Dp = 620.dp
 
     /**
-     * 宽屏下把内容收窄并居中所需的额外左右留白。
+     * v16.4：桌面宽屏的内容上限。
+     *
+     * 760dp 是**一栏文字**的舒适宽度（中文约 40 字），照搬到 1700dp 的 Windows 窗口上，
+     * 左右各空出 470dp —— 屏幕利用率不到一半，这正是「手机排版直接搬过来」的观感来源。
+     * 宽屏不是把一栏拉长，而是**换一种版面**（并排两栏 / 两列卡片），所以上限抬到 1120：
+     * 双栏各 ~540dp，仍是好读的宽度，整屏却填满了。
+     */
+    val wideContentMaxWidth: Dp = 1120.dp
+
+    /**
+     * 双栏布局里「右栏」（概览 / 报销看板）的上限。
+     *
+     * 右栏是一堆短数字卡，不是长文 —— 它比正文更需要收窄：拉到 1300dp 时
+     * `Arrangement.SpaceBetween` 会把三块金额顶到屏幕两端，中间空出一条河。
+     * 但收窄只是把空白挪到两侧，所以真正的做法是**并排两列**（见 LedgerDetailScreen），
+     * 上限跟着 [wideContentMaxWidth] 走，两份内容各占一半。
+     */
+    val formMaxWidth: Dp = 620.dp
+
+    /** 到这个宽度改用左侧导轨；更窄仍用底部胶囊（手机 / 折叠内屏都是后者） */
+    const val NAV_RAIL_FROM_DP = 1024
+
+    /** 当前窗口该用哪一档内容上限 */
+    fun contentMaxFor(widthDp: Int): Dp =
+        if (widthDp >= NAV_RAIL_FROM_DP) wideContentMaxWidth else contentMaxWidth
+
+    /**
+     * 宽屏下把内容收窄并居中所需的额外左右留白（按**整个窗口**算）。
      * 窄屏返回 [Space.pageH]。
      */
-    fun sidePadding(windowWidthDp: Int, maxWidth: Dp = contentMaxWidth): Dp {
+    fun sidePadding(
+        windowWidthDp: Int,
+        maxWidth: Dp = contentMaxFor(windowWidthDp)
+    ): Dp {
         val over = windowWidthDp - maxWidth.value
+        return if (over <= 0f) Space.pageH else Space.pageH + (over / 2).dp
+    }
+
+    /**
+     * v16.4：按**容器**（而不是整窗）算居中的左右留白。
+     *
+     * ⚠️ 双栏页面里必须用这个：右栏只是整窗的一部分，若还拿 `env.widthDp` 去算，
+     * 1700dp 窗口会算出 313dp 的留白，塞进 1338dp 的右栏后内容只剩 712dp，
+     * 甚至能在 368dp 的左栏里算出负宽度 —— 这就是「桌面双栏反而比手机更挤」的根因。
+     */
+    fun sidePaddingIn(
+        containerWidthDp: Int,
+        maxWidth: Dp = wideContentMaxWidth
+    ): Dp {
+        val over = containerWidthDp - maxWidth.value
         return if (over <= 0f) Space.pageH else Space.pageH + (over / 2).dp
     }
 }

@@ -340,8 +340,14 @@ private fun TxnEditor(
                 }
             }
 
-            // ============ 内屏展开：左右分栏 ============
+            // ============ 内屏展开 / 桌面窗口：左右分栏 ============
             dialogLayout -> {
+                // v16.4：键盘栏固定在 380dp，其余全给分类区。
+                // 620dp 的弹层里 380 给键盘 → 分类只剩 240dp（窄到要折行）；
+                // 弹层放宽到 920/1000 之后这里仍是 400（数字键不该无限变宽），
+                // 多出来的宽度全部让给分类九宫格。
+                val padColumn = if (env.widthDp >= 1100) 400.dp else 380.dp
+                val pickColumns = if (env.widthDp >= 1000) 5 else 4
                 AppOverlay(env = env, onDismiss = onDismiss) {
                     Row(Modifier.fillMaxSize()) {
                         PickArea(
@@ -366,7 +372,7 @@ private fun TxnEditor(
                                 val ok = vm.saveTemplate("")
                                 AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
                             },
-                            columns = if (env.widthDp >= 1000) 5 else 4,
+                            columns = pickColumns,
                             compact = false,
                             onDirection = vm::setDirection,
                             onPick = onPick,
@@ -380,7 +386,7 @@ private fun TxnEditor(
                         VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Column(
                             Modifier
-                                .width(if (env.widthDp >= 1000) 380.dp else 320.dp)
+                                .width(padColumn)
                                 .fillMaxHeight(),
                             verticalArrangement = Arrangement.Bottom
                         ) {

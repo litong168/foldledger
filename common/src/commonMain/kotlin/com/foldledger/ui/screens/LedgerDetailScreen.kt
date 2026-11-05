@@ -684,13 +684,19 @@ private fun LedgerDetailBody(
                     .background(dividerBrush())
             )
             // ---- 右：概览 ----
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .verticalScroll(overviewScroll)
-                    .padding(horizontal = 20.dp)
-            ) {
+            // v16.4：右栏封顶 720dp 并居中。原来只有 20dp 内边距，1700dp 窗口下这块
+            // 有 1300dp 宽 —— 报销看板的三块金额被 SpaceBetween 顶到屏幕两端，
+            // 中间空出一条河，"已回款"和"待回款"读起来像两张不相干的卡。
+            // v16.4：右栏封顶 + 宽屏拆两列。
+            // 原来只有 20dp 内边距，1700dp 窗口下这块有 1300dp 宽 —— 报销看板的三块金额
+            // 被 SpaceBetween 顶到屏幕两端，中间空出一条河；而「尚余垫付 ¥2,056」这种
+            // 一个数字的卡被拉到 800dp 宽，右边全是空气。单纯"限宽居中"只是把空白挪到边上，
+            // 真正的大屏做法是**并排两列**：左列"我还有多少钱"（概览 / 资产 / 固定支出），
+            // 右列"钱卡在谁那儿"（报销看板 / 催办清单）。每列回到 520dp 上下，卡片本身
+            // 也重新成立 —— 这才是桌面版而不是被拉长的手机版。
+            val detailPaneWidth = env.paneTrailingWidthDp(navigationVisible = true) - 1
+            val wideOverview = detailPaneWidth >= 860
+            val overviewBlocks: @Composable () -> Unit = {
                 Spacer(Modifier.height(6.dp))
                 LedgerOverviewCard(
                     emoji = ledger?.emoji ?: "📒",
@@ -727,6 +733,9 @@ private fun LedgerDetailBody(
                         onManage = { recurringOpen = true }
                     )
                 }
+                // v16.4：看板跟概览走同一列 —— 它讲的是"我有多少钱压在外面"，
+                // 和上面的余额是同一句话；催办清单是明细，单独站右列。
+                // 这样两列的高度也不会一边倒（收起概览时左列只剩一张 100dp 的卡）。
                 if (supportsReimburse) {
                     Spacer(Modifier.height(12.dp))
                     ReimburseBoard(
@@ -737,15 +746,43 @@ private fun LedgerDetailBody(
                         onPickOutstanding = { vm.setReimburseFilter(setOf(ReimburseState.PENDING, ReimburseState.SUBMITTED)) },
                         onPickRecovered = { vm.setReimburseFilter(setOf(ReimburseState.SETTLED)) }
                     )
-                    if (outstanding.isNotEmpty()) {
-                        Spacer(Modifier.height(12.dp))
-                        ChaseListCard(
-                            items = outstanding,
-                            projectNames = projectNames,
-                            ledgerName = ledger?.name ?: "",
-                            onFilterAll = { vm.setReimburseFilter(setOf(ReimburseState.PENDING, ReimburseState.SUBMITTED)) }
+                }
+            }
+            val chaseBlocks: @Composable () -> Unit = {
+                if (supportsReimburse && outstanding.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    ChaseListCard(
+                        items = outstanding,
+                        projectNames = projectNames,
+                        ledgerName = ledger?.name ?: "",
+                        onFilterAll = { vm.setReimburseFilter(setOf(ReimburseState.PENDING, ReimburseState.SUBMITTED)) }
+                    )
+                }
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(overviewScroll)
+                    .padding(
+                        horizontal = Layout.sidePaddingIn(
+                            detailPaneWidth,
+                            Layout.wideContentMaxWidth
                         )
+                    )
+            ) {
+                if (wideOverview) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(Modifier.weight(1f)) { overviewBlocks() }
+                        Column(Modifier.weight(1f)) { chaseBlocks() }
                     }
+                } else {
+                    overviewBlocks()
+                    chaseBlocks()
                 }
                 // ⚠️ v12.2.0：这里原来在收起态插了一块「记账节奏」卡
                 // （记账天数 / 流水笔数 / 日均笔数 / 最近记账）。

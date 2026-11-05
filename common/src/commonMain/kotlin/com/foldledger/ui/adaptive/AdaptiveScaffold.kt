@@ -196,7 +196,10 @@ fun AdaptiveScaffold(
     // v12.1.4：**内外屏统一**为底部悬浮胶囊 —— 内屏 860dp 横屏也不再切侧栏。
     // 侧栏那套（80dp 竖排）在横屏里既占宽度、横向可抹的距离又只有几十 dp，
     // 手势天然别扭；统一成同一枚胶囊后，"按住来回抹"内外屏是同一种手感。
-    val showBottomBar = chromeVisible && showNavigation && selectedTab != null
+    // v16.4：≥1024dp（Windows 窗口 / 横放平板）改用左侧导轨。
+    // 二选一，绝不并存：底栏胶囊与导轨是同一件事的两种形态，同时出现就是两套导航。
+    val showRail = chromeVisible && showNavigation && selectedTab != null && env.useNavRail
+    val showBottomBar = chromeVisible && showNavigation && selectedTab != null && !showRail
 
     // ⚠️ v10.2.0：底栏内容必须整体抬到系统手势条以上。
     // 原来把 `windowInsetsPadding(navigationBars)` 写在底栏内部，但它已经被
@@ -210,6 +213,17 @@ fun AdaptiveScaffold(
 
     AppBackground {
         Row(Modifier.fillMaxSize()) {
+            // v16.4：导轨在 Scaffold **之外** —— 这样顶栏只覆盖内容区（桌面惯例：导航与
+            // 页头是两条独立的竖带），而且不需要改任何页面的 padding 计算。
+            if (showRail) {
+                selectedTab?.let { tab ->
+                    AppNavRail(
+                        selected = tab,
+                        onSelected = onTabSelected,
+                        onAdd = onAdd
+                    )
+                }
+            }
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),

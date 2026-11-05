@@ -29,16 +29,20 @@ import kotlin.math.roundToInt
 //      368 是上限（再宽列表只是变空），48% 是占比上限（保证窄展开屏上右栏仍有 340dp+）。
 
 /** 左侧 NavigationRail 的固定宽度 */
-internal const val NAV_RAIL_DP = 80
+internal const val NAV_RAIL_DP = 96
 
 /** 达到这个宽度才用侧边导航栏；更窄改用底部导航，把宽度让给内容 */
-internal const val NAV_RAIL_FROM_DP = 800
+internal const val NAV_RAIL_FROM_DP = 1024
 
 /** 左栏占可分栏宽度的比例上限 */
 internal const val PANE_MASTER_SHARE = 0.48f
 
 internal const val PANE_MASTER_MIN_DP = 288
 internal const val PANE_MASTER_MAX_DP = 368
+
+/** 桌面宽屏（可分栏 ≥1400dp）左栏占比与上限（v16.4） */
+internal const val PANE_MASTER_SHARE_WIDE = 0.40f
+internal const val PANE_MASTER_MAX_WIDE_DP = 720
 
 /**
  * 分栏所需的最小窗口宽度（dp）。
@@ -169,11 +173,15 @@ data class FoldEnv(
     /**
      * 是否用左侧 NavigationRail。
      *
-     * ⚠️ v12.1.4：**内外屏统一**为底部悬浮胶囊后，侧栏已退役（恒 false）。
-     * 保留这个属性是为了让 `contentWidthDp` / 折叠屏设置页继续有一处统一口径；
-     * 不要再把它接回导航（需要时改这里一处即可复活）。
+     * v12.1.4 曾**内外屏统一**为底部悬浮胶囊（侧栏退役），理由是 860dp 横屏里
+     * 80dp 竖排既要宽度、可抹距离又短。v16.4 把门槛从 800 抬到 **1024** 并复活它：
+     * 到 1024dp 以上（实际只有 Windows 窗口和横放平板）底部胶囊就变成了
+     * 「一颗手机底栏浮在屏幕下沿」—— 它占掉一条可视高度，却只用到屏幕 30% 的宽度。
+     * 这个宽度下换竖排导轨才是对的：导航贴左边，内容拿到完整的剩余宽度。
+     *
+     * 手机（≤ 430dp）与折叠内屏（860dp）都在门槛之下，观感与手势完全不变。
      */
-    val useNavRail: Boolean get() = false
+    val useNavRail: Boolean get() = widthDp >= NAV_RAIL_FROM_DP
 
     /** 扣掉侧边导航栏后，真正能用来分栏的宽度 */
     fun contentWidthDp(navigationVisible: Boolean): Int =
@@ -181,12 +189,29 @@ data class FoldEnv(
 
     /**
      * 左侧「主列表」栏宽度（账本列表 / 流水列表）。
-     * `min(368dp, 可分栏宽度 × 48%)`，下限 288dp。
+     *
+     * - 折叠内屏 / 平板：`min(368dp, 可分栏宽度 × 48%)`，下限 288dp。这是离线搜出来的，
+     *   368 以上列表只是变空。
+     * - **v16.4 桌面宽屏（可分栏 ≥1400dp）：按 40% 分，上限 720。**
+     *   1600dp 的窗口里如果左栏还锁在 420，就变成"读的那一列窄、看的概览宽 1100"——
+     *   主次反了。40% 让流水回到主栏位置（~640dp），右栏落在 960dp 左右，
+     *   里面正好并排两列 460dp 的卡。
      */
-    fun paneMasterWidthDp(navigationVisible: Boolean): Int =
-        (contentWidthDp(navigationVisible) * PANE_MASTER_SHARE)
-            .roundToInt()
-            .coerceIn(PANE_MASTER_MIN_DP, PANE_MASTER_MAX_DP)
+    fun paneMasterWidthDp(navigationVisible: Boolean): Int {
+        val content = contentWidthDp(navigationVisible)
+        return if (content >= 1400) {
+            (content * PANE_MASTER_SHARE_WIDE).roundToInt().coerceIn(420, PANE_MASTER_MAX_WIDE_DP)
+        } else {
+            (content * PANE_MASTER_SHARE)
+                .roundToInt()
+                .coerceIn(PANE_MASTER_MIN_DP, PANE_MASTER_MAX_DP)
+        }
+    }
+
+    /** 右栏（概览 / 看板）宽度 = 可分栏宽度 − 左栏 */
+    fun paneTrailingWidthDp(navigationVisible: Boolean): Int =
+        (contentWidthDp(navigationVisible) - paneMasterWidthDp(navigationVisible))
+            .coerceAtLeast(1)
 
     /** 顶部展示的姿态标签，便于用户/测试确认适配是否生效 */
     val postureLabel: String

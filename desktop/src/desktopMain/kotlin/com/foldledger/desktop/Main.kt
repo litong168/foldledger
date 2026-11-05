@@ -100,6 +100,13 @@ fun main(args: Array<String>) {
         ) {
             LaunchedEffect(saved) {
                 windowRef.value = window
+                // QA 钩子：-Ddrip.alwaysOnTop=true 时窗口置顶。
+                // 桌面版没有 adb 那样的自动化通道，界面验收只能靠"启动 → 截屏"；
+                // 而 Windows 上浏览器/聊天窗随时抢焦点，截图截到的往往是别人。
+                // 置顶后 Robot 截屏与点击都稳定落在本窗口上。正常启动不传该参数 = 行为不变。
+                if (System.getProperty("drip.alwaysOnTop") == "true") {
+                    window.isAlwaysOnTop = true
+                }
                 // 恢复几何：AWT 物理像素设置（比 WindowPosition 构造器 protected 的方案可靠）
                 if (saved != null) {
                     if (saved.maximized) {

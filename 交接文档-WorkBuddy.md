@@ -52,12 +52,12 @@
 
 ---
 
-## 3. 当前版本与双端状态（2026-11-04，已更新到 16.3.2）
+## 3. 当前版本与双端状态（2026-11-05，已更新到 16.4.0）
 
 | 端 | 版本 | 状态 |
 |---|---|---|
-| 桌面 | 16.3.2 (225) | ✅ **安装包分发**：`dist/滴水记账-v16.3.2-win-x64-setup.exe`（89.9MB），静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
-| 手机 | 16.3.2 (225) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.3.2-release.apk` 4.0MB，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
+| 桌面 | 16.4.0 (226) | ✅ **安装包分发**：`dist/滴水记账-v16.4.0-win-x64-setup.exe`，静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
+| 手机 | 16.4.0 (226) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.4.0-release.apk`，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
 
 > **16.3.0 双端一致性 + 性能**（详见 §5 首节）：桌面补齐三处空桩（速记输入槽、自定义分类图标、备份回收站），并合并重复订阅 / 收敛重复重算。全程**不新增 DB 列、不改备份格式、不触发迁移**。测试 app 203 + desktopTest **55**。
 
@@ -98,6 +98,28 @@ $env:JAVA_HOME="C:\Users\16039\.workbuddy\binaries\jdk\17.0.2"
 ```
 
 ---
+
+### 16.4.0（2026-11-05，桌面宽屏改版 · 纯表现层）
+
+用户截图三张（明细 / 账本 / 我的），要求「提高屏幕利用率，别把手机排版直接搬到 Windows，在不影响双端互通的前提下美化」。
+
+**诊断**（三处版式问题，都不是数据问题）：
+1. `Layout.contentMaxWidth = 760dp` —— 这是"一栏中文"的舒适宽度，放在 1700dp 窗口里左右各空 470dp。
+2. **双栏页面的右栏用整窗宽度算居中留白**（`Layout.sidePadding(env.widthDp)`）：1700dp 算出 313dp 留白，塞进 1300dp 的右栏后内容只剩 700dp。这是"桌面双栏反而比手机还挤"的根因，账本 / 明细两个双栏页都中招。
+3. 底栏胶囊是手机形态：1700dp 下只用掉 13% 宽度，却占掉一整条可视高度。
+
+**做法（换版面，不放大手机）**：
+- `Dimens.kt`：新增 `wideContentMaxWidth = 1120dp`、`contentMaxFor(widthDp)`、`sidePaddingIn(containerWidthDp, maxWidth)`（按**容器**算留白）。`sidePadding` 的默认上限改为随窗口宽度选档。
+- `FoldEnv`：`useNavRail` 门槛 800 → **1024** 并复活（老注释里"已退役"的说明同步改掉）；新增 `paneTrailingWidthDp()`；`paneMasterWidthDp` 在可分栏 ≥1400dp 时按 **40%** 分（上限 720），让流水回到主栏位置。
+- 新增 `ui/adaptive/AppNavRail.kt`：左侧玻璃导轨（品牌位 + 三格 + 底部 `GlassKey`），选中态仍旧是"被托起来的白玻璃滑块"。`AdaptiveScaffold` 在 `env.useNavRail` 时把导轨放在 **Scaffold 之外**（顶栏只覆盖内容区，且不需要改任何页面的 padding 计算），底栏胶囊同时隐藏。
+- 账本页右栏：`sidePaddingIn(paneWidth)`；≥860dp 时「合计范围 ｜ 当前账本」并排；场景模板网格等分铺满整行（新增 `SceneChip` + `stretch`）。
+- 明细页右栏：`sidePaddingIn(paneWidth, wideContentMaxWidth)`；≥860dp 拆两列 —— 左「概览 + 资产 + 固定支出 + 报销看板」，右「催办清单」（用两个 `@Composable () -> Unit` lambda 复用同一份内容，单栏分支照旧顺序执行）。
+- 「我的」页：≥1180dp 拆两列（左：工具/外观/回收站/同步，右：备份/提醒/启动/关于）。为此把 8 张卡从 LazyColumn 里抽成 `ToolsCard` / `AppearanceCard` / `RecycleCard` / `ReminderCard` / `StartupCard` / `AboutCard` 六个私有 composable，两种排版共用。
+- 记一笔弹层：`AppOverlay` 的 DIALOG 宽度 620 → 920/1000dp（按窗口宽度三档），键盘栏固定 400dp，分类列数 4 → 5。
+
+**验证**：字阶闸门 **712** 点全绿；`app 203 + desktopTest 55 = 258` 全绿；桌面端真机截屏逐页核对（新增 `-Ddrip.alwaysOnTop=true` QA 钩子，见 Main.kt，用于自动化截屏时把窗口置顶，正常启动行为不变）。
+
+**已知取舍**：二级页（统计/分类/回收站…）是全屏覆盖层，打开时导轨会一起被盖住 —— 与手机上"整页推入"是同一套语言，本轮未改成"导轨常驻 + 内容区替换"。
 
 ### 16.3.2（同日，日期时间选择器排版复核与修复）
 

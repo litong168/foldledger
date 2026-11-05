@@ -272,7 +272,18 @@ fun AppOverlay(
                 ) {
                     SurfaceCard(
                         modifier = Modifier
-                            .widthIn(max = 620.dp)
+                            // v16.4：宽屏弹层不再锁 620dp。
+                            // 620 是"手机横过来"的宽度；内部却是左右两栏（选分类 + 键盘），
+                            // 键盘那栏固定 380 → 分类区只剩 240dp，于是账本 chip 折行、
+                            // 模板挤成一条、数字键比分类区还宽 —— 屏幕利用率低到荒谬。
+                            .widthIn(
+                                max = when {
+                                    env.widthDp >= 1400 -> 1000.dp
+                                    env.widthDp >= 1100 -> 920.dp
+                                    env.widthDp >= 900 -> 820.dp
+                                    else -> 620.dp
+                                }
+                            )
                             .fillMaxHeight(0.9f)
                             .padding(
                                 horizontal = 16.dp,

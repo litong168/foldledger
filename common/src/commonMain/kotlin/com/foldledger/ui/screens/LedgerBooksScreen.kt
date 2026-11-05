@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foldledger.data.ScenePreset
@@ -329,6 +331,15 @@ fun LedgerBooksScreen(
     if (env.twoPane) {
         // 左栏宽度由 FoldEnv 的离线搜索结果给出，不再让用户调
         val masterWidth = rememberAnimatedPaneWidth(env.paneMasterWidthDp(navigationVisible = true))
+        // v16.4：右栏的留白必须按**右栏**宽度算。
+        // 原来用的是 `Layout.sidePadding(env.widthDp)` —— 1700dp 窗口算出 300+dp 留白，
+        // 塞进 1000dp 的右栏后内容只剩 400dp，于是"合计 ¥5,582"下面孤零零一张窄卡，
+        // 右边空出大半屏。这正是用户说的「手机排版直接搬到 Windows」。
+        val paneWidth = env.paneTrailingWidthDp(navigationVisible = true) - 1
+        val paneSide = Layout.sidePaddingIn(paneWidth)
+        // 右栏够宽时（≥1000dp）「合计范围」与「当前账本」并排 —— 两块都在讲"现在多少钱"，
+        // 并排读是同一句话的两半；单列上下堆则要多滚一屏才看到账本本身。
+        val widePane = paneWidth >= 860
         Row(
             Modifier
                 .then(modifier)
@@ -370,7 +381,7 @@ fun LedgerBooksScreen(
                     .weight(1f)
                     .fillMaxHeight()
                     .verticalScroll(paneScroll)
-                    .padding(horizontal = side)
+                    .padding(horizontal = paneSide)
             ) {
                 Spacer(Modifier.height(12.dp))
                 if (creating) {
@@ -382,32 +393,63 @@ fun LedgerBooksScreen(
                     )
                     Spacer(Modifier.height(14.dp))
                 }
-                AggregateCard(
-                    cards = cards,
-                    aggregateAll = aggregateAll,
-                    aggregateIds = aggregateIds,
-                    onCustomize = onCustomizeAggregate,
-                    onGoDetail = onGoDetail
-                )
-                Spacer(Modifier.height(14.dp))
-                cards.firstOrNull { it.ledger.id == effectiveCurrent }?.let { ui ->
-                    CurrentLedgerPanel(
-                        ui = ui,
-                        onAdd = { onAddTransaction(ui.ledger.id) },
-                        onDetail = onGoDetail,
-                        onStats = { onOpenStats(ui.ledger.id) },
-                        onCategories = { onOpenCategories(ui.ledger.id) }
+                val currentUi = cards.firstOrNull { it.ledger.id == effectiveCurrent }
+                if (widePane && currentUi != null) {
+                    // 宽屏：合计（跨账本）｜当前账本 —— 左右两栏，同一视线内读完
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(Modifier.weight(1.08f)) {
+                            AggregateCard(
+                                cards = cards,
+                                aggregateAll = aggregateAll,
+                                aggregateIds = aggregateIds,
+                                onCustomize = onCustomizeAggregate,
+                                onGoDetail = onGoDetail
+                            )
+                        }
+                        Box(Modifier.weight(1f)) {
+                            CurrentLedgerPanel(
+                                ui = currentUi,
+                                onAdd = { onAddTransaction(currentUi.ledger.id) },
+                                onDetail = onGoDetail,
+                                onStats = { onOpenStats(currentUi.ledger.id) },
+                                onCategories = { onOpenCategories(currentUi.ledger.id) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(18.dp))
+                } else {
+                    AggregateCard(
+                        cards = cards,
+                        aggregateAll = aggregateAll,
+                        aggregateIds = aggregateIds,
+                        onCustomize = onCustomizeAggregate,
+                        onGoDetail = onGoDetail
                     )
                     Spacer(Modifier.height(14.dp))
+                    currentUi?.let { ui ->
+                        CurrentLedgerPanel(
+                            ui = ui,
+                            onAdd = { onAddTransaction(ui.ledger.id) },
+                            onDetail = onGoDetail,
+                            onStats = { onOpenStats(ui.ledger.id) },
+                            onCategories = { onOpenCategories(ui.ledger.id) }
+                        )
+                        Spacer(Modifier.height(14.dp))
+                    }
                 }
                 SceneTemplateSection(
-                    columns = 4,
+                    columns = if (widePane) 6 else 3,
                     onQuickCreate = { key -> onQuickCreateScene(key, markCreated) },
-                    onCreateCustom = openCreate
+                    onCreateCustom = openCreate,
+                    stretch = widePane
                 )
-                // 抬高一截给右下角的悬浮「记一笔」让位 —— 120dp ≈ FAB 高度(56) + 外边距(16)
-                // + 一点呼吸，否则拉到最底下时那个按钮会被 FAB 压住点不到。
-                Spacer(Modifier.height(120.dp))
+                // 窄栏（折叠内屏）时右下角还有「记一笔」浮钮，留出一截让它不压内容；
+                // 宽屏已改成左侧导轨，底部不再有东西，留白收回到常规呼吸即可。
+                Spacer(Modifier.height(if (widePane) 24.dp else 120.dp))
             }
         }
     } else {
@@ -1330,7 +1372,16 @@ private fun QuickAction(label: String, color: Color, onClick: () -> Unit) {
 private fun SceneTemplateSection(
     columns: Int,
     onQuickCreate: (String) -> Unit,
-    onCreateCustom: () -> Unit
+    onCreateCustom: () -> Unit,
+    /**
+     * v16.4：宽屏把网格**撑满整行**。
+     *
+     * 场景芯片原本是固定 112dp，靠 FlowRow 自然换行 —— 手机上是正确的（一屏两三列）。
+     * 但桌面上右栏有 1080dp，4×112 只铺到 472dp，剩下 600dp 全是空 ——
+     * 「屏幕利用率低」有一半是这类固定宽度造成的。宽屏改成按列数等分，
+     * 网格正好铺满，芯片也回到 180~210dp 的自然宽度（再宽就成了横幅）。
+     */
+    stretch: Boolean = false
 ) {
     Column {
         SectionHeader(
@@ -1338,45 +1389,28 @@ private fun SceneTemplateSection(
             subtitle = "点一下即生成账本 + 整套分类"
         )
         Spacer(Modifier.height(8.dp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            maxItemsInEachRow = columns
-        ) {
-            ScenePresets.gallery.forEach { s ->
-                // v13.9：场景模板块从"白卡 + 1dp 色边框"改成染色玻璃 ——
-                // 边框是画出来的线，玻璃的边界是折出来的棱，两者不能混用。
-                Box(
-                    Modifier
-                        .width(112.dp)
-                        .glassChip(
-                            shape = RoundedCornerShape(Radius.sm),
-                            tint = parseHexColor(s.colorHex),
-                            strength = 1.2f
-                        )
-                        .clickableScale { onQuickCreate(s.key) }
+        if (stretch) {
+            BoxWithConstraints {
+                val gap = 8.dp
+                val itemW = (maxWidth - gap * (columns - 1)) / columns
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(gap),
+                    verticalArrangement = Arrangement.spacedBy(gap),
+                    maxItemsInEachRow = columns
                 ) {
-                    Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(s.emoji, fontSize = 17.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Column {
-                            Text(
-                                "${s.name}账本",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                "${s.expenses.size} 个分类",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    ScenePresets.gallery.forEach { s ->
+                        SceneChip(s, itemW, onQuickCreate)
                     }
+                }
+            }
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                maxItemsInEachRow = columns
+            ) {
+                ScenePresets.gallery.forEach { s ->
+                    SceneChip(s, 112.dp, onQuickCreate)
                 }
             }
         }
@@ -1398,6 +1432,52 @@ private fun SceneTemplateSection(
                     "手动配置账本（名称 / 图标 / 配色 / 预算）",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 一枚场景模板芯片（v16.4 抽出，供固定宽度与等分拉伸两种排版共用）。
+ *
+ * 染色玻璃而不是"白卡 + 1dp 色边框"（v13.9 的结论）：边框是画出来的线，
+ * 玻璃的边界是折出来的棱，两者不能混用。
+ */
+@Composable
+private fun SceneChip(
+    s: ScenePreset,
+    width: Dp,
+    onQuickCreate: (String) -> Unit
+) {
+    Box(
+        Modifier
+            .width(width)
+            .glassChip(
+                shape = RoundedCornerShape(Radius.sm),
+                tint = parseHexColor(s.colorHex),
+                strength = 1.2f
+            )
+            .clickableScale { onQuickCreate(s.key) }
+    ) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(s.emoji, fontSize = 17.sp)
+            Spacer(Modifier.width(6.dp))
+            Column {
+                Text(
+                    "${s.name}账本",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${s.expenses.size} 个分类",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

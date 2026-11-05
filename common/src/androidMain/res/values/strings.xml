@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件用到的字符串（v16.4.0 补）。
+
+  ⚠️ 为什么 :common 也要有一份：`res/layout/widget_today.xml` 在 common 模块里，
+  而字符串原来只写在 `app/src/main/res/values/strings.xml`。AAPT2 给**库模块**做
+  verifyReleaseResources 时不会看到宿主模块的资源，于是报
+  `resource string/widget_today_title not found` —— 这个坑平时不显形，
+  因为该任务只有在 common 的资源输入变化（例如改了 commonMain 源码）时才重新执行。
+  两处同名同值，合并时宿主覆盖库，行为不变。
+-->
+<resources>
+    <string name="widget_today_title">今日收支</string>
+    <string name="widget_expense">支出</string>
+    <string name="widget_income">收入</string>
+    <string name="widget_month">本月</string>
+    <string name="widget_quick_add">速记</string>
+    <string name="widget_today_desc">查看今日 / 本月收支，一键速记</string>
+</resources>
