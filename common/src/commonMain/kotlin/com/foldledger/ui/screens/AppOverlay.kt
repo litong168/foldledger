@@ -280,7 +280,9 @@ fun AppOverlay(
                                 max = when {
                                     env.widthDp >= 1400 -> 1000.dp
                                     env.widthDp >= 1100 -> 920.dp
-                                    env.widthDp >= 900 -> 820.dp
+                                    // v16.5.3：840 起就放宽到 820 —— 折叠屏展开横屏是 860，
+                                    // 之前落进 620 档，分栏后分类区只剩 200 出头。
+                                    env.widthDp >= 840 -> 820.dp
                                     else -> 620.dp
                                 }
                             )

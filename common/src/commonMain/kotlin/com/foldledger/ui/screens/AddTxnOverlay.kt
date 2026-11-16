@@ -354,17 +354,27 @@ private fun TxnEditor(
 
             // ============ 内屏展开 / 桌面窗口：居中浮窗 ============
             dialogLayout -> {
-                // 卡片够宽才左右分栏；窄屏（折叠屏展开竖屏 608dp）在**同一张浮窗**里
+                // 卡片够宽就左右分栏；窄屏（折叠屏展开**竖屏** 608dp）在**同一张浮窗**里
                 // 上下叠 —— 分类铺满整宽 4 列，键盘贴底。
                 //
                 // ⚠️ 用户要的是"浮窗样式 + 更大信息量"，不是把屏幕铺满。
                 // v16.5 曾把门槛提到 900dp，窄屏退回贴底抽屉（fillMaxHeight 0.92，
                 // 视觉上就是全屏），被明确否掉。现在摆位与排版分开判：
                 // 摆位看 useDialogOverlay(≥600)，内部是否分栏看这里。
-                val twoColumn = env.widthDp >= 900
-                // v16.4：键盘栏固定在 360~380dp，其余全给分类区；
-                // v16.5：键盘栏随窗口降档 —— 900dp 窗口下卡片 820，分类区仍有 428dp。
-                val padColumn = if (env.widthDp >= 1100) 380.dp else 360.dp
+                //
+                // 阈值 840（v16.5.3）：折叠屏展开**横屏**是 860×608 —— 高度只有 608，
+                // 上下叠会把分类压得只剩一两行，而横向明明有 860 的余量。
+                // 840 之上卡片能到 812，扣掉键盘栏 360 仍有 450 给分类（4 列刚好）。
+                val twoColumn = env.widthDp >= 840
+                // v16.4：键盘栏固定在 340~380dp，其余全给分类区；
+                // v16.5：键盘栏随窗口降档 —— 840dp 窗口下卡片 812，分类区仍有 472dp。
+                // 横屏（860×608）高度只有 ~497dp，左栏得同时收紧：键盘栏压到 340，
+                // 让「账本」四个 chip 排成一行（多一排就是 -55dp）。
+                val padColumn = when {
+                    env.widthDp >= 1100 -> 380.dp
+                    env.widthDp >= 840 -> 340.dp
+                    else -> 360.dp
+                }
                 val pickColumns = if (env.widthDp >= 1000) 5 else 4
                 AppOverlay(env = env, onDismiss = onDismiss) {
                     if (twoColumn) {
@@ -392,7 +402,10 @@ private fun TxnEditor(
                                     AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
                                 },
                                 columns = pickColumns,
-                                compact = false,
+                                // 矮屏（横屏展开：608dp 高）用紧凑芯片 + 省掉小标题，
+                                // 否则「账本/模板/方向/项目」四段吃掉整栏，分类一条都看不见
+                                compact = compact,
+                                dense = compact,
                                 onDirection = vm::setDirection,
                                 onPick = onPick,
                                 onExtra = vm::setExtra,
