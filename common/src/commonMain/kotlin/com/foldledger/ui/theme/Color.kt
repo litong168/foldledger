@@ -252,6 +252,22 @@ fun pendingTone(): Color =
 val ReimburseSubmitted = BrandBlue
 val ReimburseSettled = CoolGreen
 
+/**
+ * 已提交色（随主题）。
+ *
+ * ⚠️ 与 [pendingTone] 同理：语义色必须按主题分档。#4A6B87 落在深色玻璃上只有
+ * 3 出头，而"已提交"是用户在项目条上要一眼分出来的第二档状态。**新画的字/点
+ * 一律用这个函数**，不要直接用 [ReimburseSubmitted]（那个常量是历史用法）。
+ */
+@androidx.compose.runtime.Composable
+fun submittedTone(): Color =
+    if (LocalDarkTheme.current) BrandBlueDark else BrandBlue
+
+/** 已到账色（随主题）。同理，深色下用 [CoolGreenLight]。 */
+@androidx.compose.runtime.Composable
+fun settledTone(): Color =
+    if (LocalDarkTheme.current) CoolGreenLight else CoolGreen
+
 /** 柔和色块取色：按字符串哈希稳定映射到淡彩列表 */
 fun tintFor(key: String, dark: Boolean = false): Color {
     val list = if (dark) CategoryTintsDark else CategoryTints

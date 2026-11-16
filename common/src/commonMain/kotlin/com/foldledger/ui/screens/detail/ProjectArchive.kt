@@ -37,3 +37,62 @@ internal fun archivedProjectIds(
         .sumOf { it.count }
     inFlight == 0
 }.map { it.id }.toSet()
+
+/**
+ * 一个项目在各报销阶段的笔数（v16.5.1）。
+ *
+ * 项目条以前只报「待提交 N」—— 单子交出去之后就什么都不显示了，
+ * 于是「已提交的项目」和「全都到账的项目」在界面上长得一模一样。
+ * 用户明确要：**项目上也要看到报销状态，归档的也要看到**。
+ */
+internal data class ProjectStateBadge(
+    val pending: Int = 0,
+    val submitted: Int = 0,
+    val settled: Int = 0
+) {
+    val isEmpty: Boolean get() = pending == 0 && submitted == 0 && settled == 0
+}
+
+/**
+ * 从「项目 × 状态」汇总里算出每个项目的徽标数据。
+ *
+ * 只在账本支持报销时有意义（其它场景 [ProjectStateAgg] 里只有 NA，会被过滤掉）。
+ */
+internal fun projectStateBadges(
+    stateTotals: Map<Long, List<ProjectStateAgg>>
+): Map<Long, ProjectStateBadge> = stateTotals.mapValues { (_, list) ->
+    fun countOf(state: Int) = list.filter { it.state == state }.sumOf { it.count }
+    ProjectStateBadge(
+        pending = countOf(ReimburseState.PENDING),
+        submitted = countOf(ReimburseState.SUBMITTED),
+        settled = countOf(ReimburseState.SETTLED)
+    )
+}.filterValues { !it.isEmpty }
+
+/**
+ * 项目条上要显示哪几段文字。
+ *
+ * 规则（宽度有限，最多两段）：
+ *  - 还有「待提交」→ 报待提交，顺带报已提交（这两个都还要人事后跟进）；
+ *  - 没有待提交但还有「已提交」→ 只报已提交（等公司打款）；
+ *  - 全部到账 → 报已到账 —— **归档的项目走这一条**，否则抽屉里的项目
+ *    什么状态都看不到。
+ *  - 已到账的笔数在"还没走完"的项目上不展示：那段信息在项目汇总卡里，
+ *    挤进 chip 只会把它撑到看不清。
+ */
+internal fun ProjectStateBadge.segments(): List<Segment> = buildList {
+    if (pending > 0) {
+        add(Segment("待提交 $pending", StateKind.PENDING))
+        // 待提交和已提交同时存在时都报：这两档都还要人跟进
+        if (submitted > 0) add(Segment("已提交 $submitted", StateKind.SUBMITTED))
+    } else if (submitted > 0) {
+        add(Segment("已提交 $submitted", StateKind.SUBMITTED))
+    } else if (settled > 0) {
+        add(Segment("已到账 $settled", StateKind.SETTLED))
+    }
+}
+
+/** 项目条上的一段状态文字 + 它属于哪一档（决定颜色） */
+internal data class Segment(val text: String, val kind: StateKind)
+
+internal enum class StateKind { PENDING, SUBMITTED, SETTLED }

@@ -109,6 +109,8 @@ import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.theme.LocalDirectionColors
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.pendingTone
+import com.foldledger.ui.theme.settledTone
+import com.foldledger.ui.theme.submittedTone
 import com.foldledger.ui.theme.ReimburseSettled
 import com.foldledger.ui.theme.ReimburseSubmitted
 import com.foldledger.ui.theme.Space
@@ -166,8 +168,12 @@ internal fun ProjectBar(
      * **把它们挪到一个可展开的抽屉里**：不删除、不丢数据、点一下还能看见。
      */
     archivedIds: Set<Long> = emptySet(),
-    /** v14.2：每个项目「待提交」笔数 —— 账本一眼看出哪个项目还卡着没交 */
-    pendingCounts: Map<Long, Int> = emptyMap(),
+    /**
+     * v14.2：每个项目的报销状态徽标（待提交 / 已提交 / 已到账笔数）。
+     * v16.5.1 从「只报待提交」扩成三档 —— 单子交出去之后项目条上什么都不显示，
+     * 用户分不出「还在等打款」和「已经全到账」。
+     */
+    badges: Map<Long, ProjectStateBadge> = emptyMap(),
     /**
      * v16.1.1：桌面端左栏固定 368dp，LazyRow 横向滚动只露出前 2-3 个 chip，
      * 其余项目与「已归档 N」抽屉全在视口外（用户看不到其它项目）。
@@ -201,7 +207,7 @@ internal fun ProjectBar(
                     label = p.name,
                     emoji = p.emoji,
                     colorHex = p.colorHex,
-                    pendingCount = pendingCounts[p.id] ?: 0,
+                    badge = badges[p.id],
                     active = selected == p.id
                 ) { onSelect(p.id) }
             }
@@ -239,6 +245,8 @@ internal fun ProjectBar(
                             label = p.name,
                             emoji = p.emoji,
                             colorHex = p.colorHex,
+                            // v16.5.1：归档的也要报状态（这一档通常是「已到账 N」）
+                            badge = badges[p.id],
                             active = selected == p.id,
                             dimmed = true
                         ) { onSelect(p.id) }
@@ -265,7 +273,7 @@ internal fun ProjectBar(
                 label = p.name,
                 emoji = p.emoji,
                 colorHex = p.colorHex,
-                pendingCount = pendingCounts[p.id] ?: 0,
+                badge = badges[p.id],
                 active = selected == p.id
             ) { onSelect(p.id) }
         }
@@ -313,6 +321,7 @@ internal fun ProjectBar(
                         label = p.name,
                         emoji = p.emoji,
                         colorHex = p.colorHex,
+                        badge = badges[p.id],
                         active = selected == p.id,
                         // 归档项一律压暗一档：它和「进行中」的项目并排时，
                         // 必须一眼看出哪一组是"还在办事的"。
@@ -379,8 +388,8 @@ private fun ProjectChip(
     label: String,
     emoji: String?,
     colorHex: String? = null,
-    /** v14.2：待提交笔数徽标（0 = 不显示） */
-    pendingCount: Int = 0,
+    /** 报销状态徽标（null / 空 = 不显示） */
+    badge: ProjectStateBadge? = null,
     active: Boolean,
     dimmed: Boolean = false,
     onClick: () -> Unit
@@ -441,18 +450,37 @@ private fun ProjectChip(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 140.dp)
             )
-            // v14.2：待提交笔数 —— 纯文字「待提交 N」，不做胶囊、不画圆点。
-            // 颜色按明暗分档：亮色下压深到 #8F6533（≥4.0:1），暗色用原亮琥珀色。
-            if (pendingCount > 0) {
-                Spacer(Modifier.width(5.dp))
+            // v14.2 / v16.5.1：报销状态 —— 纯文字，不做胶囊。
+            // 每段一个颜色（待提交琥珀 / 已提交蓝 / 已到账绿），段间用「·」分隔。
+            // ⚠️ 归档项的名字会压暗（dimmed），**状态字不压暗** —— 用户要的正是
+            //    "归档的项目也能看到状态"，压暗等于又把它藏起来了。
+            val segments = badge?.segments().orEmpty()
+            if (segments.isNotEmpty()) {
                 val isDarkChip = com.foldledger.ui.theme.LocalDarkTheme.current
-                Text(
-                    "待提交 $pendingCount",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = if (isDarkChip) pendingTone() else lerp(pendingTone(), Color.Black, 0.12f),
-                    maxLines = 1
-                )
+                segments.forEachIndexed { index, seg ->
+                    Spacer(Modifier.width(if (index == 0) 5.dp else 3.dp))
+                    if (index > 0) {
+                        Text(
+                            "·",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.width(3.dp))
+                    }
+                    val tone = when (seg.kind) {
+                        StateKind.PENDING -> if (isDarkChip) pendingTone() else lerp(pendingTone(), Color.Black, 0.12f)
+                        StateKind.SUBMITTED -> submittedTone()
+                        StateKind.SETTLED -> settledTone()
+                    }
+                    Text(
+                        seg.text,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = tone,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }

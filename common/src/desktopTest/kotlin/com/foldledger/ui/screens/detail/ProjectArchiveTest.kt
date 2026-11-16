@@ -4,9 +4,18 @@ import com.foldledger.data.db.ProjectEntity
 import com.foldledger.data.db.ProjectStateAgg
 import com.foldledger.data.db.ReimburseState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+private fun project(id: Long, closed: Boolean = false) = ProjectEntity(
+    id = id, ledgerId = 1L, name = "项目$id", closed = closed
+)
+
+private fun agg(projectId: Long, state: Int, count: Int) = ProjectStateAgg(
+    projectId = projectId, state = state, totalCents = 100L * count, count = count
+)
 
 /**
  * 项目归档判定（v16.5）。
@@ -24,13 +33,6 @@ import org.junit.Test
  */
 class ProjectArchiveTest {
 
-    private fun project(id: Long, closed: Boolean = false) = ProjectEntity(
-        id = id, ledgerId = 1L, name = "项目$id", closed = closed
-    )
-
-    private fun agg(projectId: Long, state: Int, count: Int) = ProjectStateAgg(
-        projectId = projectId, state = state, totalCents = 100L * count, count = count
-    )
 
     @Test
     fun allSettledIsArchived() {
@@ -100,5 +102,75 @@ class ProjectArchiveTest {
             )
         )
         assertEquals(setOf(1L), ids)
+    }
+}
+
+/**
+ * 项目条上的报销状态徽标（v16.5.1）。
+ *
+ * 用户原话："项目上也要显示报销状态，包括已经归档的。"
+ * 规则：最多两段，按「还差什么」优先 —— 待提交 > 已提交 > 已到账；
+ * 全部到账时才单独显示「已到账」（归档的项目走这一条）。
+ */
+class ProjectStateBadgeTest {
+
+    private fun seg( pending: Int = 0, submitted: Int = 0, settled: Int = 0) =
+        ProjectStateBadge(pending, submitted, settled).segments()
+
+    @Test
+    fun pendingOnly() {
+        val s = seg(pending = 2)
+        assertEquals(listOf("待提交 2" to StateKind.PENDING), s.map { it.text to it.kind })
+    }
+
+    @Test
+    fun pendingAndSubmittedBothShown() {
+        val s = seg(pending = 2, submitted = 1)
+        assertEquals(
+            listOf("待提交 2" to StateKind.PENDING, "已提交 1" to StateKind.SUBMITTED),
+            s.map { it.text to it.kind }
+        )
+    }
+
+    @Test
+    fun submittedOnly() {
+        val s = seg(submitted = 2)
+        assertEquals(listOf("已提交 2" to StateKind.SUBMITTED), s.map { it.text to it.kind })
+    }
+
+    /** 还有一笔在等打款时不展示已到账笔数（那段信息在汇总卡里） */
+    @Test
+    fun settledHiddenWhileStillWaiting() {
+        val s = seg(submitted = 1, settled = 5)
+        assertEquals(listOf("已提交 1"), s.map { it.text })
+    }
+
+    /** 归档的项目：全部到账，必须能看到状态 */
+    @Test
+    fun allSettledShowsSettled() {
+        val s = seg(settled = 3)
+        assertEquals(listOf("已到账 3" to StateKind.SETTLED), s.map { it.text to it.kind })
+    }
+
+    @Test
+    fun emptyProducesNoSegment() {
+        assertTrue(seg().isEmpty())
+    }
+
+    @Test
+    fun aggregationIgnoresNaAndEmptyProjects() {
+        val badges = projectStateBadges(
+            mapOf(
+                1L to listOf(
+                    agg(1, ReimburseState.PENDING, 2),
+                    agg(1, ReimburseState.SETTLED, 1)
+                ),
+                2L to listOf(agg(2, ReimburseState.NA, 4)),   // 非报销场景
+                3L to emptyList()
+            )
+        )
+        assertEquals(ProjectStateBadge(pending = 2, submitted = 0, settled = 1), badges[1L])
+        assertNull(badges[2L])
+        assertNull(badges[3L])
     }
 }

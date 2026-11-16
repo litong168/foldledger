@@ -145,6 +145,7 @@ import com.foldledger.ui.screens.detail.ReimburseFilterBar
 import com.foldledger.ui.screens.detail.ReimburseBoard
 import com.foldledger.ui.screens.detail.SettledArchiveBar
 import com.foldledger.ui.screens.detail.archivedProjectIds
+import com.foldledger.ui.screens.detail.projectStateBadges
 import com.foldledger.ui.screens.detail.ChaseListCard
 import com.foldledger.ui.screens.detail.ProjectBar
 import com.foldledger.ui.screens.detail.ProjectSummaryCard
@@ -314,11 +315,10 @@ private fun LedgerDetailBody(
     val projectTotals by vm.projectTotals.collectAsStateWithLifecycle()
     val projectStateTotals by vm.projectStateTotals.collectAsStateWithLifecycle()
     val projectNames by vm.projectNames.collectAsStateWithLifecycle()
-    // v14.2：每个项目「待提交」笔数 —— 项目 chip 上的待办徽标（零新查询，复用已有汇总）
-    val pendingByProject = remember(projectStateTotals) {
-        projectStateTotals.mapValues { (_, list) ->
-            list.filter { it.state == ReimburseState.PENDING }.sumOf { it.count }
-        }
+    // v14.2 / v16.5.1：项目 chip 上的报销状态徽标（待提交 / 已提交 / 已到账笔数）。
+    // 零新查询，复用已有汇总；归档项同样有徽标 —— 用户要"归档的也能看到状态"。
+    val projectBadges = remember(projectStateTotals) {
+        projectStateBadges(projectStateTotals)
     }
     // 归档判定走纯函数（detail/ProjectArchive.kt），逻辑与单测同源
     val archivedProjectIds = remember(projects, projectStateTotals) {
@@ -511,7 +511,7 @@ private fun LedgerDetailBody(
                                     selected = projectFilter,
                                     onSelect = vm::setProjectFilter,
                                     onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
-                                    archivedIds = archivedProjectIds, pendingCounts = pendingByProject,
+                                    archivedIds = archivedProjectIds, badges = projectBadges,
                                     // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
                                     expanded = env.twoPane && !env.isFoldable
                                 )
@@ -964,7 +964,7 @@ private fun LedgerDetailBody(
                                 selected = projectFilter,
                                 onSelect = vm::setProjectFilter,
                                 onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
-                                archivedIds = archivedProjectIds, pendingCounts = pendingByProject,
+                                archivedIds = archivedProjectIds, badges = projectBadges,
                                 // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
                                 expanded = env.twoPane && !env.isFoldable
                             )
