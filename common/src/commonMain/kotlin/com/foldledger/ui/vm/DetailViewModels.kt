@@ -1046,9 +1046,12 @@ data class TxnFormState(
     /** v6.1：这笔钱走的账户（0 = 未指定） */
     val accountId: Long = 0L,
     /**
-     * v10.4：目标账本 id（0 = 不变）。
-     * 自动记账默认落在「自动记账」账本，用户事后编辑时把 targetLedgerId 换成
-     * 报销/日常等真实账本 —— 保存时直接改 ledgerId，省掉"先记再搬"两步。
+     * 目标账本 id —— 这一笔最终落在哪个账本。
+     *
+     * v10.4 加它是为了「自动记账的条目事后搬到真实账本」，当时默认 0 表示"不变"。
+     * v16.5 起**默认就是当前账本**：账本 chip 靠它判断选中态，
+     * 一直是 0 的话打开弹层看不到自己在哪个账本记账（用户报的第 4 条）。
+     * 0 只作为"未初始化"的兜底，保存时仍按 `targetLedgerId ?: 当前账本` 取。
      */
     val targetLedgerId: Long = 0L
 ) {
@@ -1063,6 +1066,27 @@ data class TxnFormState(
     val canSave: Boolean get() = (amountCents ?: 0L) > 0L && categoryName.isNotBlank()
 }
 
+/**
+ * 这一笔该落成什么报销状态（v16.5）。
+ *
+ * 判据只能看**目标账本**有没有报销场景。以前传进来的是"打开弹层时那个账本"，
+ * 于是从报销账本点开、手动切成日常账本之后，流水照样写成「待提交」，
+ * 日常账本里凭空多出一条待报销的支出。
+ *
+ * 抽成纯函数是为了能单测：这条规则同样是用户实测踩出来的。
+ */
+internal fun reimburseStateFor(
+    targetSupportsReimburse: Boolean,
+    direction: Int,
+    extra: Map<String, String>
+): Int = if (targetSupportsReimburse && direction == Direction.EXPENSE) {
+    // 用户在表单里手选过状态就跟用户走，没选默认待提交
+    extra["state"]?.toIntOrNull() ?: ReimburseState.PENDING
+} else {
+    // 目标账本不支持报销，或者这笔是收入 —— 一律 NA，绝不带状态过去
+    ReimburseState.NA
+}
+
 class AddTxnViewModel(
     private val repo: LedgerRepository,
     val ledgerId: Long
@@ -1070,7 +1094,10 @@ class AddTxnViewModel(
 
     var form by mutableStateOf(
         // v5.1：默认带出上次用过的项目（同一趟差旅连记几笔不用每次重选）
-        TxnFormState(projectId = ProjectContext.get(ledgerId))
+        // v16.5：targetLedgerId 直接初始化成**当前账本** —— 以前默认 0，
+        // 账本 chip 的 isActive 判断永远不成立，"我在哪个账本记账"看不出来，
+        // 每次都得点一下才亮。
+        TxnFormState(projectId = ProjectContext.get(ledgerId), targetLedgerId = ledgerId)
     )
         private set
 
@@ -1104,9 +1131,24 @@ class AddTxnViewModel(
      */
     fun setTargetLedger(id: Long) {
         if (id == form.targetLedgerId) return
-        form = form.copy(targetLedgerId = id)
+        // v16.5：换账本必须把「属于原账本的东西」摘干净，否则会串到新账本里：
+        //  · projectId —— 项目是账本内的差旅/客户，搬到日常账本没有意义；
+        //  · extra["state"] —— 报销状态（待提交/已提交/已到账）。
+        // 用户实测：在报销账本里点开记一笔、手动切成日常账本，流水照样带着「待提交」。
+        form = form.copy(
+            targetLedgerId = id,
+            projectId = 0L,
+            extra = form.extra - "state"
+        )
         viewModelScope.launch {
-            _categories.value = repo.allCategories(id).first()
+            val list = repo.allCategories(id).first()
+            _categories.value = list
+            // 分类也分账本：原来选的那个在新账本里不存在的话必须清掉，
+            // 否则会存进一个「属于别的账本的 categoryId」（名字还在，但统计/编辑会对不上）
+            val current = form.categoryId
+            if (current != null && list.none { it.id == current }) {
+                form = form.copy(categoryId = null, categoryName = "", categoryEmoji = "")
+            }
         }
     }
 
@@ -1263,6 +1305,11 @@ class AddTxnViewModel(
      */
     fun reset(keepContext: Boolean = false) {
         val prev = form
+        // v16.5：连续记账要保留**用户选的目标账本** —— 否则在报销账本里点开、
+        // 切成日常账本记完一笔，下一笔又默默记回报销账本。
+        val target = if (keepContext && prev.targetLedgerId != 0L) prev.targetLedgerId else ledgerId
+        // 项目和账户都挂在账本上：换了账本就不能带
+        val sameLedger = target == ledgerId
         form = if (keepContext) {
             TxnFormState(
                 direction = prev.direction,
@@ -1270,12 +1317,13 @@ class AddTxnViewModel(
                 categoryName = prev.categoryName,
                 categoryEmoji = prev.categoryEmoji,
                 occurredAt = prev.occurredAt,
-                projectId = ProjectContext.get(ledgerId),
+                projectId = if (sameLedger) ProjectContext.get(ledgerId) else 0L,
                 // v6.1：连续记账也保留账户（同一天连记几笔通常走同一个账户）
-                accountId = prev.accountId
+                accountId = if (sameLedger) prev.accountId else 0L,
+                targetLedgerId = target
             )
         } else {
-            TxnFormState(projectId = ProjectContext.get(ledgerId))
+            TxnFormState(projectId = ProjectContext.get(ledgerId), targetLedgerId = ledgerId)
         }
     }
 
@@ -1302,11 +1350,19 @@ class AddTxnViewModel(
         if (f.categoryName.isBlank()) return
         lastSaveAt = nowMs
         viewModelScope.launch {
-            val reimburse = if (supportsReimbursement && f.direction == Direction.EXPENSE) {
-                f.extra["state"]?.toIntOrNull() ?: ReimburseState.PENDING
+            // v16.5：目标账本 = 用户在这一笔里选的那个（默认就是当前账本）
+            val targetId = if (f.targetLedgerId != 0L) f.targetLedgerId else ledgerId
+            // 换过账本的话，项目/账户/报销状态都属于原账本，不能跟着搬
+            val ledgerChanged = targetId != ledgerId
+            // 报销状态按**目标账本**的场景判定：以前用的是打开时的账本，
+            // 于是「报销账本里点开 → 切成日常账本 → 保存」照样写成待提交。
+            val targetSupportsReimburse = if (!ledgerChanged) {
+                supportsReimbursement
             } else {
-                ReimburseState.NA
+                allLedgers.value.firstOrNull { it.id == targetId }
+                    ?.let { ScenePresets.byKey(it.sceneKey).supportsReimbursement } ?: false
             }
+            val reimburse = reimburseStateFor(targetSupportsReimburse, f.direction, f.extra)
 
             val editId = f.editingId
             if (editId != null) {
@@ -1334,9 +1390,8 @@ class AddTxnViewModel(
                 }
             } else {
                 // v10.5：新建也可换目标账本
-                val newLedgerId = if (f.targetLedgerId != 0L) f.targetLedgerId else ledgerId
                 repo.addTransaction(
-                    ledgerId = newLedgerId,
+                    ledgerId = targetId,
                     categoryId = f.categoryId,
                     categoryName = f.categoryName,
                     categoryEmoji = f.categoryEmoji,
@@ -1346,8 +1401,9 @@ class AddTxnViewModel(
                     occurredAt = f.occurredAt,
                     extra = f.extra,
                     reimburseState = reimburse,
-                    projectId = f.projectId,
-                    accountId = f.accountId
+                    // 换过账本：项目和账户都是原账本的，不带过去（与编辑分支同一口径）
+                    projectId = if (ledgerChanged) 0L else f.projectId,
+                    accountId = if (ledgerChanged) 0L else f.accountId
                 )
             }
             reset(keepContext)

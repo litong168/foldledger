@@ -178,6 +178,17 @@ private fun TxnEditor(
     val scene = ScenePresets.byKey(ledger?.sceneKey ?: ScenePresets.CUSTOM_KEY)
     val supportsReimburse = scene.supportsReimbursement
 
+    // v16.5：这一笔最终落在哪个账本上，UI 与写入都以它为准。
+    // 以前这里只看"打开时的账本"，于是从报销账本点开、手动切成日常账本后，
+    // 项目行照旧显示、流水还带「待提交」——两个账本的数据串了。
+    val switched: LedgerEntity? = allLedgers.firstOrNull {
+        it.id == form.targetLedgerId && it.id != vm.ledgerId
+    }
+    val targetScene = switched?.let { ScenePresets.byKey(it.sceneKey) } ?: scene
+    val targetSupportsReimburse = targetScene.supportsReimbursement
+    // 项目是账本内的（这趟差旅/这个客户），换到别的账本就没有意义了
+    val showProjectRow = supportsReimburse && switched == null
+
     // ⚠️ v9.7.2 修：这个 VM 挂在 Activity 上（key = "add-$ledgerId"），会被多次打开复用。
     // 原来只在「编辑」时 loadForEdit，新建时**什么都不做**，于是：
     //   ① 取消后再点「记一笔」→ 上次填的金额/备注/分类/日期全都还在；
@@ -195,7 +206,8 @@ private fun TxnEditor(
     // 编辑已有流水时必须关闭（那是一次性的修改，不该连着改下一笔）。
     val save = {
         val continuous = AddTxnUiState.continuous && editTxnId == null
-        vm.save(supportsReimburse, keepContext = continuous) {
+        // 传目标账本的报销能力，不要传打开时的那个（见上面的 switched 说明）
+        vm.save(targetSupportsReimburse, keepContext = continuous) {
             if (continuous) {
                 AddTxnUiState.savedCount++
             } else {
@@ -238,7 +250,7 @@ private fun TxnEditor(
                             templates = templates,
                             projects = projects,
                             onProject = vm::setProject,
-                            showProjects = supportsReimburse,
+                            showProjects = showProjectRow,
                             accounts = accounts,
                             onAccount = vm::setAccount,
                             allLedgers = allLedgers,
@@ -298,7 +310,7 @@ private fun TxnEditor(
                             templates = templates,
                             projects = projects,
                             onProject = vm::setProject,
-                            showProjects = supportsReimburse,
+                            showProjects = showProjectRow,
                             accounts = accounts,
                             onAccount = vm::setAccount,
                             allLedgers = allLedgers,
@@ -346,7 +358,10 @@ private fun TxnEditor(
                 // 620dp 的弹层里 380 给键盘 → 分类只剩 240dp（窄到要折行）；
                 // 弹层放宽到 920/1000 之后这里仍是 400（数字键不该无限变宽），
                 // 多出来的宽度全部让给分类九宫格。
-                val padColumn = if (env.widthDp >= 1100) 400.dp else 380.dp
+                // v16.5：键盘栏随窗口降档，把宽度让给分类区。
+                // 900dp 窗口 → 弹层 820 → 分类区 428dp，正好放得下 4 列 84dp；
+                // 1100dp 起弹层 920、键盘 380 → 分类区 508dp，5 列也不折行。
+                val padColumn = if (env.widthDp >= 1100) 380.dp else 360.dp
                 val pickColumns = if (env.widthDp >= 1000) 5 else 4
                 AppOverlay(env = env, onDismiss = onDismiss) {
                     Row(Modifier.fillMaxSize()) {
@@ -359,7 +374,7 @@ private fun TxnEditor(
                             templates = templates,
                             projects = projects,
                             onProject = vm::setProject,
-                            showProjects = supportsReimburse,
+                            showProjects = showProjectRow,
                             accounts = accounts,
                             onAccount = vm::setAccount,
                             allLedgers = allLedgers,
@@ -450,7 +465,7 @@ private fun TxnEditor(
                             templates = templates,
                             projects = projects,
                             onProject = vm::setProject,
-                            showProjects = supportsReimburse,
+                            showProjects = showProjectRow,
                             accounts = accounts,
                             onAccount = vm::setAccount,
                             allLedgers = allLedgers,

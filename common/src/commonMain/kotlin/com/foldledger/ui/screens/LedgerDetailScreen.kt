@@ -144,6 +144,7 @@ import com.foldledger.ui.screens.detail.FilteredEmptyHint
 import com.foldledger.ui.screens.detail.ReimburseFilterBar
 import com.foldledger.ui.screens.detail.ReimburseBoard
 import com.foldledger.ui.screens.detail.SettledArchiveBar
+import com.foldledger.ui.screens.detail.archivedProjectIds
 import com.foldledger.ui.screens.detail.ChaseListCard
 import com.foldledger.ui.screens.detail.ProjectBar
 import com.foldledger.ui.screens.detail.ProjectSummaryCard
@@ -319,26 +320,9 @@ private fun LedgerDetailBody(
             list.filter { it.state == ReimburseState.PENDING }.sumOf { it.count }
         }
     }
-    /**
-     * v13.8：哪些项目已经"不需要再盯着"了。
-     *
-     * 判据是 **`pendingCount == 0`**，也就是**这个项目里没有任何一条还停在「待提交」**。
-     * 为什么不是"已回款"：报销流程里真正需要你动手的只有"待提交"这一步 ——
-     * 单子交出去之后，剩下的是等公司打款，那件事在「尚余垫付 / 催收列表」里统一看，
-     * 不需要在项目条上一个个占位。用户的原话也是"条目状态全部变为已提交之后"。
-     *
-     * 手动「已结束」（`closed`）的项目同样归档 —— 它和"提交完了"是同一个意思：
-     * 这趟事办完了。归档**不删数据**，流水、归属、金额全都还在，只是从项目条挪到抽屉里。
-     */
+    // 归档判定走纯函数（detail/ProjectArchive.kt），逻辑与单测同源
     val archivedProjectIds = remember(projects, projectStateTotals) {
-        projects.filter { p ->
-            if (p.closed) return@filter true
-            val states = projectStateTotals[p.id].orEmpty()
-            // 一个还没记过支出的项目不算归档：它只是空壳，用户建了还没用
-            if (states.isEmpty()) return@filter false
-            val pending = states.firstOrNull { it.state == ReimburseState.PENDING }
-            (pending?.count ?: 0) == 0
-        }.map { it.id }.toSet()
+        archivedProjectIds(projects, projectStateTotals)
     }
     val accountNames by vm.accountNames.collectAsStateWithLifecycle()
     // v6.2：资产总览

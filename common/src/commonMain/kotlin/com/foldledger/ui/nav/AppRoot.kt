@@ -226,6 +226,10 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
         ApplyHighRefreshRate()
 
         var currentLedgerId by rememberSaveable { mutableStateOf<Long?>(null) }
+        // v16.5：是否已经做过"恢复上次账本"这一步。冷启动时账本列表和 settings
+        // 是两条异步流，谁先到不确定 —— 用一个一次性标记，保证只在**拿到真实
+        // lastLedgerId 之后**才落定，而不是被先到的空列表锁死在第一本上。
+        var ledgerRestored by rememberSaveable { mutableStateOf(false) }
         var overlay by remember { mutableStateOf<OverlayTarget?>(null) }
         var backupBannerDismissed by rememberSaveable { mutableStateOf(false) }
 
@@ -265,14 +269,37 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
         )
 
         LaunchedEffect(backupState.restoredTick) {
-            if (backupState.restoredTick > 0) currentLedgerId = null
+            if (backupState.restoredTick > 0) {
+                currentLedgerId = null
+                // 恢复备份后账本 id 可能整个换掉，重新走一次"恢复上次账本"的判定
+                ledgerRestored = false
+            }
         }
 
-        // 「当前账本」的校正：账本被删掉或首次进入时自动落到第一个
-        LaunchedEffect(cards) {
+        // 「当前账本」的校正：**优先回到上次看的那个**，账本被删掉才落回第一个。
+        //
+        // ⚠️ v16.5：原来只有"当前为空/已失效 → cards.first()"这一条。
+        // settings.lastLedgerId 早就在写（selectLedger 每次都存），但从没人读，
+        // 于是每次冷启动都停在列表第一本上 —— 用户看到的就是"永远打开都是报销账本"。
+        LaunchedEffect(cards, settings.lastLedgerId) {
             if (cards.isEmpty()) {
                 currentLedgerId = null
-            } else if (cards.none { it.ledger.id == currentLedgerId }) {
+                ledgerRestored = false
+                return@LaunchedEffect
+            }
+            val stillValid = currentLedgerId != null && cards.any { it.ledger.id == currentLedgerId }
+            if (stillValid) {
+                ledgerRestored = true
+                return@LaunchedEffect
+            }
+            if (!ledgerRestored) {
+                // 首次进入：上次那本还在就用它，否则落到第一个
+                val last = settings.lastLedgerId
+                currentLedgerId = cards.firstOrNull { it.ledger.id == last }?.ledger?.id
+                    ?: cards.first().ledger.id
+                ledgerRestored = true
+            } else {
+                // 只是当前这本被删了
                 currentLedgerId = cards.first().ledger.id
             }
         }
