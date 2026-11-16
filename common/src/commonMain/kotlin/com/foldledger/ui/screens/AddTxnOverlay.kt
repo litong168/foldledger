@@ -352,68 +352,86 @@ private fun TxnEditor(
                 }
             }
 
-            // ============ 内屏展开 / 桌面窗口：左右分栏 ============
+            // ============ 内屏展开 / 桌面窗口：居中浮窗 ============
             dialogLayout -> {
-                // v16.4：键盘栏固定在 380dp，其余全给分类区。
-                // 620dp 的弹层里 380 给键盘 → 分类只剩 240dp（窄到要折行）；
-                // 弹层放宽到 920/1000 之后这里仍是 400（数字键不该无限变宽），
-                // 多出来的宽度全部让给分类九宫格。
-                // v16.5：键盘栏随窗口降档，把宽度让给分类区。
-                // 900dp 窗口 → 弹层 820 → 分类区 428dp，正好放得下 4 列 84dp；
-                // 1100dp 起弹层 920、键盘 380 → 分类区 508dp，5 列也不折行。
+                // 卡片够宽才左右分栏；窄屏（折叠屏展开竖屏 608dp）在**同一张浮窗**里
+                // 上下叠 —— 分类铺满整宽 4 列，键盘贴底。
+                //
+                // ⚠️ 用户要的是"浮窗样式 + 更大信息量"，不是把屏幕铺满。
+                // v16.5 曾把门槛提到 900dp，窄屏退回贴底抽屉（fillMaxHeight 0.92，
+                // 视觉上就是全屏），被明确否掉。现在摆位与排版分开判：
+                // 摆位看 useDialogOverlay(≥600)，内部是否分栏看这里。
+                val twoColumn = env.widthDp >= 900
+                // v16.4：键盘栏固定在 360~380dp，其余全给分类区；
+                // v16.5：键盘栏随窗口降档 —— 900dp 窗口下卡片 820，分类区仍有 428dp。
                 val padColumn = if (env.widthDp >= 1100) 380.dp else 360.dp
                 val pickColumns = if (env.widthDp >= 1000) 5 else 4
                 AppOverlay(env = env, onDismiss = onDismiss) {
-                    Row(Modifier.fillMaxSize()) {
-                        PickArea(
-                            title = if (editTxnId == null) "记一笔" else "编辑这一笔",
-                            subtitle = "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""} · ${scene.emoji}${scene.name}",
-                            form = form,
-                            scene = scene,
-                            categories = visibleCategories,
-                            templates = templates,
-                            projects = projects,
-                            onProject = vm::setProject,
-                            showProjects = showProjectRow,
-                            accounts = accounts,
-                            onAccount = vm::setAccount,
-                            allLedgers = allLedgers,
-                            currentLedgerName = ledger?.name ?: "",
-                            currentLedgerEmoji = ledger?.emoji ?: "📒",
-                            showLedgerPicker = true, // v10.5：新建也可换账本，不限编辑
-                            onSetTargetLedger = vm::setTargetLedger,
-                            onApplyTemplate = vm::applyTemplate,
-                            onSaveTemplate = {
-                                val ok = vm.saveTemplate("")
-                                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
-                            },
-                            columns = pickColumns,
-                            compact = false,
-                            onDirection = vm::setDirection,
-                            onPick = onPick,
-                            onExtra = vm::setExtra,
-                            onNote = vm::setNote,
-                            onBackdate = vm::backdate,
-                            onOpenPicker = onOpenDatePicker,
-                            scrollable = true,
-                            modifier = Modifier.weight(1f).fillMaxHeight()
-                        )
-                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Column(
-                            Modifier
-                                .width(padColumn)
-                                .fillMaxHeight(),
-                            verticalArrangement = Arrangement.Bottom
-                        ) {
-                            KeyArea(
+                    if (twoColumn) {
+                        Row(Modifier.fillMaxSize()) {
+                            PickArea(
+                                title = if (editTxnId == null) "记一笔" else "编辑这一笔",
+                                subtitle = "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""} · ${scene.emoji}${scene.name}",
                                 form = form,
-                                onKey = vm::inputKey,
-                                onSave = save,
-                                padHeight = (fullH - AMOUNT_BLOCK - 48.dp).coerceIn(PAD_MIN, PAD_MAX),
+                                scene = scene,
+                                categories = visibleCategories,
+                                templates = templates,
+                                projects = projects,
+                                onProject = vm::setProject,
+                                showProjects = showProjectRow,
+                                accounts = accounts,
+                                onAccount = vm::setAccount,
+                                allLedgers = allLedgers,
+                                currentLedgerName = ledger?.name ?: "",
+                                currentLedgerEmoji = ledger?.emoji ?: "📒",
+                                showLedgerPicker = true, // v10.5：新建也可换账本，不限编辑
+                                onSetTargetLedger = vm::setTargetLedger,
+                                onApplyTemplate = vm::applyTemplate,
+                                onSaveTemplate = {
+                                    val ok = vm.saveTemplate("")
+                                    AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+                                },
+                                columns = pickColumns,
                                 compact = false,
-                                modifier = Modifier.fillMaxWidth()
+                                onDirection = vm::setDirection,
+                                onPick = onPick,
+                                onExtra = vm::setExtra,
+                                onNote = vm::setNote,
+                                onBackdate = vm::backdate,
+                                onOpenPicker = onOpenDatePicker,
+                                scrollable = true,
+                                modifier = Modifier.weight(1f).fillMaxHeight()
                             )
+                            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Column(
+                                Modifier
+                                    .width(padColumn)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.Bottom
+                            ) {
+                                KeyArea(
+                                    form = form,
+                                    onKey = vm::inputKey,
+                                    onSave = save,
+                                    padHeight = (fullH - AMOUNT_BLOCK - 48.dp).coerceIn(PAD_MIN, PAD_MAX),
+                                    compact = false,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
+                    } else {
+                        // 窄卡片：上下叠。没有拖拽把手（那是抽屉的手势语言）
+                        TxnStackedBody(
+                            vm = vm, form = form, scene = scene, ledger = ledger,
+                            editTxnId = editTxnId, categories = visibleCategories,
+                            templates = templates, projects = projects, accounts = accounts,
+                            allLedgers = allLedgers, showProjectRow = showProjectRow,
+                            columns = env.categoryColumns, compact = compact, fullH = fullH,
+                            save = save, onPick = onPick, onDismiss = onDismiss,
+                            onOpenDatePicker = onOpenDatePicker, showGrabber = false,
+                            // 窄屏：键盘压到 190dp + 省掉三个小标题，多出来的全给分类区
+                            padMax = 190.dp, dense = true
+                        )
                     }
                 }
             }
@@ -421,91 +439,137 @@ private fun TxnEditor(
             // ============ 外屏 / 直板机：底部抽屉 ============
             else -> {
                 AppOverlay(env = env, onDismiss = onDismiss) {
-                    Column(Modifier.fillMaxSize()) {
-                        SheetGrabber()
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Space.md, vertical = Space.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "取消",
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(Radius.sm))
-                                    .clickableScale(pressedScale = 0.94f) { onDismiss() }
-                                    .padding(horizontal = Space.sm, vertical = 6.dp)
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                if (editTxnId == null) "记一笔" else "编辑",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""}",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.width(96.dp)
-                            )
-                        }
-                        // 先把扣除键盘后剩下的空间全给分类区（保证 PICK_AREA_MIN），
-                        // 键盘再吃掉剩下的那部分 —— "分类优先"就是这一段在保证
-                        PickArea(
-                            title = null,
-                            subtitle = null,
-                            form = form,
-                            scene = scene,
-                            categories = visibleCategories,
-                            templates = templates,
-                            projects = projects,
-                            onProject = vm::setProject,
-                            showProjects = showProjectRow,
-                            accounts = accounts,
-                            onAccount = vm::setAccount,
-                            allLedgers = allLedgers,
-                            currentLedgerName = ledger?.name ?: "",
-                            currentLedgerEmoji = ledger?.emoji ?: "📒",
-                            showLedgerPicker = true, // v10.5：新建也可换账本，不限编辑
-                            onSetTargetLedger = vm::setTargetLedger,
-                            onApplyTemplate = vm::applyTemplate,
-                            onSaveTemplate = {
-                                val ok = vm.saveTemplate("")
-                                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
-                            },
-                            columns = env.categoryColumns,
-                            compact = compact,
-                            onDirection = vm::setDirection,
-                            onPick = onPick,
-                            onExtra = vm::setExtra,
-                            onNote = vm::setNote,
-                            onBackdate = vm::backdate,
-                            onOpenPicker = onOpenDatePicker,
-                            scrollable = true,
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = PICK_AREA_MIN)
-                                .fillMaxWidth()
-                        )
-                        KeyArea(
-                            form = form,
-                            onKey = vm::inputKey,
-                            onSave = save,
-                            padHeight = (
-                                fullH - PICK_AREA_MIN - AMOUNT_BLOCK - 72.dp
-                                ).coerceIn(PAD_MIN, PAD_MAX),
-                            compact = compact,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    TxnStackedBody(
+                        vm = vm, form = form, scene = scene, ledger = ledger,
+                        editTxnId = editTxnId, categories = visibleCategories,
+                        templates = templates, projects = projects, accounts = accounts,
+                        allLedgers = allLedgers, showProjectRow = showProjectRow,
+                        columns = env.categoryColumns, compact = compact, fullH = fullH,
+                        save = save, onPick = onPick, onDismiss = onDismiss,
+                        onOpenDatePicker = onOpenDatePicker, showGrabber = true
+                    )
                 }
             }
         }
+    }
+}
+
+/**
+ * 「上下叠」版记账主体：头部（取消 / 标题 / 账本）+ 分类区 + 键盘。
+ *
+ * v16.5.1：从底部抽屉里抽出来，给**窄屏浮窗**复用 —— 手机与折叠屏展开竖屏
+ * （<900dp）的卡片里就是这一个块，只是没有 [showGrabber]（拖拽把手是抽屉的
+ * 手势语言，浮窗上画一根横条会让人想往下拖）。
+ *
+ * 布局意图：分类区优先。键盘高度按"扣掉分类区下限后剩多少"算，
+ * 所以窄屏上也是先保证看得见分类，再决定键盘多高。
+ */
+@Composable
+private fun TxnStackedBody(
+    vm: AddTxnViewModel,
+    form: TxnFormState,
+    scene: ScenePreset,
+    ledger: LedgerEntity?,
+    editTxnId: Long?,
+    categories: List<CategoryEntity>,
+    templates: List<TxnTemplate>,
+    projects: List<ProjectEntity>,
+    accounts: List<AccountEntity>,
+    allLedgers: List<LedgerEntity>,
+    showProjectRow: Boolean,
+    columns: Int,
+    compact: Boolean,
+    fullH: Dp,
+    save: () -> Unit,
+    onPick: (CategoryEntity) -> Unit,
+    onDismiss: () -> Unit,
+    onOpenDatePicker: () -> Unit,
+    showGrabber: Boolean,
+    /** 键盘最大高度。窄屏浮窗压到 200dp，把高度让给分类区 */
+    padMax: Dp = PAD_MAX,
+    /** 紧凑头部（省掉「账本/常用模板/归入项目」三个小标题） */
+    dense: Boolean = false
+) {
+    Column(Modifier.fillMaxSize()) {
+        if (showGrabber) SheetGrabber()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Space.md, vertical = Space.xs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "取消",
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(Radius.sm))
+                    .clickableScale(pressedScale = 0.94f) { onDismiss() }
+                    .padding(horizontal = Space.sm, vertical = 6.dp)
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (editTxnId == null) "记一笔" else "编辑",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""}",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(96.dp)
+            )
+        }
+        // 先把扣除键盘后剩下的空间全给分类区（保证 PICK_AREA_MIN），
+        // 键盘再吃掉剩下的那部分 —— "分类优先"就是这一段在保证
+        PickArea(
+            title = null,
+            subtitle = null,
+            form = form,
+            scene = scene,
+            categories = categories,
+            templates = templates,
+            projects = projects,
+            onProject = vm::setProject,
+            showProjects = showProjectRow,
+            accounts = accounts,
+            onAccount = vm::setAccount,
+            allLedgers = allLedgers,
+            currentLedgerName = ledger?.name ?: "",
+            currentLedgerEmoji = ledger?.emoji ?: "📒",
+            showLedgerPicker = true, // v10.5：新建也可换账本，不限编辑
+            onSetTargetLedger = vm::setTargetLedger,
+            onApplyTemplate = vm::applyTemplate,
+            onSaveTemplate = {
+                val ok = vm.saveTemplate("")
+                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+            },
+            columns = columns,
+            compact = compact,
+            dense = dense,
+            onDirection = vm::setDirection,
+            onPick = onPick,
+            onExtra = vm::setExtra,
+            onNote = vm::setNote,
+            onBackdate = vm::backdate,
+            onOpenPicker = onOpenDatePicker,
+            scrollable = true,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = PICK_AREA_MIN)
+                .fillMaxWidth()
+        )
+        KeyArea(
+            form = form,
+            onKey = vm::inputKey,
+            onSave = save,
+            padHeight = (fullH - PICK_AREA_MIN - AMOUNT_BLOCK - 72.dp).coerceIn(PAD_MIN, padMax),
+            compact = compact,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -536,6 +600,14 @@ private fun PickArea(
     onSetTargetLedger: (Long) -> Unit = {},
     columns: Int,
     compact: Boolean,
+    /**
+     * v16.5.1：紧凑头部 —— 窄屏浮窗专用。
+     *
+     * 卡片只有 ~700dp 高，键盘 + 金额占掉 ~300，剩下要放「账本/模板/方向/项目/分类」。
+     * 三段小标题各占 ~25dp，加起来就是一整行分类。dense 下省掉这些标题，
+     * 只留 chip 本身（账本名、模板名、项目名都自带含义，标题是重复信息）。
+     */
+    dense: Boolean = false,
     onDirection: (Int) -> Unit,
     onPick: (CategoryEntity) -> Unit,
     onApplyTemplate: (TxnTemplate) -> Unit,
@@ -596,13 +668,15 @@ private fun PickArea(
 
         // v10.4：编辑模式下可换目标账本 —— 自动记账的条目事后搬到真实账本
         if (showLedgerPicker && allLedgers.isNotEmpty()) {
-            Text(
-                "账本",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(6.dp))
+            if (!dense) {
+                Text(
+                    "账本",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+            }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -653,13 +727,15 @@ private fun PickArea(
 
         // 常用模板（v2.1）：点一下把金额/分类/备注填进表单，也能把当前表单存成模板
         // v10.5：原来 if(templates.isNotEmpty()) 包整块 → 无模板时看不到「存为模板」按钮，第一条模板无法诞生
-        Text(
-            "常用模板",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(6.dp))
+        if (!dense) {
+            Text(
+                "常用模板",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+        }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -718,14 +794,16 @@ private fun PickArea(
 
         // v5.1：归入项目 / 空间 —— 报销账本才有，记的时候顺手归到这一趟差旅
         if (showProjects && projects.isNotEmpty()) {
-            Spacer(Modifier.height(gap))
-            Text(
-                "归入项目",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(if (compact) 6.dp else Space.sm))
+            Spacer(Modifier.height(if (dense) 6.dp else gap))
+            if (!dense) {
+                Text(
+                    "归入项目",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(if (compact) 6.dp else Space.sm))
+            }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)

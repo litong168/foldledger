@@ -284,11 +284,19 @@ fun AppOverlay(
                                     else -> 620.dp
                                 }
                             )
-                            .fillMaxHeight(0.9f)
+                            // v16.5.1：窄屏（<900dp）要的是**浮窗**，不是"顶上留一条缝"。
+                            // 左右留 24dp、上下各留一点，四边都看得见背景；宽屏保持 16dp。
+                            //
+                            // ⚠️ 上下**不能对称**：状态栏已经吃掉 50dp 左右，
+                            // 再对称加 12dp 就等于白白少掉一整行分类（实测卡片只剩 599dp）。
+                            // 现在顶部让开状态栏 + 8，底部只留 14。
+                            .fillMaxHeight(if (env.widthDp >= 900) 0.9f else 0.94f)
                             .padding(
-                                horizontal = 16.dp,
-                                vertical = WindowInsets.statusBars.asPaddingValues()
-                                    .calculateTopPadding() + 12.dp
+                                start = if (env.widthDp >= 900) 16.dp else 24.dp,
+                                end = if (env.widthDp >= 900) 16.dp else 24.dp,
+                                top = WindowInsets.statusBars.asPaddingValues()
+                                    .calculateTopPadding() + 8.dp,
+                                bottom = 14.dp
                             ),
                         color = panelColor,
                         elevation = 18.dp,
