@@ -34,6 +34,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1178,16 +1179,93 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
 /** 关于 */
 @Composable
 internal fun AboutCard() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val manager = remember { com.foldledger.data.update.UpdateManager(ServiceLocator.preferences) }
+    var showDonation by remember { mutableStateOf(false) }
+    var showUpdate by remember { mutableStateOf(false) }
+    var checking by remember { mutableStateOf(false) }
+    var downloadBusy by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(0L to -1L) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+    var silentFound by remember { mutableStateOf(false) }
+
+    // 进入「关于」时静默检查一次（Manager 内 6 小时节流，不打扰）；有更新仅在提示文字上标注
+    LaunchedEffect(Unit) {
+        val has = manager.check("android", force = false)
+        silentFound = has
+    }
+
     SectionCard(overline = "信息", title = "关于") {
         InfoRow("应用名称", "滴水记账")
         InfoRow("版本", "$APP_VERSION_NAME ($APP_VERSION_CODE)")
         InfoRow("技术栈", "Kotlin 2.0 · Jetpack Compose · Material 3 · Room")
-        // v4.3.0：Rust 核心真实状态 + 运行时自检（一眼看出 .so 是否生效）
         InfoRow("核心引擎", if (DripCore.nativeAvailable) "Rust 原生（JNI）" else "Kotlin 回退")
         InfoRow("核心自检", rustSelfCheck())
         InfoRow("自适应", "WindowManager FoldingFeature + WindowSizeClass")
         InfoRow("备份格式", ".foldledger.json 可恢复 + .xlsx 可阅读")
         InfoRow("最低版本", "Android 8.0 (API 26) · 目标 Android 15 (API 35)")
+        Spacer(Modifier.height(6.dp))
+        // v16.6：检查更新 + 捐赠入口（不打扰、不捆绑功能）
+        GlobalToolRow(
+            emoji = "⬆️",
+            title = if (silentFound) "发现新版本 · 点击更新" else "检查更新",
+            subtitle = if (checking) "正在检查…"
+                else if (silentFound) "v${manager.available?.versionName ?: "新版本"} 已发布"
+                else "当前 v$APP_VERSION_NAME，点击检查新版本"
+        ) {
+            if (checking) return@GlobalToolRow
+            checking = true
+            errorText = null
+            scope.launch {
+                val has = manager.check("android", force = true)
+                checking = false
+                if (has) showUpdate = true
+                else errorText = manager.lastError
+            }
+        }
+        GlobalToolRow(
+            emoji = "💝",
+            title = "支持作者",
+            subtitle = "滴水记账免费开源，自愿打赏"
+        ) { showDonation = true }
+    }
+
+    if (showDonation) {
+        com.foldledger.ui.screens.DonationQrDialog(onDismiss = { showDonation = false })
+    }
+    if (showUpdate) {
+        manager.available?.let { info ->
+            com.foldledger.ui.screens.UpdateAvailableDialog(
+                info = info,
+                progress = progress.let { if (it.second > 0) it else null },
+                busy = downloadBusy,
+                error = errorText,
+                onUpdate = {
+                    downloadBusy = true
+                    errorText = null
+                    scope.launch {
+                        if (!com.foldledger.update.AndroidUpdateInstaller.canInstallUnknownApps(context)) {
+                            com.foldledger.update.AndroidUpdateInstaller.openInstallPermissionSettings(context)
+                            errorText = "请先开启「安装未知应用」权限，再点立即更新"
+                            downloadBusy = false
+                            return@launch
+                        }
+                        val result = com.foldledger.update.AndroidUpdateInstaller.downloadAndInstall(
+                            context, manager
+                        ) { done, total -> progress = done to total }
+                        downloadBusy = false
+                        progress = 0L to -1L
+                        result.exceptionOrNull()?.let { errorText = it.message ?: "下载失败" }
+                    }
+                },
+                onLater = { showUpdate = false },
+                onSkip = {
+                    scope.launch { manager.skipThisVersion() }
+                    showUpdate = false
+                }
+            )
+        }
     }
 }
 

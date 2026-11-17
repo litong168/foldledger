@@ -113,7 +113,14 @@ data class AppSettings(
     /** 开机自启：桌面端写入 HKCU Run 注册表，带 --minimized 后台进托盘 */
     val desktopAutoStart: Boolean = false,
     /** 桌面端自动更新源目录（null = 默认：安装目录同级目录，即 exe 旁的 dist） */
-    val desktopUpdateDir: String? = null
+    val desktopUpdateDir: String? = null,
+    // ---------- 自动更新（v16.6.0）----------
+    /** 自动检查更新开关（默认开） */
+    val autoCheckUpdate: Boolean = true,
+    /** 用户「跳过此版本」记下的 versionCode（-1 = 没跳过） */
+    val skippedVersionCode: Int = -1,
+    /** 上次检查更新的时间（毫秒），用于节流；0 = 从未 */
+    val lastUpdateCheckAt: Long = 0L
 )
 
 /** 触感强度档位（v5.0） */
@@ -176,6 +183,10 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
         // 桌面专属：开机自启 / 更新源目录
         val DESKTOP_AUTO_START = booleanPreferencesKey("desktop_auto_start")
         val DESKTOP_UPDATE_DIR = stringPreferencesKey("desktop_update_dir")
+        // 自动更新
+        val AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
+        val SKIPPED_VERSION_CODE = intPreferencesKey("skipped_version_code")
+        val LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -215,7 +226,10 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
             syncAutoSync = p[Keys.SYNC_AUTO] ?: false,
             syncLog = p[Keys.SYNC_LOG] ?: "",
             desktopAutoStart = p[Keys.DESKTOP_AUTO_START] ?: false,
-            desktopUpdateDir = p[Keys.DESKTOP_UPDATE_DIR]
+            desktopUpdateDir = p[Keys.DESKTOP_UPDATE_DIR],
+            autoCheckUpdate = p[Keys.AUTO_CHECK_UPDATE] ?: true,
+            skippedVersionCode = p[Keys.SKIPPED_VERSION_CODE] ?: -1,
+            lastUpdateCheckAt = p[Keys.LAST_UPDATE_CHECK_AT] ?: 0L
         )
     }
 
@@ -357,4 +371,17 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
         if (path.isNullOrBlank()) p.remove(Keys.DESKTOP_UPDATE_DIR)
         else p[Keys.DESKTOP_UPDATE_DIR] = path.trim()
     }
+
+    // ---- 自动更新 ----
+    suspend fun setAutoCheckUpdate(v: Boolean) =
+        dataStore.edit { it[Keys.AUTO_CHECK_UPDATE] = v }
+
+    /** code < 0 表示清除跳过记录 */
+    suspend fun setSkippedVersionCode(code: Int) = dataStore.edit { p ->
+        if (code < 0) p.remove(Keys.SKIPPED_VERSION_CODE)
+        else p[Keys.SKIPPED_VERSION_CODE] = code
+    }
+
+    suspend fun markUpdateChecked(at: Long) =
+        dataStore.edit { it[Keys.LAST_UPDATE_CHECK_AT] = at }
 }

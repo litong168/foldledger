@@ -51,8 +51,12 @@ import com.foldledger.ui.components.SectionCard
 import com.foldledger.ui.screens.BackupSection
 import com.foldledger.ui.screens.BillImportScreen
 import com.foldledger.ui.screens.DesktopCategoryManageScreen
+import com.foldledger.ui.screens.DonationQrDialog
 import com.foldledger.ui.screens.SpeedEntryPanel
 import com.foldledger.ui.screens.SyncSectionCard
+import com.foldledger.ui.screens.UpdateAvailableDialog
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.Space
@@ -381,16 +385,21 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
 
 @Composable
 private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
-    // M5.15：启动（开机自启）与自动更新卡，桌面专属
+    // M5.15：开机自启与自动更新卡，桌面专属。v16.6 起更新走 GitHub，本地目录作兜底。
     var updateDir by remember { mutableStateOf(settings.desktopUpdateDir ?: "") }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(settings.desktopUpdateDir) {
         updateDir = settings.desktopUpdateDir ?: ""
     }
+    // 后台检查发现新版本时自动弹窗（GitHub 路径）
+    LaunchedEffect(DesktopAutoUpdater.updateInfo.value) {
+        if (DesktopAutoUpdater.updateInfo.value?.fromGithub == true) showUpdateDialog = true
+    }
+
     SectionCard(overline = "启动", title = "开机自启与更新") {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+            Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -402,24 +411,22 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
         }
         Text(
             "开机后后台启动（不弹窗），从托盘打开窗口",
-            fontSize = 11.sp,
-            lineHeight = 16.sp,
+            fontSize = 11.sp, lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         DesktopDivider()
-        Text("更新来源目录", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("自动检查更新", fontSize = 15.sp)
+            Switch(
+                checked = settings.autoCheckUpdate,
+                onCheckedChange = { appVm.setAutoCheckUpdate(it) }
+            )
+        }
         Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
-            value = updateDir,
-            onValueChange = {
-                updateDir = it
-                appVm.setDesktopUpdateDir(it)
-            },
-            placeholder = { Text("留空 = 系统「下载」文件夹") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(10.dp))
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -430,14 +437,17 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
             ) {
                 Text(if (DesktopAutoUpdater.busy.value) "检查中…" else "检查更新")
             }
+            // 本地兜底包：直接给安装/定位按钮（GitHub 包走统一弹窗）
             DesktopAutoUpdater.updateInfo.value?.let { info ->
-                if (info.isInstaller) {
-                    Button(onClick = { DesktopAutoUpdater.installUpdate() }) {
-                        Text("退出并安装 v${info.versionName}")
-                    }
-                } else {
-                    Button(onClick = { DesktopAutoUpdater.openUpdateLocation() }) {
-                        Text("打开位置")
+                if (!info.fromGithub) {
+                    if (info.isInstaller) {
+                        Button(onClick = { DesktopAutoUpdater.installUpdate() }) {
+                            Text("安装 v${info.versionName}")
+                        }
+                    } else {
+                        Button(onClick = { DesktopAutoUpdater.openUpdateLocation() }) {
+                            Text("打开位置")
+                        }
                     }
                 }
             }
@@ -445,21 +455,52 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
         Spacer(Modifier.height(6.dp))
         Text(
             DesktopAutoUpdater.updateInfo.value?.let {
-                if (it.isInstaller) {
-                    "发现新版本 v${it.versionName}；点右侧会关闭本程序并启动安装包，安装完成后重新打开即可（数据不受影响）"
-                } else {
-                    "发现新版本 v${it.versionName}（旧版绿色包）；请手动用安装包升级"
-                }
-            } ?: "当前版本 v$APP_VERSION_NAME（$APP_VERSION_CODE）；启动后自动检查",
-            fontSize = 11.sp,
-            lineHeight = 16.sp,
+                if (it.fromGithub) "发现新版本 v${it.versionName}，已弹出更新提示"
+                else if (it.isInstaller) "发现本地安装包 v${it.versionName}，点上方安装"
+                else "发现旧版绿色包 v${it.versionName}"
+            } ?: "当前版本 v$APP_VERSION_NAME（$APP_VERSION_CODE）；优先从 GitHub 检查",
+            fontSize = 11.sp, lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.height(8.dp))
+        Text("本地更新来源目录（GitHub 不可用时兜底）", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = updateDir,
+            onValueChange = { updateDir = it; appVm.setDesktopUpdateDir(it) },
+            placeholder = { Text("留空 = 系统「下载」文件夹") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (showUpdateDialog) {
+        val full = DesktopAutoUpdater.managerAvailable
+        if (full != null) {
+            UpdateAvailableDialog(
+                info = full,
+                progress = DesktopAutoUpdater.progress.value.let { if (it.second > 0) it else null },
+                busy = DesktopAutoUpdater.busy.value,
+                error = DesktopAutoUpdater.lastError.value,
+                onUpdate = {
+                    scope.launch {
+                        val ok = DesktopAutoUpdater.downloadGithubUpdate()
+                        if (ok) DesktopAutoUpdater.installUpdate()
+                    }
+                },
+                onLater = { showUpdateDialog = false },
+                onSkip = {
+                    scope.launch { DesktopAutoUpdater.skipThisVersion() }
+                    showUpdateDialog = false
+                }
+            )
+        }
     }
 }
 
 @Composable
 private fun AboutCard() {
+    var showDonation by remember { mutableStateOf(false) }
     SectionCard(overline = "关于", title = "滴水记账") {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
@@ -472,8 +513,27 @@ private fun AboutCard() {
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(8.dp))
+            // 捐赠入口：关于页底部一行，不打扰、不捆绑功能
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickableScale { showDonation = true }
+                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("💝", fontSize = 20.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("支持作者", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("滴水记账免费开源，自愿打赏", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
+    if (showDonation) DonationQrDialog(onDismiss = { showDonation = false })
 }
 
 @Composable

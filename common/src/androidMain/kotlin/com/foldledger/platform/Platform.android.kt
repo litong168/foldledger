@@ -3,6 +3,7 @@ package com.foldledger.platform
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -64,6 +65,15 @@ actual suspend fun <R> AppDatabase.runInDbTransaction(block: suspend () -> R): R
 actual suspend fun loadIconBitmap(fileName: String): ImageBitmap? =
     withContext(Dispatchers.IO) {
         IconStore.load(ServiceLocator.appContext, fileName)?.asImageBitmap()
+    }
+
+actual suspend fun loadAssetBitmap(name: String): ImageBitmap? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            ServiceLocator.appContext.assets.open(name).use { stream ->
+                BitmapFactory.decodeStream(stream)?.asImageBitmap()
+            }
+        }.getOrNull()
     }
 
 actual fun dynamicColorSchemeIfAvailable(dark: Boolean): ColorScheme? =

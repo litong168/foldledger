@@ -3,6 +3,7 @@ package com.foldledger.desktop
 import androidx.compose.runtime.mutableStateOf
 import com.foldledger.APP_VERSION_NAME
 import com.foldledger.ServiceLocator
+import com.foldledger.data.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,26 +15,39 @@ import java.io.File
 import java.util.zip.ZipFile
 
 /**
- * 桌面端「检查更新」。
+ * 桌面端「检查更新」v16.6.0。
  *
- * ⚠️ v16.2.9 起桌面端**只以安装包分发**（jpackage exe 安装器 → MSI），不再提供绿色免安装版，
- * 所以这里**不再原地解压替换安装目录**。被原地替换过的目录，MSI 的组件表（文件清单 / 版本号 /
- * 卸载信息）会与实际文件脱节：之后卸载会留下残文件，升级会被判定为"文件被改过"而走修复。
+ * 两条来源，GitHub 优先、本地目录兜底：
+ * 1. **GitHub Releases**（主）：[UpdateManager] 拉 `releases/latest` + `update-manifest.json`，
+ *    比对 versionCode，有更新则下载 exe 到用户私有目录并校验 SHA256，用户点「退出并安装」后
+ *    启动 setup 再退出本进程（同 UpgradeCode 覆盖，绝不解压替换安装目录）。
+ * 2. **本地来源目录**（兜底）：扫设置里的目录 / 系统「下载」文件夹找更高的安装包——
+ *    GitHub 访问失败、或用户手动下好了包时用这条。
  *
- * 现在只做两件事：
- * 1. 在「更新来源目录」里找比当前版本高的安装包（也认旧版 zip，方便从绿色版过渡），提示用户；
- * 2. 用户点按钮时用资源管理器定位到该文件，由用户运行安装包 —— 升级流程交给安装器本身
- *    （同 UpgradeCode + 更高版本，安装器会先卸旧版再装新版，快捷方式/卸载项一并更新）。
+ * ⚠️ 铁律：不走原地解压替换（MSI 组件表会与文件脱节）；下载目录是用户私有目录，绝不写安装目录。
  */
 object DesktopAutoUpdater {
 
-    /** [isInstaller] = true 表示是安装包（.exe），false 表示旧版绿色 zip */
-    data class UpdateInfo(val path: String, val versionName: String, val isInstaller: Boolean)
+    /** [isInstaller] = true 表示安装包（.exe），false 表示旧版绿色 zip */
+    data class UpdateInfo(
+        val path: String,
+        val versionName: String,
+        val isInstaller: Boolean,
+        /** 来自 GitHub 的更新（已下载并校验完）；本地扫描时为 null */
+        val fromGithub: Boolean = false,
+        val notes: String = ""
+    )
 
-    /** 发现的新版本（null = 无更新或还没检查） */
     val updateInfo = mutableStateOf<UpdateInfo?>(null)
-
     val busy = mutableStateOf(false)
+    val progress = mutableStateOf(0L to -1L)
+    val lastError = mutableStateOf<String?>(null)
+
+    /** 更新管理器（用共享偏好） */
+    private val manager by lazy { UpdateManager(ServiceLocator.preferences) }
+
+    /** 供 UI 直接读取的完整更新信息（含 versionCode，跳过要用） */
+    val managerAvailable: UpdateManager.Available? get() = manager.available
 
     /** 应用更新后退出本进程（由 Main.kt 注入 exitApplication） */
     var onExit: () -> Unit = {}
@@ -55,9 +69,24 @@ object DesktopAutoUpdater {
         if (busy.value) return
         scope.launch {
             busy.value = true
+            lastError.value = null
             try {
-                val dir = updateDir()
-                updateInfo.value = dir?.let { findNewer(it) }
+                // 主路径：GitHub 检查
+                val has = manager.check(platform = "windows", force = true)
+                if (has && manager.available != null) {
+                    val info = manager.available!!
+                    updateInfo.value = UpdateInfo(
+                        path = "", // 还没下载，路径在用户点「更新」后填充
+                        versionName = info.versionName,
+                        isInstaller = true,
+                        fromGithub = true,
+                        notes = info.notes
+                    )
+                    return@launch
+                }
+                // 兜底：本地目录扫描
+                updateInfo.value = updateDir()?.let { findNewer(it) }
+                lastError.value = manager.lastError
             } catch (_: Exception) {
                 updateInfo.value = null
             } finally {
@@ -67,10 +96,37 @@ object DesktopAutoUpdater {
     }
 
     /**
-     * 更新来源目录：设置项优先；否则用系统的「下载」文件夹
-     * （安装包默认也下载到那里）。安装目录本身不再参与扫描 ——
-     * 它现在由 MSI 管理，往里塞文件只会让卸载不干净。
+     * 下载当前 GitHub 更新到用户私有目录（~/.foldledger/updates），校验后填 path。
+     * 返回是否成功；失败写 lastError，updateInfo 保持（弹窗可重试）。
      */
+    suspend fun downloadGithubUpdate(): Boolean {
+        val info = updateInfo.value ?: return false
+        if (!info.fromGithub) return true // 本地包无需下载
+        busy.value = true
+        lastError.value = null
+        try {
+            val dir = File(System.getProperty("user.home"), ".foldledger/updates")
+            val file = manager.downloadAndVerify(dir) { done, total ->
+                progress.value = done to total
+            }
+            progress.value = 0L to -1L
+            updateInfo.value = info.copy(path = file.absolutePath)
+            return true
+        } catch (e: Exception) {
+            lastError.value = e.message ?: e::class.simpleName
+            return false
+        } finally {
+            busy.value = false
+        }
+    }
+
+    /** 跳过此版本（GitHub 更新） */
+    suspend fun skipThisVersion() {
+        manager.skipThisVersion()
+        updateInfo.value = null
+    }
+
+    /** 更新来源目录（本地兜底）：设置项优先；否则系统「下载」文件夹 */
     private suspend fun updateDir(): File? {
         val set = ServiceLocator.preferences.settings.first().desktopUpdateDir
         if (!set.isNullOrBlank()) {
@@ -81,10 +137,7 @@ object DesktopAutoUpdater {
         return if (downloads.isDirectory) downloads else null
     }
 
-    /**
-     * 从 classpath 推断安装目录：<install>/app/<main.jar>。
-     * 仅当目录里存在 滴水记账.exe 时返回（开发版返回 null）。
-     */
+    /** 从 classpath 推断安装目录：<install>/app/<main.jar>。仅当存在 滴水记账.exe 时返回。 */
     fun installDir(): File? = runCatching {
         val cp = System.getProperty("java.class.path") ?: return null
         val jar = cp.split(File.pathSeparator)
@@ -94,7 +147,6 @@ object DesktopAutoUpdater {
         if (File(dir, "滴水记账.exe").isFile) dir else null
     }.getOrNull()
 
-    /** exe 绝对路径（开发版 = null）。开机自启写的就是这个路径。 */
     fun currentExePath(): String? =
         installDir()?.let { File(it, "滴水记账.exe").absolutePath }
 
@@ -114,25 +166,17 @@ object DesktopAutoUpdater {
             val isInstaller = installerPattern.matchEntire(name) != null
             val m = installerPattern.matchEntire(name) ?: legacyZipPattern.matchEntire(name)
                 ?: return@mapNotNull null
-            // 半截下载文件不提示（安装包 ~90MB，小于 20MB 基本可以确定没下完）
             if (f.length() < 20L * 1024 * 1024) return@mapNotNull null
             if (!isInstaller && !zipLooksValid(f)) return@mapNotNull null
-            Triple(
-                f,
-                Version(
-                    m.groupValues[1].toInt(),
-                    m.groupValues[2].toInt(),
-                    m.groupValues[3].toInt()
-                ),
-                isInstaller
-            )
+            Triple(f, Version(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt()), isInstaller)
         }?.filter { it.second > current } ?: return null
         val best = candidates.maxByOrNull { it.second } ?: return null
         val v = best.second
         return UpdateInfo(
             path = best.first.absolutePath,
             versionName = "${v.major}.${v.minor}.${v.patch}",
-            isInstaller = best.third
+            isInstaller = best.third,
+            fromGithub = false
         )
     }
 
@@ -144,23 +188,17 @@ object DesktopAutoUpdater {
     private fun zipLooksValid(zip: File): Boolean = runCatching {
         ZipFile(zip).use { zf ->
             val names = zf.entries().asSequence().map { it.name.replace('\\', '/') }.toList()
-            names.any { it.endsWith("/app/滴水记账.cfg") } &&
-                names.any { it.endsWith("/滴水记账.exe") }
+            names.any { it.endsWith("/app/滴水记账.cfg") } && names.any { it.endsWith("/滴水记账.exe") }
         }
     }.getOrDefault(false)
 
-    /**
-     * 在资源管理器里定位到找到的那个更新文件（选中它），由用户双击运行。
-     * 返回 false 表示当前没有可定位的目标（或系统不支持）。
-     */
+    /** 在资源管理器里定位更新文件（本地兜底用） */
     fun openUpdateLocation(): Boolean {
         val info = updateInfo.value ?: return false
         val f = File(info.path)
         if (!f.exists()) return false
-        runCatching {
-            ProcessBuilder("explorer.exe", "/select,${f.absolutePath}").start()
-        }.onSuccess { return true }
-        // 兜底：打开所在目录
+        runCatching { ProcessBuilder("explorer.exe", "/select,${f.absolutePath}").start() }
+            .onSuccess { return true }
         return runCatching {
             val dir = f.parentFile ?: return false
             Desktop.getDesktop().open(dir)
@@ -170,9 +208,7 @@ object DesktopAutoUpdater {
 
     /**
      * 启动安装包，然后退出本进程。
-     *
-     * 先起安装器再退出：安装向导要用户点几下才真正开始拷文件，那时本进程已经没了，
-     * MSI 不会撞上"滴水记账.exe / jar 正在被使用"而要求重启。
+     * 先起安装器再退出：等用户点完向导本进程已没了，MSI 不会撞上文件占用。
      */
     fun installUpdate(): Boolean {
         val info = updateInfo.value ?: return false

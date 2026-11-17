@@ -52,12 +52,14 @@
 
 ---
 
-## 3. 当前版本与双端状态（2026-11-16，已更新到 16.5.3）
+## 3. 当前版本与双端状态（2026-11-17，已更新到 16.6.0）
 
 | 端 | 版本 | 状态 |
 |---|---|---|
-| 桌面 | 16.5.3 (232) | ✅ **安装包分发**：`dist/滴水记账-v16.5.3-win-x64-setup.exe`，静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
-| 手机 | 16.5.3 (232) | ✅ 已装机（`adb install -r`，`09029C6247444540`）；`dist/滴水记账-v16.5.3-release.apk`，4 ABI 齐全、签名指纹不变，启动存活无崩溃 |
+| 桌面 | 16.6.0 (233) | ✅ **安装包分发**：`dist/滴水记账-v16.6.0-win-x64-setup.exe`，静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
+| 手机 | 16.6.0 (233) | ✅ `dist/滴水记账-v16.6.0-release.apk`，4 ABI 齐全、签名指纹不变；`adb install -r` 覆盖装到 `09029C6247444540` |
+
+> **16.6.0 公开发布 + 双端自动更新 + 捐赠入口**（详见 §6.7）：源码/安装包上 GitHub `litong168/foldledger`（Apache-2.0）。自动更新：`common/data/update/`（`UpdateChecker` 纯函数 + `UpdateHttp` GET/下载/校验 + `UpdateManager` 协调），GitHub Releases latest → `update-manifest.json`（versionCode 权威）→ 资产 SHA256 校验 → 桌面 `DesktopAutoUpdater` 走 GitHub（本地目录兜底）、手机 `AndroidUpdateInstaller` 走 FileProvider + ACTION_VIEW。捐赠：双端「关于」页底部「支持作者」一行 + `DonationQrDialog`（微信收款码：`app/src/main/assets/` + `common/src/desktopMain/resources/` 各一份，`loadAssetBitmap` expect/actual 加载）。Android 新增 `REQUEST_INSTALL_PACKAGES` + FileProvider（`provider_paths.xml` 暴露 files/updates/）。一键发版 `scripts/publish_github_release.sh`（从 AppInfo 读版本、算 sha256、生成 manifest、push、建 Release、传 3 资产，可重跑）。**零 DB 改动**；新增 8 个更新单测。
 
 > **16.3.0 双端一致性 + 性能**（详见 §5 首节）：桌面补齐三处空桩（速记输入槽、自定义分类图标、备份回收站），并合并重复订阅 / 收敛重复重算。全程**不新增 DB 列、不改备份格式、不触发迁移**。测试 app 203 + desktopTest **55**。
 

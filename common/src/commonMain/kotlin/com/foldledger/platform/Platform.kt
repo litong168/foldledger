@@ -20,6 +20,12 @@ expect suspend fun <R> AppDatabase.runInDbTransaction(block: suspend () -> R): R
 /** 自定义分类图标加载（Android 走 IconStore 缓存；桌面暂无自定义图标 → null）。 */
 expect suspend fun loadIconBitmap(fileName: String): ImageBitmap?
 
+/**
+ * 加载内置资产图片（按逻辑名）。目前用于「关于」页的微信收款码。
+ * Android 从 assets/ 读，桌面从 classpath resources 读；找不到返回 null。
+ */
+expect suspend fun loadAssetBitmap(name: String): ImageBitmap?
+
 /** 动态取色（Android S+ 壁纸色；桌面/低版本返回 null → 固定色板）。 */
 expect fun dynamicColorSchemeIfAvailable(dark: Boolean): ColorScheme?
 

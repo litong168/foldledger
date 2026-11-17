@@ -237,6 +237,10 @@ class AppViewModel(
     fun setDesktopUpdateDir(v: String?) =
         viewModelScope.launch { ServiceLocator.preferences.setDesktopUpdateDir(v) }
 
+    /** 自动检查更新开关（双端共用） */
+    fun setAutoCheckUpdate(v: Boolean) =
+        viewModelScope.launch { ServiceLocator.preferences.setAutoCheckUpdate(v) }
+
     companion object {
         val Factory = viewModelFactory {
             initializer { AppViewModel() }

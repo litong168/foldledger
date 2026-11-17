@@ -3,6 +3,7 @@ package com.foldledger.platform
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -45,6 +46,20 @@ actual suspend fun <R> AppDatabase.runInDbTransaction(block: suspend () -> R): R
 /** v16.3：桌面自定义分类图标走本地文件存储，与 Android 的 `img:` 引用完全兼容。 */
 actual suspend fun loadIconBitmap(fileName: String): ImageBitmap? =
     withContext(Dispatchers.IO) { DesktopIconStore.load(fileName) }
+
+/** 内置资产图片（classpath resources，如收款码）。 */
+actual suspend fun loadAssetBitmap(name: String): ImageBitmap? =
+    withContext(Dispatchers.IO) {
+        try {
+            val loader: ClassLoader? = Thread.currentThread().contextClassLoader
+                ?: java.awt.image.BufferedImage::class.java.classLoader
+            val stream = loader?.getResourceAsStream(name) ?: return@withContext null
+            val buffered = stream.use { javax.imageio.ImageIO.read(it) }
+            buffered?.toComposeImageBitmap()
+        } catch (e: Exception) {
+            null
+        }
+    }
 
 actual fun dynamicColorSchemeIfAvailable(dark: Boolean): ColorScheme? =
     null // 桌面无壁纸取色，恒走固定色板

@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- v8.1 自动记账：接收银行动账短信（运行时请求；不读历史短信、不外传） -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <!-- v16.6 应用内自动更新：下载 APK 后拉起系统安装界面时需要（首次安装需用户授权「安装未知应用」） -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!--
       折叠屏适配关键声明：
@@ -50,6 +52,17 @@
         <meta-data
             android:name="android.max_aspect"
             android:value="2.4" />
+
+        <!-- v16.6 应用内更新：把下载到私有目录的 APK 通过 content:// 暴露给系统安装器 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
 
         <activity
             android:name=".MainActivity"
