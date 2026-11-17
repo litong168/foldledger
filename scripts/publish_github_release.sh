@@ -24,8 +24,8 @@ VERSION_CODE="$(grep -oE 'APP_VERSION_CODE = [0-9]+' "$APPINFO" | head -1 | grep
 [ -n "$VERSION" ] && [ -n "$VERSION_CODE" ] || { echo "读不到版本号"; exit 1; }
 TAG="v${VERSION}"
 
-APK="dist/滴水记账-${VERSION}-release.apk"
-EXE="dist/滴水记账-${VERSION}-win-x64-setup.exe"
+APK="dist/滴水记账-v${VERSION}-release.apk"
+EXE="dist/滴水记账-v${VERSION}-win-x64-setup.exe"
 [ -f "$APK" ] || { echo "缺少 $APK"; exit 1; }
 [ -f "$EXE" ] || { echo "缺少 $EXE"; exit 1; }
 
@@ -41,8 +41,8 @@ APK_SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
 EXE_SHA="$(sha256sum "$EXE" | cut -d' ' -f1)"
 APK_SIZE="$(stat -c%s "$APK")"
 EXE_SIZE="$(stat -c%s "$EXE")"
-APK_NAME="drip-ledger-${VERSION}-arm64.apk"
-EXE_NAME="drip-ledger-${VERSION}-win-x64-setup.exe"
+APK_NAME="drip-ledger-v${VERSION}-arm64.apk"
+EXE_NAME="drip-ledger-v${VERSION}-win-x64-setup.exe"
 NOTES="$(printf '## 滴水记账 v%s\n\n双端同版（versionCode %s）。下载对应平台的安装包即可。\n' "$VERSION" "$VERSION_CODE")"
 python - "$VERSION" "$VERSION_CODE" "$APK_NAME" "$APK_SIZE" "$APK_SHA" "$EXE_NAME" "$EXE_SIZE" "$EXE_SHA" "$NOTES" <<'PY' > update-manifest.json
 import json, sys
