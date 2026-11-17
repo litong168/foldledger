@@ -432,6 +432,23 @@ OpenVPN 网段 `10.80.12.0/24`（网关 `10.80.12.1`，PC=`.2`、手机=`.4`）�
 
 git 凭据按 URL 配（`http.<url>.proxy=` 空 / `credential.<url>.provider=generic` / `.username=litong` + helper 先空值再 PAT 函数）；PAT 仍在 `~/.gitea-pat`。
 
+## 6.7 GitHub 公开发布通道（2026-11-17 配通）
+
+面向公众的源码主页 + 发布入口（与内网 Gitea 并存，互不干扰）：
+
+| 项 | 值 |
+|---|---|
+| 仓库 | `https://github.com/litong168/foldledger`（Public，默认分支 `main`） |
+| 本地 remote | `github` → `https://github.com/litong168/foldledger.git`；推送 `master:main` |
+| 发布页 | `https://github.com/litong168/foldledger/releases` |
+| 一键发版 | `bash scripts/publish_github_release.sh <version>`（核验签名→push→建/复用 Release→传 APK+EXE，可重跑） |
+
+**凭据（只在本机，绝不进仓库）**：PAT 存 `~/.github-pat`（scope=`repo`），HTTPS 凭据 `~/.git-credentials-github`。仓库级 git config：`credential.https://github.com.helper=store --file=~/.git-credentials-github` —— ⚠️ key 必须是 `https://github.com`（协议+主机），带仓库路径 `.git` 不会命中、push 会卡。配好后 `git push github` 免手工令牌。另备了 SSH key `~/.ssh/id_ed25519_github`，但公钥未贴 GitHub，走 HTTPS/PAT 即可。
+
+**本机可直连 GitHub**：环境有代理 `127.0.0.1:5240`，git/API 都通；之前「推不了」是偶发误判。但 **Release 资产下载域 `release-assets.githubusercontent.com` 国内约 23KB/s**（实测 1MB/44s），国内用户下不动包 → 自动更新的版本检查走 GitHub API、下载源需镜像到国内（Gitee/COS），见 `docs/自动更新方案设计-GiteaRelease.md`。
+
+`LICENSE`（Apache-2.0 官方原文 202 行）+ `NOTICE`（版权 2026 李通）已在仓库根。`.gitignore` 排除 `dist/*.apk`/`*.exe`，安装包只挂 Release 不进源码。
+
 ## 7. 手机端打包发布流程
 
 ```powershell
