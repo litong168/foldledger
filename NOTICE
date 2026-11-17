@@ -1,0 +1,52 @@
+滴水记账 · Drip Ledger
+Copyright 2026 李通
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--------------------------------------------------------------------------------
+第三方组件声明
+--------------------------------------------------------------------------------
+
+本项目使用了以下开源组件，其版权归各自作者所有，并依各自许可证授权：
+
+* Kotlin / Kotlinx Coroutines / Kotlinx Serialization
+  Copyright 2011-2026 JetBrains s.r.o.
+  License: Apache-2.0
+
+* Jetpack Compose / AndroidX (Room, DataStore, WindowManager, WorkManager, Core)
+  Copyright 2018-2026 The Android Open Source Project
+  License: Apache-2.0
+
+* Compose Multiplatform
+  Copyright 2022-2026 JetBrains s.r.o.
+  License: Apache-2.0
+
+* SQLite / androidx.sqlite:sqlite-bundled
+  Copyright 2000-2026 SQLite authors
+  License: Public Domain (SQLite) / Apache-2.0 (AndroidX 封装)
+
+* drip-core (本项目 Rust 原生核心，源码见 rust/drip-core)
+  Copyright 2026 李通
+  License: MIT
+  依赖 jni crate (Copyright 2018-2026 jni-rs contributors, License: Apache-2.0)
+
+* Gradle / Android Gradle Plugin / WiX Toolset (仅构建期使用，不随应用分发)
+  分别遵循 Apache-2.0 / ASL 2.0 等各自许可证。
+
+--------------------------------------------------------------------------------
+说明
+--------------------------------------------------------------------------------
+
+* 若软件著作权登记或应用商店上架主体为公司，请将本文件顶部的
+  "Copyright 2026 李通" 改为公司全称，使其与软著证书/上架主体一致。
+* 本 NOTICE 随 Apache-2.0 LICENSE 一同分发；第三方商标归各自所有者。
