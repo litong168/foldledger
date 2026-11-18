@@ -64,12 +64,14 @@ def wrap_file(path):
                 return m.group(0)
             if body in KEYS:
                 start = m.start()
-                prefix = line[max(0, start - 4):start]
-                # 已包过 t(/tr( ：幂等跳过
-                if prefix.endswith("t(") or prefix.endswith("tr("):
+                left = line[:start]
+                # 已包过 t(/tr( ：幂等跳过。
+                # ⚠️ 必须用标识符边界判断：`Text(` 的结尾也是 `t(`，若只判断 endswith("t(")
+                #    就会把所有 `Text("中文")` 误判成已包、整体跳过（v16.7.0 踩过）。
+                if re.search(r'(?<![A-Za-z0-9_])(?:t|tr)\(\s*$', left):
                     return m.group(0)
                 # 比较上下文（== / != ）：这些字符串参与逻辑判断/窗口查找，翻译会破坏功能
-                left = line[:start].rstrip()
+                left = left.rstrip()
                 if re.search(r'(==|!=)\s*$', left):
                     return m.group(0)
                 # 常量/枚举存储上下文

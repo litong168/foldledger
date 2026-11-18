@@ -1000,23 +1000,23 @@ private fun LedgerBookCard(
                     }
                     GlassMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("记一笔") },
+                            text = { Text(t("记一笔")) },
                             onClick = { menuOpen = false; onAdd() }
                         )
                         DropdownMenuItem(
-                            text = { Text("查看统计") },
+                            text = { Text(t("查看统计")) },
                             onClick = { menuOpen = false; onStats() }
                         )
                         DropdownMenuItem(
-                            text = { Text("分类管理") },
+                            text = { Text(t("分类管理")) },
                             onClick = { menuOpen = false; onCategories() }
                         )
                         DropdownMenuItem(
-                            text = { Text("编辑账本") },
+                            text = { Text(t("编辑账本")) },
                             onClick = { menuOpen = false; onEdit() }
                         )
                         DropdownMenuItem(
-                            text = { Text("删除账本", color = MaterialTheme.colorScheme.error) },
+                            text = { Text(t("删除账本"), color = MaterialTheme.colorScheme.error) },
                             onClick = { menuOpen = false; onDelete() }
                         )
                     }
@@ -1063,7 +1063,7 @@ private fun LedgerBookCard(
             Spacer(Modifier.height(10.dp))
             // ▲▼ 小米钱包式对称两格
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MiniStat("收入", Money.format(ui.incomeCents), Direction.INCOME, Modifier.weight(1f))
+                MiniStat(t("收入"), Money.format(ui.incomeCents), Direction.INCOME, Modifier.weight(1f))
                 MiniStat(
                     t("结余"),
                     Money.format(ui.balanceCents),
@@ -1232,23 +1232,23 @@ private fun BookMasterList(
                             }
                             GlassMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("记一笔") },
+                                    text = { Text(t("记一笔")) },
                                     onClick = { menuOpen = false; onAdd(ui.ledger.id) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("查看统计") },
+                                    text = { Text(t("查看统计")) },
                                     onClick = { menuOpen = false; onStats(ui.ledger.id) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("分类管理") },
+                                    text = { Text(t("分类管理")) },
                                     onClick = { menuOpen = false; onCategories(ui.ledger.id) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("编辑账本") },
+                                    text = { Text(t("编辑账本")) },
                                     onClick = { menuOpen = false; onEdit(ui.ledger) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("删除账本", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(t("删除账本"), color = MaterialTheme.colorScheme.error) },
                                     onClick = { menuOpen = false; onDelete(ui.ledger.id) }
                                 )
                             }
@@ -1318,7 +1318,7 @@ private fun CurrentLedgerPanel(
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("累计支出", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("累计支出"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     AmountText(ui.expenseCents, Direction.EXPENSE, fontSize = 20)
                 }
                 Column(Modifier.weight(1f)) {

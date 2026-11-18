@@ -325,7 +325,7 @@ private fun InsightEntryCard(onOpenInsight: () -> Unit) {
             Text("🧠", fontSize = 20.sp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("智能洞察", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(t("智能洞察"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     t("周期支出识别 · 净资产走势 · 年度支出预测"),
                     fontSize = 11.sp,
@@ -1135,8 +1135,8 @@ private fun YearOverviewCard(
             EmptyHint(emoji = "📅", title = t("今年还没有记录"))
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LegendDot("支出", dc.expense)
-                LegendDot("收入", dc.income)
+                LegendDot(t("支出"), dc.expense)
+                LegendDot(t("收入"), dc.income)
             }
             Spacer(Modifier.height(10.dp))
             YearBars(months, grow = yearGrow)

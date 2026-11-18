@@ -78,8 +78,8 @@ actual fun MoreSettingsCards(
                 Text("💝", fontSize = 20.sp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("支持作者", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text("滴水记账免费开源，自愿打赏", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("支持作者"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(t("滴水记账免费开源，自愿打赏"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

@@ -647,7 +647,7 @@ private fun ReimburseCompositionBar(summary: ReimburseSummary) {
     ).filter { it.first > 0L }
 
     Column {
-        Text("垫付构成", fontSize = 11.sp, color = faint)
+        Text(t("垫付构成"), fontSize = 11.sp, color = faint)
         Spacer(Modifier.height(6.dp))
         Box(
             Modifier

@@ -222,10 +222,10 @@ fun GoalScreen(
                 TextButton(onClick = {
                     vm.trash(goal)
                     deleting = null
-                }) { Text("移到回收站", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("移到回收站"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text("再想想") }
+                TextButton(onClick = { deleting = null }) { Text(t("再想想")) }
             }
         )
     }
@@ -505,7 +505,7 @@ private fun GoalEditDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(10.dp))
-                Text("图标", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("图标"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -613,7 +613,7 @@ private fun GoalEditDialog(
                 }
             ) { Text(if (goal == null) t("创建") else t("保存")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(t("取消")) } }
     )
 
     // v9.6：自选截止日期（Material3 日期选择器，叠在弹窗之上）
@@ -646,9 +646,9 @@ private fun GoalDatePickerDialog(
             TextButton(onClick = {
                 state.selectedDateMillis?.let(onPick)
                 onDismiss()
-            }) { Text("确定") }
+            }) { Text(t("确定")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(t("取消")) } }
     ) {
         androidx.compose.material3.DatePicker(state = state)
     }
@@ -705,7 +705,7 @@ private fun DepositDialog(
             TextButton(onClick = {
                 val cents = Money.parseToCents(amount) ?: 0L
                 if (cents > 0) onDeposit(cents)
-            }) { Text("存入") }
+            }) { Text(t("存入")) }
         },
         dismissButton = {
             Row {
@@ -713,7 +713,7 @@ private fun DepositDialog(
                     val cents = Money.parseToCents(amount) ?: 0L
                     if (cents > 0) onWithdraw(cents)
                 }) { Text("取出", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                TextButton(onClick = onDismiss) { Text("取消") }
+                TextButton(onClick = onDismiss) { Text(t("取消")) }
             }
         }
     )

@@ -177,7 +177,7 @@ fun IconPickerOverlay(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("搜索（如：加油 / 疫苗 / 房贷）") },
+                label = { Text(t("搜索（如：加油 / 疫苗 / 房贷）")) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()

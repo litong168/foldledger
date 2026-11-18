@@ -204,7 +204,7 @@ fun CreateLedgerOverlay(
                             .clickableScale { onDismiss() }
                     ) {
                         Box(Modifier.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
-                            Text("取消", fontSize = 15.sp)
+                            Text(t("取消"), fontSize = 15.sp)
                         }
                     }
                     Box(
@@ -369,8 +369,8 @@ internal fun FormColumn(
         OutlinedTextField(
             value = name,
             onValueChange = onName,
-            label = { Text("账本名称") },
-            placeholder = { Text("如：小家装修 2026") },
+            label = { Text(t("账本名称")) },
+            placeholder = { Text(t("如：小家装修 2026")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -498,8 +498,8 @@ internal fun FormColumn(
             onValueChange = { input ->
                 if (input.all { it.isDigit() || it == '.' } && input.length <= 12) onBudget(input)
             },
-            label = { Text("预算（元，可留空）") },
-            placeholder = { Text("如：200000") },
+            label = { Text(t("预算（元，可留空）")) },
+            placeholder = { Text(t("如：200000")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -508,7 +508,7 @@ internal fun FormColumn(
         OutlinedTextField(
             value = note,
             onValueChange = onNote,
-            label = { Text("备注（可选）") },
+            label = { Text(t("备注（可选）")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -588,7 +588,7 @@ internal fun PreviewColumn(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("累计支出", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("累计支出"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "¥0",
                     fontSize = 24.sp,

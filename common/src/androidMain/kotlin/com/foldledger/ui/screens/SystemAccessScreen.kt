@@ -263,9 +263,9 @@ private fun AccessRow(
                 Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(6.dp))
                 when (ok) {
-                    true -> Text("✅ 已开启", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
-                    false -> Text("❌ 未开启", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-                    null -> Text("去确认", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    true -> Text(t("✅ 已开启"), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    false -> Text(t("❌ 未开启"), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                    null -> Text(t("去确认"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Text(hint, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -253,7 +253,7 @@ fun SettingsScreen(
                     Text("📥", fontSize = 15.sp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("导入账单", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(t("导入账单"), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(2.dp))
                         Text(
                             t("微信 / 支付宝导出的 Excel 或 CSV，一键变流水"),
@@ -288,16 +288,16 @@ fun SettingsScreen(
     if (confirmWipeRecords) {
         GlassDialog(
             onDismissRequest = { confirmWipeRecords = false },
-            title = { Text("清空所有流水？") },
-            text = { Text("账本与分类会保留，所有记账记录将被删除，此操作不可撤销。建议先导出备份。") },
+            title = { Text(t("清空所有流水？")) },
+            text = { Text(t("账本与分类会保留，所有记账记录将被删除，此操作不可撤销。建议先导出备份。")) },
             confirmButton = {
                 TextButton(onClick = {
                     appVm.wipeRecords()
                     confirmWipeRecords = false
-                }) { Text("确认清空", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("确认清空"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmWipeRecords = false }) { Text("取消") }
+                TextButton(onClick = { confirmWipeRecords = false }) { Text(t("取消")) }
             }
         )
     }
@@ -305,16 +305,16 @@ fun SettingsScreen(
     if (confirmWipeAll) {
         GlassDialog(
             onDismissRequest = { confirmWipeAll = false },
-            title = { Text("清空全部数据？") },
-            text = { Text("所有账本、分类和流水都会被删除，应用回到空白状态（预置场景模板仍在，可随时重新创建）。此操作不可撤销，建议先导出备份。") },
+            title = { Text(t("清空全部数据？")) },
+            text = { Text(t("所有账本、分类和流水都会被删除，应用回到空白状态（预置场景模板仍在，可随时重新创建）。此操作不可撤销，建议先导出备份。")) },
             confirmButton = {
                 TextButton(onClick = {
                     appVm.wipeAllData()
                     confirmWipeAll = false
-                }) { Text("确认清空", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("确认清空"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmWipeAll = false }) { Text("取消") }
+                TextButton(onClick = { confirmWipeAll = false }) { Text(t("取消")) }
             }
         )
     }
@@ -325,16 +325,16 @@ fun SettingsScreen(
     if (confirmPurgeAll) {
         GlassDialog(
             onDismissRequest = { confirmPurgeAll = false },
-            title = { Text("清空回收站？") },
-            text = { Text("回收站里的所有账本和它们的流水会**永久删除**，无法恢复。") },
+            title = { Text(t("清空回收站？")) },
+            text = { Text(t("回收站里的所有账本和它们的流水会**永久删除**，无法恢复。")) },
             confirmButton = {
                 TextButton(onClick = {
                     appVm.purgeTrashed()
                     confirmPurgeAll = false
-                }) { Text("全部删掉", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("全部删掉"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmPurgeAll = false }) { Text("取消") }
+                TextButton(onClick = { confirmPurgeAll = false }) { Text(t("取消")) }
             }
         )
     }
@@ -607,7 +607,7 @@ private fun MoreSettingsRow(onClick: () -> Unit) {
         Text("⚙️", fontSize = 15.sp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("更多设置", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(t("更多设置"), fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
             Text(
                 t("提醒 · 自动记账 · 手感 · 配色 · 关于"),
@@ -673,7 +673,7 @@ private fun PermissionRow(
             Text(hint, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (granted) {
-            Text("已授权", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+            Text(t("已授权"), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
         } else {
             // v13.9：实色主色胶囊 → 主色染色的玻璃胶囊
             AccentPill(text = actionLabel, onClick = onAction, fontSize = 11)
@@ -749,7 +749,7 @@ internal fun ReminderCard(
         }
         if (enabled) {
             Spacer(Modifier.height(12.dp))
-            Text("提醒时间", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(t("提醒时间"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -758,7 +758,7 @@ internal fun ReminderCard(
                         val h = v.filter { it.isDigit() }.toIntOrNull()
                         if (h != null && h in 0..23) onTimeChange(h, minute)
                     },
-                    label = { Text("时") },
+                    label = { Text(t("时")) },
                     singleLine = true,
                     modifier = Modifier.width(80.dp)
                 )
@@ -769,7 +769,7 @@ internal fun ReminderCard(
                         val m = v.filter { it.isDigit() }.toIntOrNull()
                         if (m != null && m in 0..59) onTimeChange(hour, m)
                     },
-                    label = { Text("分") },
+                    label = { Text(t("分")) },
                     singleLine = true,
                     modifier = Modifier.width(80.dp)
                 )
@@ -844,7 +844,7 @@ internal fun AutoBookkeepingCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("自动捕获", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(t("自动捕获"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
                     t("关掉后不再自动进账，已记的条目保留"),
                     fontSize = 11.sp,
@@ -1024,7 +1024,7 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
 
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("捕获日志") },
+        title = { Text(t("捕获日志")) },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 // v12.1：日志降噪后这里只会有"和钱有关"的条目
@@ -1168,11 +1168,11 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
             TextButton(onClick = {
                 AutoDiag.clear(context)
                 entries = emptyList()
-            }) { Text("清空") }
+            }) { Text(t("清空")) }
             TextButton(onClick = {
                 entries = AutoDiag.recent(context, 100)
-            }) { Text("刷新") }
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            }) { Text(t("刷新")) }
+            TextButton(onClick = onDismiss) { Text(t("关闭")) }
         }
     )
 }

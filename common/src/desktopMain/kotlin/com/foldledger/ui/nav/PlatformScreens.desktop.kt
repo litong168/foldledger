@@ -334,7 +334,7 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("每日提醒", fontSize = 15.sp)
+            Text(t("每日提醒"), fontSize = 15.sp)
             Switch(
                 checked = settings.reminderEnabled,
                 onCheckedChange = { enable ->
@@ -344,7 +344,7 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
         }
         if (settings.reminderEnabled) {
             Spacer(Modifier.height(10.dp))
-            Text("提醒时间", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(t("提醒时间"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -355,7 +355,7 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
                             appVm.setReminder(true, h, settings.reminderMinute)
                         }
                     },
-                    label = { Text("时") },
+                    label = { Text(t("时")) },
                     singleLine = true,
                     modifier = Modifier.width(80.dp)
                 )
@@ -368,7 +368,7 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
                             appVm.setReminder(true, settings.reminderHour, m)
                         }
                     },
-                    label = { Text("分") },
+                    label = { Text(t("分")) },
                     singleLine = true,
                     modifier = Modifier.width(80.dp)
                 )
@@ -404,7 +404,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("开机自启", fontSize = 15.sp)
+            Text(t("开机自启"), fontSize = 15.sp)
             Switch(
                 checked = settings.desktopAutoStart,
                 onCheckedChange = { appVm.setDesktopAutoStart(it) }
@@ -421,7 +421,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("自动检查更新", fontSize = 15.sp)
+            Text(t("自动检查更新"), fontSize = 15.sp)
             Switch(
                 checked = settings.autoCheckUpdate,
                 onCheckedChange = { appVm.setAutoCheckUpdate(it) }
@@ -447,7 +447,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
                         }
                     } else {
                         Button(onClick = { DesktopAutoUpdater.openUpdateLocation() }) {
-                            Text("打开位置")
+                            Text(t("打开位置"))
                         }
                     }
                 }
@@ -464,12 +464,12 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
-        Text("本地更新来源目录（GitHub 不可用时兜底）", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(t("本地更新来源目录（GitHub 不可用时兜底）"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = updateDir,
             onValueChange = { updateDir = it; appVm.setDesktopUpdateDir(it) },
-            placeholder = { Text("留空 = 系统「下载」文件夹") },
+            placeholder = { Text(t("留空 = 系统「下载」文件夹")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -527,8 +527,8 @@ private fun AboutCard() {
                 Text("💝", fontSize = 20.sp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("支持作者", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Text("滴水记账免费开源，自愿打赏", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("支持作者"), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(t("滴水记账免费开源，自愿打赏"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

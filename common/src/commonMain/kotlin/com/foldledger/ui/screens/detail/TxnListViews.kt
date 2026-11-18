@@ -403,11 +403,11 @@ private fun TxnRow(
             }
             GlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(
-                    text = { Text("编辑这一笔") },
+                    text = { Text(t("编辑这一笔")) },
                     onClick = { menu = false; onEdit() }
                 )
                 DropdownMenuItem(
-                    text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                    text = { Text(t("删除"), color = MaterialTheme.colorScheme.error) },
                     onClick = { menu = false; onDelete() }
                 )
             }

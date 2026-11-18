@@ -444,7 +444,7 @@ private fun AccountEditorDialog(
 
                 // v9.9.0：原来只给一个空输入框让用户"打个 emoji 进去" ——
                 // 大部分输入法打不出 emoji。给一排常用图标点选，想自定义再用下面的输入框。
-                Text("图标", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("图标"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(
                     Modifier
@@ -469,7 +469,7 @@ private fun AccountEditorDialog(
                 OutlinedTextField(
                     value = emoji,
                     onValueChange = { if (it.length <= 2) emoji = it },
-                    label = { Text("图标（也可自己输入一个 emoji）") },
+                    label = { Text(t("图标（也可自己输入一个 emoji）")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -484,7 +484,7 @@ private fun AccountEditorDialog(
                 )
 
                 // v9.9.0：让普通用户手打 #3B82F6 是不现实的 —— 给一排色点，选中的带描边。
-                Text("颜色", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("颜色"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(
                     Modifier
@@ -518,7 +518,7 @@ private fun AccountEditorDialog(
                 OutlinedTextField(
                     value = colorHex,
                     onValueChange = { colorHex = it },
-                    label = { Text("颜色值（也可自己填 HEX，如 #3B82F6）") },
+                    label = { Text(t("颜色值（也可自己填 HEX，如 #3B82F6）")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

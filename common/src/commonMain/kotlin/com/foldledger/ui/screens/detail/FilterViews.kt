@@ -152,7 +152,7 @@ internal fun FilterOverlay(
 
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("筛选流水") },
+        title = { Text(t("筛选流水")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 FilterGroup(t("时间")) {

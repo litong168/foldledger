@@ -938,7 +938,7 @@ private fun PickArea(
         OutlinedTextField(
             value = form.note,
             onValueChange = onNote,
-            label = { Text("备注") },
+            label = { Text(t("备注")) },
             placeholder = { Text("这笔钱花在哪了？") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()

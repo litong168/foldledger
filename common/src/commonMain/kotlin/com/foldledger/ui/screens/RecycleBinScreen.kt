@@ -192,11 +192,11 @@ fun RecycleBinScreen(
                     }
                     confirmPurge = null
                 }) {
-                    Text("彻底删除", color = MaterialTheme.colorScheme.error)
+                    Text(t("彻底删除"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmPurge = null }) { Text("再想想") }
+                TextButton(onClick = { confirmPurge = null }) { Text(t("再想想")) }
             }
         )
     }

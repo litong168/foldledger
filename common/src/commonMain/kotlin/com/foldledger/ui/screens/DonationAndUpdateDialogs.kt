@@ -91,7 +91,7 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(t("关闭")) } },
         scrollable = true
     )
 }
@@ -149,7 +149,7 @@ fun UpdateAvailableDialog(
         },
         dismissButton = {
             if (!info.force && !busy) {
-                TextButton(onClick = onSkip) { Text("跳过此版本") }
+                TextButton(onClick = onSkip) { Text(t("跳过此版本")) }
             }
         },
         scrollable = true

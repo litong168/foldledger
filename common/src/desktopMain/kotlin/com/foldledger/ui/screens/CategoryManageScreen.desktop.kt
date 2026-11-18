@@ -258,17 +258,17 @@ fun DesktopCategoryManageScreen(
                 TextButton(onClick = {
                     vm.delete(c.id)
                     confirmingDelete = null
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("删除"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingDelete = null }) { Text("取消") }
+                TextButton(onClick = { confirmingDelete = null }) { Text(t("取消")) }
             }
         )
     }
     if (confirmingRestore) {
         GlassDialog(
             onDismissRequest = { confirmingRestore = false },
-            title = { Text("恢复预置分类？") },
+            title = { Text(t("恢复预置分类？")) },
             text = {
                 Text(
                     "会把「$sceneName」模板里缺失的 $missing 个预置分类补回来。已有分类不受影响。",
@@ -279,10 +279,10 @@ fun DesktopCategoryManageScreen(
                 TextButton(onClick = {
                     vm.restorePresetCategories()
                     confirmingRestore = false
-                }) { Text("恢复") }
+                }) { Text(t("恢复")) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingRestore = false }) { Text("取消") }
+                TextButton(onClick = { confirmingRestore = false }) { Text(t("取消")) }
             }
         )
     }
@@ -351,7 +351,7 @@ private fun CategoryEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称") },
+                    label = { Text(t("名称")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -359,7 +359,7 @@ private fun CategoryEditDialog(
                 OutlinedTextField(
                     value = search,
                     onValueChange = { search = it; if (it.isNotBlank()) groupIndex = 0 },
-                    label = { Text("搜图标（如：吃饭 / 交通）") },
+                    label = { Text(t("搜图标（如：吃饭 / 交通）")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -387,7 +387,7 @@ private fun CategoryEditDialog(
                 // 图标网格（搜索命中时收起分组只显示结果）
                 val shown = filtered.take(30)
                 if (shown.isEmpty()) {
-                    Text("没有匹配的图标", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("没有匹配的图标"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     androidx.compose.foundation.layout.FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -432,7 +432,7 @@ private fun CategoryEditDialog(
                                 uploadHint = null
                             }
                         }
-                    }) { Text("上传图片", fontSize = 13.sp) }
+                    }) { Text(t("上传图片"), fontSize = 13.sp) }
                     if (IconRef.isCustom(icon)) {
                         Spacer(Modifier.width(8.dp))
                         CategoryIcon(ref = icon, size = 24.dp, fontSize = 20)
@@ -451,7 +451,7 @@ private fun CategoryEditDialog(
                 if (direction == Direction.EXPENSE && isEdit) {
                     Spacer(Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("预算", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(t("预算"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.width(8.dp))
                         Text(
                             Money.format(budgetCents),
@@ -497,7 +497,7 @@ private fun CategoryEditDialog(
             }) { Text(if (isEdit) t("保存") else t("新建")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(t("取消")) }
         }
     )
 }

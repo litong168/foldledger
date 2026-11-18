@@ -284,11 +284,11 @@ private fun LedgerDetailBody(
                 androidx.compose.material3.TextButton(onClick = {
                     vm.deleteTransaction(id)
                     pendingDeleteTxnId = null
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("删除"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { pendingDeleteTxnId = null }) {
-                    Text("取消")
+                    Text(t("取消"))
                 }
             }
         )

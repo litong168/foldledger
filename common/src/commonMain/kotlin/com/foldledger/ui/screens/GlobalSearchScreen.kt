@@ -91,7 +91,7 @@ fun GlobalSearchScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = vm::setQuery,
-                placeholder = { Text("搜分类 / 备注 / 金额，空格分开多个词", fontSize = 13.sp) },
+                placeholder = { Text(t("搜分类 / 备注 / 金额，空格分开多个词"), fontSize = 13.sp) },
                 singleLine = true,
                 shape = RoundedCornerShape(Radius.md),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

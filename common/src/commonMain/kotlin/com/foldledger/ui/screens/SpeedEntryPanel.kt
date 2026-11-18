@@ -230,7 +230,7 @@ internal fun SpeedEntryPanelBody(
             value = text,
             // IME 组词/候选回填也会走 onValueChange 且文本可能相同 —— 只有真正改了字才算"用户编辑"
             onValueChange = { next -> if (next != text) { text = next; voice.userEdits++ } },
-            placeholder = { Text("说一句：昨天打车35", fontSize = 15.sp) },
+            placeholder = { Text(t("说一句：昨天打车35"), fontSize = 15.sp) },
             textStyle = MaterialTheme.typography.titleMedium,
             shape = RoundedCornerShape(Radius.md),
             colors = OutlinedTextFieldDefaults.colors(
@@ -335,7 +335,7 @@ internal fun SpeedEntryPanelBody(
                 Spacer(Modifier.height(10.dp))
 
                 // 日期
-                Text("日期", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("日期"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DateChip(t("今天"), dateMillis) { dateMillis = startOfToday() }
@@ -352,7 +352,7 @@ internal fun SpeedEntryPanelBody(
                 Spacer(Modifier.height(10.dp))
 
                 // 分类
-                Text("分类", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("分类"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(
                     Modifier
@@ -424,7 +424,7 @@ internal fun SpeedEntryPanelBody(
                 // 现在给「再记一笔」当主操作，「撤销刚才那笔」降级成次要入口，且必须二次确认
                 // —— 流水是硬删、不进回收站，一次误触就真没了。
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("✅ 已记下", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(t("✅ 已记下"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.weight(1f))
                     Text(
                         t("撤销"),
@@ -465,7 +465,7 @@ internal fun SpeedEntryPanelBody(
             if (confirmingUndo) {
                 GlassDialog(
                     onDismissRequest = { confirmingUndo = false },
-                    title = { Text("删掉刚才那一笔？") },
+                    title = { Text(t("删掉刚才那一笔？")) },
                     text = {
                         Text(
                             "这一笔会被直接删除，回收站里也找不回来。\n如果只是记错了金额或分类，去明细页点它能改。",
@@ -477,11 +477,11 @@ internal fun SpeedEntryPanelBody(
                             savedId?.let { vm.undo(it) }
                             savedId = null
                             confirmingUndo = false
-                        }) { Text("删掉", color = MaterialTheme.colorScheme.error) }
+                        }) { Text(t("删掉"), color = MaterialTheme.colorScheme.error) }
                     },
                     dismissButton = {
                         TextButton(onClick = { confirmingUndo = false }) {
-                            Text("保留")
+                            Text(t("保留"))
                         }
                     }
                 )

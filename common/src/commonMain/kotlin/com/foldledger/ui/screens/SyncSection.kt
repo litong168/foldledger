@@ -65,7 +65,7 @@ fun SyncSectionCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("启用双端同步", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(t("启用双端同步"), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
                     if (state.registered) "本机设备 ID：${state.deviceId}" else t("把账本同步到你自己的服务器"),
                     fontSize = 11.sp,
@@ -110,7 +110,7 @@ fun SyncSectionCard(
                 value = state.syncToken,
                 onValueChange = { scope.launch { syncManager.setToken(it) } },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("服务端 --token 密钥；未启用可留空", fontSize = 13.sp) },
+                placeholder = { Text(t("服务端 --token 密钥；未启用可留空"), fontSize = 13.sp) },
                 singleLine = true,
                 enabled = !state.syncing,
                 visualTransformation = PasswordVisualTransformation(),
@@ -134,7 +134,7 @@ fun SyncSectionCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("自动同步（每 5 分钟）", fontSize = 13.sp)
+                    Text(t("自动同步（每 5 分钟）"), fontSize = 13.sp)
                     Switch(
                         checked = state.autoSync,
                         onCheckedChange = { scope.launch { syncManager.setAutoSync(it) } }
@@ -156,7 +156,7 @@ fun SyncSectionCard(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("重置同步身份（换服务器 / 身份冲突时用）", fontSize = 13.sp)
+                    Text(t("重置同步身份（换服务器 / 身份冲突时用）"), fontSize = 13.sp)
                 }
             }
 

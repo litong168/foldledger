@@ -461,7 +461,7 @@ private fun RecurringForm(
                 OutlinedTextField(
                     value = draft.name,
                     onValueChange = { onChange(draft.copy(name = it)) },
-                    label = { Text("名称，如「房租」") },
+                    label = { Text(t("名称，如「房租」")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -470,7 +470,7 @@ private fun RecurringForm(
                 OutlinedTextField(
                     value = draft.amountText,
                     onValueChange = { onChange(draft.copy(amountText = it)) },
-                    label = { Text("金额") },
+                    label = { Text(t("金额")) },
                     prefix = { Text("¥") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -565,7 +565,7 @@ private fun RecurringForm(
                 OutlinedTextField(
                     value = draft.note,
                     onValueChange = { onChange(draft.copy(note = it)) },
-                    label = { Text("备注（留空则用名称）") },
+                    label = { Text(t("备注（留空则用名称）")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

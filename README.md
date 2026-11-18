@@ -5,10 +5,10 @@
 双端记账 App：**Android 手机（Compose）+ Windows 桌面（Compose Multiplatform，复用 70%+ 代码）**，通过自托管 Node 同步服务做记录级增量同步。核心能力：**分账本** + **场景化记账** + **一键备份/恢复（卸载重装也能找回）**。
 
 - **包名**：`com.foldledger`（沿用旧包名，保证老版本升级安装时数据与签名连续）
-- **版本**：16.7.0 (versionCode 234)
+- **版本**：16.7.1 (versionCode 235)
 - **产物**：
-  - 手机：`dist/滴水记账-v16.7.0-release.apk`（已签名，R8 混淆后 ~4MB）
-  - 桌面：`dist/滴水记账-v16.7.0-win-x64-setup.exe`（**安装包**，双击安装到 `%LOCALAPPDATA%\滴水记账`，无需管理员；带桌面/开始菜单快捷方式与卸载项，卸载会清掉开机自启残留、保留 `~/.foldledger` 数据）
+  - 手机：`dist/滴水记账-v16.7.1-release.apk`（已签名，R8 混淆后 ~4MB）
+  - 桌面：`dist/滴水记账-v16.7.1-win-x64-setup.exe`（**安装包**，双击安装到 `%LOCALAPPDATA%\滴水记账`，无需管理员；带桌面/开始菜单快捷方式与卸载项，卸载会清掉开机自启残留、保留 `~/.foldledger` 数据）
 - **公开发布**：源码 + 安装包发布于 GitHub Releases —— https://github.com/litong168/foldledger/releases
 - **国内镜像**：Gitee 同步一份（国内下载更快，实测 ~2MB/s）—— https://gitee.com/litong168/foldledger/releases
 - **自动更新**：双端检查版本（versionCode 比较），**GitHub 优先、不可达时自动回退 Gitee 镜像**，下载包经 SHA256 校验后覆盖安装；一键发版 `bash scripts/publish_github_release.sh`（GitHub）+ `GITEE_TOKEN=xxx bash scripts/publish_gitee_mirror.sh`（Gitee）。
@@ -19,7 +19,7 @@
 - **签名**：正式签名库 `drip-ledger-release.jks`，证书 SHA-256 `3F:00:15:53:1B:C7:BD:6E:AC:7E:B1:06:96:9D:D7:F1:78:10:99:3E:2D:83:95:37:CA:28:D2:0A:97:51:32:E2`
 - **兼容**：Android 8.0 (API 26) ~ Android 15 (API 35)，ABI 覆盖 arm64-v8a / armeabi-v7a / x86 / x86_64
 
-> v16.7.0 变更摘要（中英双语 + 国内镜像，双端）：① **界面语言**：内置简体中文 / English 双语切换（更多设置 → 界面语言），切换即时生效并持久化。文案表用**中文原文作 key**（`t("记一笔")`），未翻译词条自动回退中文，绝不出现空白；覆盖导航、明细、账本、记一笔、统计、报销、备份、同步、自动记账、更新、捐赠、设置等主要界面共 1000+ 条文案。② **国内镜像**：发版脚本新增 Gitee 同步（`scripts/publish_gitee_mirror.sh`），App 自动更新改为 **GitHub 优先、失败自动回退 Gitee** 双源，国内可直连下载。**零 DB 改动、零迁移、备份格式不变**；新增多语言 5 个单测。
+> v16.7.1 变更摘要（中英双语 + 国内镜像，双端）：① **界面语言**：内置简体中文 / English 双语切换（更多设置 → 界面语言），切换即时生效并持久化。文案表用**中文原文作 key**（`t("记一笔")`），未翻译词条自动回退中文，绝不出现空白；覆盖导航、明细、账本、记一笔、统计、报销、备份、同步、自动记账、更新、捐赠、设置等主要界面共 1000+ 条文案。② **国内镜像**：发版脚本新增 Gitee 同步（`scripts/publish_gitee_mirror.sh`），App 自动更新改为 **GitHub 优先、失败自动回退 Gitee** 双源，国内可直连下载。③ **修复（16.7.1）**：底部导航（明细/账本/我的）在 enum 构造参数里提前求值导致切换语言不刷新，改成 getter 读取时求值；批量替换脚本的幂等判断把 `Text(` 误认成 `t(`，漏掉 160 处 `Text("中文")` 文案，已补全。**零 DB 改动、零迁移、备份格式不变**；新增多语言 5 个单测。
 >
 > v16.6.0 变更摘要（双端自动更新 + 开源捐赠入口）：滴水记账已公开发布到 GitHub（Apache-2.0），并加入双端自动更新。① **检查更新**：桌面启动后延迟检查、手机进「关于」页静默检查（6 小时节流），也可手动点「检查更新」；调 GitHub Releases API，按 `update-manifest.json` 里的 **versionCode 整数**比对（不是版本号字符串），支持「跳过此版本」。② **下载安装**：从 Release 资产下载安装包，校验 size + **SHA256** 后才安装；桌面复用原有「起 setup 再退进程」覆盖安装（不动 MSI 组件表），手机经 FileProvider 拉起系统安装界面（首次需授权「安装未知应用」）。③ **捐赠入口**：双端「关于」页底部加「支持作者」一行，展示你的微信收款码，不弹窗、不捆绑功能、纯自愿。④ 一键发版脚本核验签名指纹→push→建 Release→传双端包+清单，可重跑。**零 DB 改动、零迁移、备份格式不变**；新增 8 个更新逻辑单测。
 >

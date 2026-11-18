@@ -109,15 +109,29 @@ import com.foldledger.ui.l10n.t
  * **声明顺序即展示顺序**：明细在最左（第一），账本居中，我的在最右。
  * 明细排第一是因为它是每天看得最多的页面；账本页负责「选哪个账本看」。
  */
-enum class AppTab(val label: String, val icon: ImageVector) {
+enum class AppTab(val icon: ImageVector) {
     /** 明细页：显示「账本页」当前选中的那个分账本的流水 */
-    DETAIL(t("明细"), Icons.Filled.DateRange),
+    DETAIL(Icons.Filled.DateRange),
 
     /** 账本页：所有已创建的分账本、合计范围设置、以及从场景模板新建 */
-    LEDGERS(t("账本"), Icons.AutoMirrored.Filled.List),
+    LEDGERS(Icons.AutoMirrored.Filled.List),
 
     /** 我的：备份、主题、折叠屏适配状态 */
-    MINE(t("我的"), Icons.Filled.Settings)
+    MINE(Icons.Filled.Settings);
+
+    /**
+     * 显示名。
+     *
+     * ⚠️ 必须用 getter 在**读取时**求值，不能写进 enum 构造参数（`DETAIL(t("明细"), ...)`）：
+     * enum 常量的参数在类加载时只算一次，那时 L10n 还是默认中文，切换语言后底部导航
+     * 仍显示旧文案 —— v16.7.0 真机验收踩过这个坑。
+     */
+    val label: String
+        get() = when (this) {
+            DETAIL -> t("明细")
+            LEDGERS -> t("账本")
+            MINE -> t("我的")
+        }
 }
 
 /** 导航胶囊的高度（系统手势条 inset 另补在下方 padding 里） */

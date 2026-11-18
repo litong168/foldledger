@@ -355,9 +355,9 @@ fun CategoryManageScreen(
                         val fileName = IconStore.import(context, uri)
                         if (fileName != null) {
                             pickerApply?.invoke(IconRef.of(fileName))
-                            showToast("已使用你上传的图片作为图标")
+                            showToast(t("已使用你上传的图片作为图标"))
                         } else {
-                            showToast("图片读取失败，换一张试试")
+                            showToast(t("图片读取失败，换一张试试"))
                         }
                         pickerOpen = false
                         pickerApply = null
@@ -429,11 +429,11 @@ fun CategoryManageScreen(
                     vm.delete(target.id)
                     deleting = null
                 }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(t("删除"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text("取消") }
+                TextButton(onClick = { deleting = null }) { Text(t("取消")) }
             }
         )
     }
@@ -442,7 +442,7 @@ fun CategoryManageScreen(
     if (confirmRestore) {
         GlassDialog(
             onDismissRequest = { confirmRestore = false },
-            title = { Text("恢复预置分类？") },
+            title = { Text(t("恢复预置分类？")) },
             text = {
                 Column {
                     if (missing > 0) {
@@ -476,10 +476,10 @@ fun CategoryManageScreen(
                             showToast(if (n > 0) "已恢复 $n 个预置分类" else t("没有需要恢复的分类"))
                         }
                     }
-                ) { Text("恢复") }
+                ) { Text(t("恢复")) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmRestore = false }) { Text("取消") }
+                TextButton(onClick = { confirmRestore = false }) { Text(t("取消")) }
             }
         )
     }
@@ -543,7 +543,7 @@ private fun CategoryColumn(
             OutlinedTextField(
                 value = draftName,
                 onValueChange = onDraftName,
-                label = { Text("新分类名称") },
+                label = { Text(t("新分类名称")) },
                 singleLine = true,
                 modifier = Modifier.weight(1f)
             )
@@ -705,7 +705,7 @@ private fun EditCategoryDialog(
 
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑分类") },
+        title = { Text(t("编辑分类")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -735,7 +735,7 @@ private fun EditCategoryDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = onName,
-                    label = { Text("分类名称") },
+                    label = { Text(t("分类名称")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -746,8 +746,8 @@ private fun EditCategoryDialog(
                             onBudget(input)
                         }
                     },
-                    label = { Text("月度预算（元，可留空）") },
-                    placeholder = { Text("如：1500") },
+                    label = { Text(t("月度预算（元，可留空）")) },
+                    placeholder = { Text(t("如：1500")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -777,10 +777,10 @@ private fun EditCategoryDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onSave) { Text("保存") }
+            TextButton(onClick = onSave) { Text(t("保存")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(t("取消")) }
         }
     )
 }

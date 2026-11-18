@@ -364,7 +364,7 @@ private fun MonthFooter(ui: CalUi, monthTs: Long) {
     SectionCard(title = t("本月概览")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("本月支出", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("本月支出"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     Money.format(ui.monthExpenseCents),
                     fontSize = 20.sp,
@@ -372,7 +372,7 @@ private fun MonthFooter(ui: CalUi, monthTs: Long) {
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text("日均（按自然日）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("日均（按自然日）"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     Money.format(ui.monthExpenseCents / dayCount.coerceAtLeast(1)),
                     fontSize = 20.sp,
@@ -380,7 +380,7 @@ private fun MonthFooter(ui: CalUi, monthTs: Long) {
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text("有记录", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("有记录"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "${ui.dayCount} 天",
                     fontSize = 20.sp,

@@ -436,7 +436,7 @@ private fun DeleteConfirmDialog(
 ) {
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("删除这份备份？") },
+        title = { Text(t("删除这份备份？")) },
         text = {
             Column {
                 Text(
@@ -469,11 +469,11 @@ private fun DeleteConfirmDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("删除", color = MaterialTheme.colorScheme.error)
+                Text(t("删除"), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(t("取消")) }
         }
     )
 }
@@ -488,7 +488,7 @@ private fun ExportPasswordDialog(
     var error by remember { mutableStateOf<String?>(null) }
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("用密码保护这份备份？") },
+        title = { Text(t("用密码保护这份备份？")) },
         text = {
             Column {
                 Text(
@@ -498,7 +498,7 @@ private fun ExportPasswordDialog(
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = pass, onValueChange = { pass = it; error = null },
-                    label = { Text("密码（可选）") },
+                    label = { Text(t("密码（可选）")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -506,7 +506,7 @@ private fun ExportPasswordDialog(
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = confirm, onValueChange = { confirm = it; error = null },
-                    label = { Text("再次输入密码") },
+                    label = { Text(t("再次输入密码")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -525,7 +525,7 @@ private fun ExportPasswordDialog(
                 onConfirm(pass)
             }) { Text(if (pass.isBlank()) t("直接导出") else t("加密导出")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(t("取消")) } }
     )
 }
 
@@ -538,7 +538,7 @@ private fun RestorePasswordDialog(
     var pass by remember { mutableStateOf("") }
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("这份备份已加密") },
+        title = { Text(t("这份备份已加密")) },
         text = {
             Column {
                 Text(
@@ -548,7 +548,7 @@ private fun RestorePasswordDialog(
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = pass, onValueChange = { pass = it },
-                    label = { Text("备份密码") },
+                    label = { Text(t("备份密码")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -559,9 +559,9 @@ private fun RestorePasswordDialog(
             TextButton(
                 enabled = pass.isNotBlank(),
                 onClick = { onConfirm(pass) }
-            ) { Text("确认恢复") }
+            ) { Text(t("确认恢复")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(t("取消")) } }
     )
 }
 
@@ -575,7 +575,7 @@ private fun RestoreConfirmDialog(
 ) {
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("怎么恢复这份备份？") },
+        title = { Text(t("怎么恢复这份备份？")) },
         text = {
             Column {
                 Text(
@@ -597,7 +597,7 @@ private fun RestoreConfirmDialog(
                 }
                 Spacer(Modifier.height(12.dp))
                 // 两条路的后果必须写清楚 —— 这正是用户最怕点错的地方
-                Text("作为新账本", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(t("作为新账本"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
                     t("把备份里的账本追加进来，名字后面加「（恢复）」。当前数据一条不动，两份可以摆在一起看。"),
                     fontSize = 11.sp,
@@ -605,7 +605,7 @@ private fun RestoreConfirmDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(10.dp))
-                Text("覆盖当前数据", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(t("覆盖当前数据"), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
                     if (hasData) {
                         t("当前所有账本、分类与流水都会被替换（恢复前会自动留一份「自动备份」，万一恢复错了还能退回来）。")
@@ -620,12 +620,12 @@ private fun RestoreConfirmDialog(
         },
         confirmButton = {
             Row {
-                TextButton(onClick = onAsNew) { Text("作为新账本") }
-                TextButton(onClick = onReplace) { Text("覆盖当前数据") }
+                TextButton(onClick = onAsNew) { Text(t("作为新账本")) }
+                TextButton(onClick = onReplace) { Text(t("覆盖当前数据")) }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(t("取消")) }
         }
     )
 }

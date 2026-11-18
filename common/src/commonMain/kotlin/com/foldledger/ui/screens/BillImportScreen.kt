@@ -232,7 +232,7 @@ private fun DonePane(imported: Int, skipped: Int, onClose: () -> Unit) {
         Spacer(Modifier.height(60.dp))
         Text("✅", fontSize = 44.sp)
         Spacer(Modifier.height(10.dp))
-        Text("导入完成", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(t("导入完成"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
         Text(
             "新增 $imported 笔" + if (skipped > 0) "，跳过重复 $skipped 笔" else "",

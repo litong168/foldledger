@@ -179,7 +179,7 @@ internal fun AssetBar(
                 .clickableScale(pressedScale = 0.97f) { onManage() },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("净资产", fontSize = 11.sp, color = faint)
+            Text(t("净资产"), fontSize = 11.sp, color = faint)
             Spacer(Modifier.width(7.dp))
             Text(
                 Money.format(netWorth),

@@ -567,7 +567,7 @@ internal fun ProjectSummaryCard(
             // v7.1 主角：尚余垫付 / 已回款（和看板同一套语义）
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("尚余垫付", fontSize = 11.sp, color = pendingTone(), fontWeight = FontWeight.Medium)
+                    Text(t("尚余垫付"), fontSize = 11.sp, color = pendingTone(), fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     AnimatedCentsText(
                         cents = rsum.outstandingCents,
@@ -579,7 +579,7 @@ internal fun ProjectSummaryCard(
                     Text("${rsum.outstandingCount} 笔待回款", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("已回款", fontSize = 11.sp, color = ReimburseSettled, fontWeight = FontWeight.Medium)
+                    Text(t("已回款"), fontSize = 11.sp, color = ReimburseSettled, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     AnimatedCentsText(
                         cents = rsum.recoveredCents,
@@ -638,7 +638,7 @@ internal fun ProjectSummaryCard(
                     BudgetRing(used = used, color = accent, overspend = over, size = 58.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("项目预算", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(t("项目预算"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(2.dp))
                         Text(
                             "${Money.format(total)} / ${Money.format(project.budgetCents)}",
@@ -823,8 +823,8 @@ internal fun ProjectEditorDialog(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("项目名称", fontSize = 11.sp) },
-                        placeholder = { Text("如：6 月北京出差", fontSize = 13.sp) },
+                        label = { Text(t("项目名称"), fontSize = 11.sp) },
+                        placeholder = { Text(t("如：6 月北京出差"), fontSize = 13.sp) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -832,12 +832,12 @@ internal fun ProjectEditorDialog(
                 Spacer(Modifier.height(12.dp))
 
                 // 图标选择：复用分类图标库（约 300 个预置图标 + 中文关键词搜索）
-                Text("图标", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("图标"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
                     value = iconSearch,
                     onValueChange = { iconSearch = it },
-                    label = { Text("搜索图标（如 加油 / 机票 / 疫苗）", fontSize = 11.sp) },
+                    label = { Text(t("搜索图标（如 加油 / 机票 / 疫苗）"), fontSize = 11.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -870,7 +870,7 @@ internal fun ProjectEditorDialog(
                 Spacer(Modifier.height(10.dp))
 
                 // 颜色：墨白低饱和八色，与账户 / 图表共用一套调色板
-                Text("颜色", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("颜色"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(
                     Modifier
@@ -900,7 +900,7 @@ internal fun ProjectEditorDialog(
                 OutlinedTextField(
                     value = colorHex,
                     onValueChange = { colorHex = it },
-                    label = { Text("颜色值（也可自己填 HEX，如 #3B82F6）", fontSize = 11.sp) },
+                    label = { Text(t("颜色值（也可自己填 HEX，如 #3B82F6）"), fontSize = 11.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -909,8 +909,8 @@ internal fun ProjectEditorDialog(
                 OutlinedTextField(
                     value = budget,
                     onValueChange = { budget = it },
-                    label = { Text("项目预算（可选）", fontSize = 11.sp) },
-                    placeholder = { Text("不填就不设上限", fontSize = 13.sp) },
+                    label = { Text(t("项目预算（可选）"), fontSize = 11.sp) },
+                    placeholder = { Text(t("不填就不设上限"), fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -918,8 +918,8 @@ internal fun ProjectEditorDialog(
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("备注（可选）", fontSize = 11.sp) },
-                    placeholder = { Text("同行人、事由、报销单号…", fontSize = 13.sp) },
+                    label = { Text(t("备注（可选）"), fontSize = 11.sp) },
+                    placeholder = { Text(t("同行人、事由、报销单号…"), fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -948,7 +948,7 @@ internal fun ProjectEditorDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(t("取消")) }
         },
         scrollable = true
     )
