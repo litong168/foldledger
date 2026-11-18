@@ -41,6 +41,7 @@ import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.vm.AssistantViewModel
 import com.foldledger.ui.vm.SpeedEntryViewModel
+import com.foldledger.ui.l10n.t
 
 /**
  * 记账助手（v9.0）——今天该做什么，一页说清。
@@ -90,7 +91,7 @@ fun AssistantScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "记账助手",
+        title = t("记账助手"),
         subtitle = "全部账本 · 今天该做什么",
         onBack = onBack,
         showNavigation = false
@@ -173,7 +174,7 @@ private fun TodoCard(
         }
     ) {
         if (todos.isEmpty()) {
-            EmptyHint(emoji = "✅", title = "今天没有待办", subtitle = "该记的记了，该催的催了")
+            EmptyHint(emoji = "✅", title = t("今天没有待办"), subtitle = "该记的记了，该催的催了")
         } else {
             todos.forEach { t ->
                 val tone = when (t.tone) {

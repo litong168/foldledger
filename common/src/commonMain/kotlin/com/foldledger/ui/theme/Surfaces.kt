@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foldledger.ui.anim.Motion
+import com.foldledger.ui.l10n.t
 
 /**
  * 玻璃容器。
@@ -188,7 +189,7 @@ fun primaryGradientBrush(): Brush {
 @Composable
 fun sheenBrush(): Brush = glassTopSheen()
 
-/** 强调色玻璃：把语义色以 8% 洗进膜里，用于"这张卡属于某类" */
+/** 强调色玻璃：把语义色以 8% 洗进膜里，用于t("这张卡属于某类") */
 @Composable
 fun cardTintBrush(tint: Color): Brush = Brush.verticalGradient(
     colorStops = arrayOf(

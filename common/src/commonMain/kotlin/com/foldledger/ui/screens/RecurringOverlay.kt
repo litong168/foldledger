@@ -52,6 +52,7 @@ import com.foldledger.ui.theme.SurfaceCard
 import com.foldledger.ui.theme.cardSurface
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 明细页顶部的「固定支出待入账」提示条（v5.7）。
@@ -115,7 +116,7 @@ fun RecurringDueBar(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
                     LiquidButton(
-                        text = "全部入账",
+                        text = t("全部入账"),
                         onClick = onPostAll,
                         height = 40.dp,
                         modifier = Modifier.fillMaxWidth()
@@ -133,7 +134,7 @@ fun RecurringDueBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "管理",
+                        t("管理"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -282,18 +283,18 @@ private fun RecurringList(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    "固定支出",
+                    t("固定支出"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "房租、会员、房贷这类周期性支出，到点提醒你入账",
+                    t("房租、会员、房贷这类周期性支出，到点提醒你入账"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                "关闭",
+                t("关闭"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,
@@ -309,13 +310,13 @@ private fun RecurringList(
                     Text("🔁", fontSize = 44.sp)
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "还没有固定支出",
+                        t("还没有固定支出"),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "把每月都要付的那几笔加进来，以后一键入账",
+                        t("把每月都要付的那几笔加进来，以后一键入账"),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -363,7 +364,7 @@ private fun RecurringList(
                                             )
                                         ) {
                                             Text(
-                                                "待入账",
+                                                t("待入账"),
                                                 fontSize = 11.sp,
                                                 color = dc.expense,
                                                 modifier = Modifier.padding(
@@ -409,7 +410,7 @@ private fun RecurringList(
                 .padding(horizontal = 18.dp, vertical = 12.dp)
         ) {
             LiquidButton(
-                text = "＋ 新增固定支出",
+                text = t("＋ 新增固定支出"),
                 onClick = onNew,
                 height = 50.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -436,13 +437,13 @@ private fun RecurringForm(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (draft.id == 0L) "新增固定支出" else "编辑固定支出",
+                if (draft.id == 0L) t("新增固定支出") else t("编辑固定支出"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                "取消",
+                t("取消"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -476,8 +477,8 @@ private fun RecurringForm(
                 )
             }
             item {
-                LabeledChips("收支") {
-                    listOf(Direction.EXPENSE to "支出", Direction.INCOME to "收入").forEach { (d, label) ->
+                LabeledChips(t("收支")) {
+                    listOf(Direction.EXPENSE to t("支出"), Direction.INCOME to t("收入")).forEach { (d, label) ->
                         SelectChip(
                             label = label,
                             selected = draft.direction == d,
@@ -496,10 +497,10 @@ private fun RecurringForm(
                 }
             }
             item {
-                LabeledChips("分类") {
+                LabeledChips(t("分类")) {
                     if (categories.isEmpty()) {
                         Text(
-                            "这个方向还没有分类",
+                            t("这个方向还没有分类"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -522,7 +523,7 @@ private fun RecurringForm(
                 }
             }
             item {
-                LabeledChips("周期") {
+                LabeledChips(t("周期")) {
                     listOf(
                         RecurringInterval.MONTHLY,
                         RecurringInterval.WEEKLY,
@@ -537,7 +538,7 @@ private fun RecurringForm(
                 }
             }
             item {
-                LabeledChips("下次入账日") {
+                LabeledChips(t("下次入账日")) {
                     Box(
                         Modifier
                             .background(
@@ -554,7 +555,7 @@ private fun RecurringForm(
                         )
                     }
                     Text(
-                        "到这一天，它就会出现在「待入账」里",
+                        t("到这一天，它就会出现在「待入账」里"),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -571,7 +572,7 @@ private fun RecurringForm(
             }
             item {
                 LiquidButton(
-                    text = if (draft.id == 0L) "添加" else "保存修改",
+                    text = if (draft.id == 0L) t("添加") else t("保存修改"),
                     onClick = onSave,
                     enabled = draft.canSave,
                     height = 50.dp,
@@ -588,7 +589,7 @@ private fun RecurringForm(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "删除这一项",
+                            t("删除这一项"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.error

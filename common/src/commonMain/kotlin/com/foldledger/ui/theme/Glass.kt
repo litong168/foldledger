@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foldledger.ui.anim.clickableScale
 import kotlin.math.roundToInt
+import com.foldledger.ui.l10n.t
 
 /**
  * V13「液态玻璃 / Liquid Glass」材质引擎 —— 严格对标 iOS 26 系统控件。
@@ -858,7 +859,7 @@ fun GlassKey(
     modifier: Modifier = Modifier,
     size: Dp = 62.dp,
     enabled: Boolean = true,
-    /** 语义色染色：玻璃仍然是玻璃，只是"透出来的光"带了主色的色温 */
+    /** 语义色染色：玻璃仍然是玻璃，只是t("透出来的光")带了主色的色温 */
     tint: Color? = null,
     /**
      * 染色强度倍率（v13.8）。
@@ -868,7 +869,7 @@ fun GlassKey(
      * 但**不能靠调不透明度上限去超**——上限压在 0.30，超过去就退回"填了一块颜色"。
      */
     tintBoost: Float = 1f,
-    /** 投影染色。玻璃本身是白的，但一颗主行动键的影要有一点点主色，才"压在光里" */
+    /** 投影染色。玻璃本身是白的，但一颗主行动键的影要有一点点主色，才t("压在光里") */
     glow: Color? = null,
     /** Glass 2.0：读取滚动光相让主行动键的棱随滚动微微流动（液态感） */
     scrollAware: Boolean = false,

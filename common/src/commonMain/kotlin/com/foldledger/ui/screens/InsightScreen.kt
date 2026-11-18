@@ -51,6 +51,7 @@ import com.foldledger.ui.vm.InsightViewModel
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
 import com.foldledger.util.RecurringDetector
+import com.foldledger.ui.l10n.t
 
 /**
  * 智能洞察（v8.0）——从「记录」到「懂账」。
@@ -75,7 +76,7 @@ fun InsightScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "智能洞察",
+        title = t("智能洞察"),
         subtitle = "全部在本机算 · 数据不出设备",
         onBack = onBack,
         showNavigation = false

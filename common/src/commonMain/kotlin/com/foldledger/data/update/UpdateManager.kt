@@ -41,6 +41,9 @@ class UpdateManager(private val prefs: AppPreferences) {
     /**
      * 检查更新。返回是否有可用更新。
      * 网络/解析失败一律返回 false 并写 [lastError]，绝不抛给调用方打扰用户。
+     *
+     * 源策略（v16.7）：**GitHub 优先，失败/缺资产回退 Gitee 镜像**。
+     * 两条源拿到的是同构 manifest，仅资产下载 URL 来源不同。
      */
     suspend fun check(platform: String, force: Boolean = false): Boolean {
         if (busy) return false
@@ -56,11 +59,13 @@ class UpdateManager(private val prefs: AppPreferences) {
                     return false
                 }
             }
-            val releaseJson = UpdateHttp.get(UpdateHttp.LATEST_RELEASE_URL)
-            val manifestUrl = UpdateChecker.findAssetUrl(releaseJson, MANIFEST_ASSET)
-                ?: throw IllegalStateException("Release 缺少 $MANIFEST_ASSET")
-            val manifest = UpdateChecker.parseManifest(UpdateHttp.get(manifestUrl))
             val settings = prefs.settings.first()
+            val source = fetchFromSources() ?: run {
+                // 两源都拿不到：不算失败弹错，静默当"无更新"
+                available = null
+                return false
+            }
+            val manifest = source.manifest
             val result = UpdateChecker.evaluate(
                 manifest = manifest,
                 currentVersionCode = APP_VERSION_CODE,
@@ -73,8 +78,7 @@ class UpdateManager(private val prefs: AppPreferences) {
                 return false
             }
             val asset = manifest.assetFor(platform)!!
-            val url = UpdateChecker.findAssetUrl(releaseJson, asset.name)
-                ?: throw IllegalStateException("找不到资产 ${asset.name}")
+            val url = source.resolveUrl(asset)
             available = Available(
                 versionName = manifest.versionName.ifBlank { manifest.versionCode.toString() },
                 versionCode = manifest.versionCode,
@@ -91,6 +95,49 @@ class UpdateManager(private val prefs: AppPreferences) {
         } finally {
             busy = false
         }
+    }
+
+    /** 一次源尝试的结果：manifest + 根据 asset 解析下载 URL 的能力 */
+    private class SourceResult(
+        val manifest: UpdateChecker.Manifest,
+        /** 给定 asset 名，返回下载 URL（GitHub 用 API 列表解析） */
+        val assetUrl: (String) -> String
+    ) {
+        /**
+         * 优先用 asset 自带的 [UpdateChecker.Asset.url]（Gitee manifest 直接写 Release 附件地址），
+         * 没有才回落到源自己的拼接规则。
+         */
+        fun resolveUrl(asset: UpdateChecker.Asset): String =
+            asset.url.ifBlank { assetUrl(asset.name) }
+    }
+
+    /**
+     * 依次尝试 GitHub、Gitee 两个源，返回第一个能解析出 manifest 的结果。
+     * 任一源抛异常即跳到下一个；全失败返回 null。
+     */
+    private suspend fun fetchFromSources(): SourceResult? {
+        // 1) GitHub Releases API（带完整 assets 列表）
+        try {
+            val releaseJson = UpdateHttp.get(UpdateHttp.LATEST_RELEASE_URL)
+            val manifestUrl = UpdateChecker.findAssetUrl(releaseJson, MANIFEST_ASSET)
+            if (manifestUrl != null) {
+                val manifest = UpdateChecker.parseManifest(UpdateHttp.get(manifestUrl))
+                return SourceResult(manifest) { name ->
+                    UpdateChecker.findAssetUrl(releaseJson, name)
+                        ?: throw IllegalStateException("找不到资产 $name")
+                }
+            }
+        } catch (e: Exception) {
+            lastError = "GitHub：${e.message ?: e::class.simpleName}"
+        }
+        // 2) Gitee 镜像（manifest 走 raw 直链；资产 URL 由 manifest 的 url 字段给出，指向 Release 附件）
+        try {
+            val manifest = UpdateChecker.parseManifest(UpdateHttp.get(UpdateHttp.GITEE_MANIFEST_URL))
+            return SourceResult(manifest) { name -> UpdateHttp.giteeAssetUrl(name) }
+        } catch (e: Exception) {
+            lastError = "镜像：${e.message ?: e::class.simpleName}"
+        }
+        return null
     }
 
     /** 「跳过此版本」 */

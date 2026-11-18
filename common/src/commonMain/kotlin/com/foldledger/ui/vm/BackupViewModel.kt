@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.foldledger.ui.l10n.t
 
 /** 需要先拿到目录授权才能继续的动作 */
 enum class BackupAction { EXPORT, IMPORT, ENABLE_AUTO, CHANGE_FOLDER }
@@ -29,7 +30,7 @@ data class BackupUiState(
     val pendingRestore: BackupEntry? = null,
     /** 恢复加密备份时，用户在密码框里输的密码暂存在这里，等确认框选完方式再执行（只在内存里） */
     val pendingRestorePassphrase: String? = null,
-    /** 当前平台是否支持"打开备份文件夹"（桌面 true，Android false） */
+    /** 当前平台是否支持t("打开备份文件夹")（桌面 true，Android false） */
     val canOpenFolder: Boolean = false,
     /** true 时，UI 应弹出「选哪一份备份来恢复」的选择器 */
     val pickingRestore: Boolean = false,

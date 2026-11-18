@@ -54,6 +54,7 @@ import com.foldledger.util.Money
 import com.foldledger.ui.theme.cardSurface
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.wellSurface
+import com.foldledger.ui.l10n.t
 
 /**
  * 「合计范围」自定义弹层。
@@ -101,7 +102,7 @@ fun AggregatePickerOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "取消",
+                    t("取消"),
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -111,7 +112,7 @@ fun AggregatePickerOverlay(
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "合计范围",
+                    t("合计范围"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -129,7 +130,7 @@ fun AggregatePickerOverlay(
                         }
                 ) {
                     Text(
-                        "完成",
+                        t("完成"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -151,7 +152,7 @@ fun AggregatePickerOverlay(
                     PreviewMetric("支出合计", Money.format(expense), dc.expense)
                     PreviewMetric("收入合计", Money.format(income), dc.income)
                     PreviewMetric(
-                        "结余",
+                        t("结余"),
                         Money.format(income - expense),
                         MaterialTheme.colorScheme.onSurface
                     )
@@ -162,7 +163,7 @@ fun AggregatePickerOverlay(
                         all = true
                         picked = emptySet()
                     }
-                    QuickChip("清空", !all && picked.isEmpty()) {
+                    QuickChip(t("清空"), !all && picked.isEmpty()) {
                         all = false
                         picked = emptySet()
                     }
@@ -188,7 +189,7 @@ fun AggregatePickerOverlay(
                 if (cards.isEmpty()) {
                     item {
                         Text(
-                            "还没有账本",
+                            t("还没有账本"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 24.dp)

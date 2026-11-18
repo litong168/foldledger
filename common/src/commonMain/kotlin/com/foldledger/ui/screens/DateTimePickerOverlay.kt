@@ -54,6 +54,7 @@ import java.time.ZoneId
 import com.foldledger.ui.theme.cardSurface
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.SurfaceCard
+import com.foldledger.ui.l10n.t
 
 /**
  * 日期 + 时间选择弹层。
@@ -185,7 +186,7 @@ fun DateTimePickerOverlay(
             Spacer(Modifier.height(if (withTitle) 14.dp else 10.dp))
             if (withTitle) {
                 Text(
-                    "选择日期与时间",
+                    t("选择日期与时间"),
                     // v16.3.2：titleLarge 自带 24/31 SemiBold；再覆盖 Bold 会和玻璃高光糊在一起
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -234,14 +235,14 @@ fun DateTimePickerOverlay(
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PickerButton(
-                    label = "取消",
+                    label = t("取消"),
                     container = null,
                     content = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                     onClick = onDismiss
                 )
                 PickerButton(
-                    label = "确定",
+                    label = t("确定"),
                     container = MaterialTheme.colorScheme.primary,
                     content = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(2f),
@@ -333,7 +334,7 @@ private fun QuickRow(onNow: () -> Unit, onDaysAgo: (Int) -> Unit) {
                 .clickableScale(pressedScale = 0.93f) { onNow() }
         ) {
             Text(
-                "🕒 现在",
+                t("🕒 现在"),
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -341,7 +342,7 @@ private fun QuickRow(onNow: () -> Unit, onDaysAgo: (Int) -> Unit) {
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
             )
         }
-        listOf("今天" to 0, "昨天" to 1, "前天" to 2).forEach { (label, days) ->
+        listOf(t("今天") to 0, t("昨天") to 1, t("前天") to 2).forEach { (label, days) ->
             Box(
                 Modifier
                     .glassChip(shape = RoundedCornerShape(50), strength = 0.6f)
@@ -451,7 +452,7 @@ private fun CalendarCard(
     }
 }
 
-private val WeekdayLabels = listOf("日", "一", "二", "三", "四", "五", "六")
+private val WeekdayLabels = listOf(t("日"), t("一"), t("二"), t("三"), t("四"), t("五"), t("六"))
 
 /**
  * 日期格子。
@@ -555,7 +556,7 @@ private fun TimeCard(
             val stacked = maxWidth < 340.dp
             Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                 Text(
-                    if (stacked) "时间" else "时间（精确到分钟）",
+                    if (stacked) t("时间") else t("时间（精确到分钟）"),
                     fontSize = 13.sp,
                     lineHeight = 19.sp,
                     fontWeight = FontWeight.Medium,
@@ -564,12 +565,12 @@ private fun TimeCard(
                 Spacer(Modifier.height(if (stacked) 8.dp else 6.dp))
                 if (stacked) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        TimeStepper("时", hour, onHour, Modifier.fillMaxWidth())
-                        TimeStepper("分", minute, onMinute, Modifier.fillMaxWidth())
+                        TimeStepper(t("时"), hour, onHour, Modifier.fillMaxWidth())
+                        TimeStepper(t("分"), minute, onMinute, Modifier.fillMaxWidth())
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TimeStepper("时", hour, onHour, Modifier.weight(1f))
+                        TimeStepper(t("时"), hour, onHour, Modifier.weight(1f))
                         Text(
                             ":",
                             fontSize = 24.sp,
@@ -578,7 +579,7 @@ private fun TimeCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
-                        TimeStepper("分", minute, onMinute, Modifier.weight(1f))
+                        TimeStepper(t("分"), minute, onMinute, Modifier.weight(1f))
                     }
                 }
                 Spacer(Modifier.height(10.dp))

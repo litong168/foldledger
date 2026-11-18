@@ -65,6 +65,7 @@ import com.foldledger.ui.theme.wellSurface
 import com.foldledger.ui.vm.AppViewModel
 import com.foldledger.ui.vm.BackupViewModel
 import com.foldledger.ui.vm.SpeedEntryViewModel
+import com.foldledger.ui.l10n.t
 
 /**
  * 桌面端平台页。
@@ -178,7 +179,7 @@ private object DesktopPlatformScreens : PlatformScreens {
 
     @Composable
     override fun SystemAccess(env: FoldEnv, onBack: () -> Unit) {
-        Placeholder("系统权限页仅 Android 需要，桌面无需此页")
+        Placeholder(t("系统权限页仅 Android 需要，桌面无需此页"))
     }
 
     @Composable
@@ -189,7 +190,7 @@ private object DesktopPlatformScreens : PlatformScreens {
         )
         AdaptiveScaffold(
             env = env,
-            title = "一句话记账",
+            title = t("一句话记账"),
             subtitle = "打一句「昨天打车35」就记完",
             onBack = onBack,
             showNavigation = false
@@ -225,32 +226,32 @@ private fun ToolsCard(
     onOpenGoal: (Long) -> Unit,
     onOpenBillImport: (Long) -> Unit
 ) {
-    SectionCard(overline = "全局", title = "速记 · 助手 · 目标") {
+    SectionCard(overline = t("全局"), title = t("速记 · 助手 · 目标")) {
         DesktopToolRow(
             emoji = "⚡",
-            title = "一句话记账",
+            title = t("一句话记账"),
             subtitle = "打一句「昨天打车35」就记完",
             onClick = { onOpenSpeedEntry(settings.lastLedgerId) }
         )
         DesktopDivider()
         DesktopToolRow(
             emoji = "💡",
-            title = "记账助手",
-            subtitle = "全部账本的待办，一页说清",
+            title = t("记账助手"),
+            subtitle = t("全部账本的待办，一页说清"),
             onClick = onOpenAssistant
         )
         DesktopDivider()
         DesktopToolRow(
             emoji = "🎯",
-            title = "存钱目标",
+            title = t("存钱目标"),
             subtitle = "所有账本的钱罐，攒钱不混进流水",
             onClick = { onOpenGoal(settings.lastLedgerId) }
         )
         DesktopDivider()
         DesktopToolRow(
             emoji = "📥",
-            title = "导入账单",
-            subtitle = "微信 / 支付宝导出的 Excel 或 CSV",
+            title = t("导入账单"),
+            subtitle = t("微信 / 支付宝导出的 Excel 或 CSV"),
             onClick = { onOpenBillImport(settings.lastLedgerId) }
         )
     }
@@ -258,9 +259,9 @@ private fun ToolsCard(
 
 @Composable
 private fun AppearanceCard(settings: AppSettings, appVm: AppViewModel) {
-    SectionCard(overline = "主题", title = "外观") {
+    SectionCard(overline = t("主题"), title = t("外观")) {
         Text(
-            "深色模式",
+            t("深色模式"),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(vertical = 4.dp)
@@ -268,9 +269,9 @@ private fun AppearanceCard(settings: AppSettings, appVm: AppViewModel) {
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
-                DarkMode.FOLLOW_SYSTEM to "跟随系统",
-                DarkMode.LIGHT to "浅色",
-                DarkMode.DARK to "深色"
+                DarkMode.FOLLOW_SYSTEM to t("跟随系统"),
+                DarkMode.LIGHT to t("浅色"),
+                DarkMode.DARK to t("深色")
             ).forEach { (mode, label) ->
                 val selected = settings.darkMode == mode
                 // v16.3.1：与 Android ChipRow 同款 —— 选中 = 主色染浓的玻璃，
@@ -309,11 +310,11 @@ private fun AppearanceCard(settings: AppSettings, appVm: AppViewModel) {
 private fun RecycleCard(onOpenRecycleBin: () -> Unit) {
     // v16.3：桌面以前收了 onOpenRecycleBin 却没接，回收站页面根本进不去
     // （虽然共享的 RecycleBinScreen 与 OverlayTarget 早就注册好了）。
-    SectionCard(overline = "数据", title = "回收站") {
+    SectionCard(overline = t("数据"), title = t("回收站")) {
         DesktopToolRow(
             emoji = "🗑️",
-            title = "查看回收站",
-            subtitle = "删掉的账本、存钱目标和备份文件，都能在这里找回",
+            title = t("查看回收站"),
+            subtitle = t("删掉的账本、存钱目标和备份文件，都能在这里找回"),
             onClick = onOpenRecycleBin
         )
     }
@@ -322,9 +323,9 @@ private fun RecycleCard(onOpenRecycleBin: () -> Unit) {
 @Composable
 private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
     SectionCard(
-        overline = "提醒",
-        title = "记账提醒",
-        subtitle = "每天定时提醒你记一笔"
+        overline = t("提醒"),
+        title = t("记账提醒"),
+        subtitle = t("每天定时提醒你记一笔")
     ) {
         Row(
             Modifier
@@ -374,7 +375,7 @@ private fun ReminderCard(settings: AppSettings, appVm: AppViewModel) {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "到点会从系统托盘弹出气泡提醒；App 需在后台运行（最小化到托盘即可）",
+                t("到点会从系统托盘弹出气泡提醒；App 需在后台运行（最小化到托盘即可）"),
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -397,7 +398,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
         if (DesktopAutoUpdater.updateInfo.value?.fromGithub == true) showUpdateDialog = true
     }
 
-    SectionCard(overline = "启动", title = "开机自启与更新") {
+    SectionCard(overline = t("启动"), title = t("开机自启与更新")) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -410,7 +411,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
             )
         }
         Text(
-            "开机后后台启动（不弹窗），从托盘打开窗口",
+            t("开机后后台启动（不弹窗），从托盘打开窗口"),
             fontSize = 11.sp, lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -435,7 +436,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
                 onClick = { DesktopAutoUpdater.checkNow() },
                 enabled = !DesktopAutoUpdater.busy.value
             ) {
-                Text(if (DesktopAutoUpdater.busy.value) "检查中…" else "检查更新")
+                Text(if (DesktopAutoUpdater.busy.value) t("检查中…") else t("检查更新"))
             }
             // 本地兜底包：直接给安装/定位按钮（GitHub 包走统一弹窗）
             DesktopAutoUpdater.updateInfo.value?.let { info ->
@@ -501,7 +502,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
 @Composable
 private fun AboutCard() {
     var showDonation by remember { mutableStateOf(false) }
-    SectionCard(overline = "关于", title = "滴水记账") {
+    SectionCard(overline = t("关于"), title = t("滴水记账")) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 "Windows 桌面版 · 版本 $APP_VERSION_NAME（$APP_VERSION_CODE）",
@@ -509,7 +510,7 @@ private fun AboutCard() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                "数据保存在本机 ~/.foldledger/；启用同步后会上传到自托管服务器",
+                t("数据保存在本机 ~/.foldledger/；启用同步后会上传到自托管服务器"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

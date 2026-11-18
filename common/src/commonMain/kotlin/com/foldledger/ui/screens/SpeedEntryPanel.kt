@@ -56,6 +56,7 @@ import com.foldledger.util.DateExt
 import com.foldledger.util.Money
 import com.foldledger.util.NLParser
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 速记面板（一句话记账，v8.6 / v9.3）。
@@ -142,15 +143,15 @@ internal fun SpeedEntryPanelBody(
         // 不能把上一轮的旧文挂成"可撤销"（撤销会跳回更早的内容）。
         if (text.isNotBlank() && text.trim() != spoken) voice.undoText = text else voice.undoText = null
         text = spoken
-        voice.hint = "已填入"
+        voice.hint = t("已填入")
         voice.touched = true
     }
     val onNoRecognition: () -> Unit = {
-        voice.hint = "没听清，再说一次"
+        voice.hint = t("没听清，再说一次")
         voice.touched = true
     }
     val onVoiceUnavailable: () -> Unit = {
-        voice.hint = "没有可用的语音输入，改用键盘"
+        voice.hint = t("没有可用的语音输入，改用键盘")
     }
 
     // 语音覆盖了已有文字时，留 6 秒可撤销（一句话=一笔，覆盖比追加安全）
@@ -274,8 +275,8 @@ internal fun SpeedEntryPanelBody(
             if (text.isNotBlank()) {
                 HintBlock(
                     emoji = "🤔",
-                    title = "没看懂金额",
-                    subtitle = "换种说法试试：「打车35」「买菜56.8」「工资8000」",
+                    title = t("没看懂金额"),
+                    subtitle = t("换种说法试试：「打车35」「买菜56.8」「工资8000」"),
                     // 空态卡也要能撤销：语音覆盖了原文字但没解析出金额时，别让"撤销"变孤儿
                     trailing = {
                         if (voice.undoText != null) UndoAction {
@@ -288,15 +289,15 @@ internal fun SpeedEntryPanelBody(
             } else {
                 HintBlock(
                     emoji = "⚡",
-                    title = "一句话就能记一笔",
-                    subtitle = "支持日期（昨天/前天/10月3号）、中文数字（一百二）、方向（工资/红包）"
+                    title = t("一句话就能记一笔"),
+                    subtitle = t("支持日期（昨天/前天/10月3号）、中文数字（一百二）、方向（工资/红包）")
                 )
             }
         } else {
             // 预览卡
             SectionCard(
-                title = "解析结果",
-                subtitle = "看着不对就直接改",
+                title = t("解析结果"),
+                subtitle = t("看着不对就直接改"),
                 // 槽常驻 44dp：撤销进出时标题行高度不变 → 零位移
                 trailing = {
                     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
@@ -313,7 +314,7 @@ internal fun SpeedEntryPanelBody(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (direction == Direction.INCOME) "收入" else "支出",
+                            if (direction == Direction.INCOME) t("收入") else t("支出"),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -326,8 +327,8 @@ internal fun SpeedEntryPanelBody(
                     }
                     // 方向切换
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        DirChip("支出", direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
-                        DirChip("收入", direction == Direction.INCOME) { direction = Direction.INCOME }
+                        DirChip(t("支出"), direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
+                        DirChip(t("收入"), direction == Direction.INCOME) { direction = Direction.INCOME }
                     }
                 }
 
@@ -337,9 +338,9 @@ internal fun SpeedEntryPanelBody(
                 Text("日期", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DateChip("今天", dateMillis) { dateMillis = startOfToday() }
-                    DateChip("昨天", dateMillis) { dateMillis = startOfToday() - DAY_MS }
-                    DateChip("前天", dateMillis) { dateMillis = startOfToday() - 2 * DAY_MS }
+                    DateChip(t("今天"), dateMillis) { dateMillis = startOfToday() }
+                    DateChip(t("昨天"), dateMillis) { dateMillis = startOfToday() - DAY_MS }
+                    DateChip(t("前天"), dateMillis) { dateMillis = startOfToday() - 2 * DAY_MS }
                     Text(
                         DateExt.shortDateTime(dateMillis),
                         fontSize = 11.sp,
@@ -408,7 +409,7 @@ internal fun SpeedEntryPanelBody(
                         }
                 ) {
                     Text(
-                        if (selectedLedger != null) "记下这一笔" else "先去「账本」页建一个账本",
+                        if (selectedLedger != null) t("记下这一笔") else t("先去「账本」页建一个账本"),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -426,7 +427,7 @@ internal fun SpeedEntryPanelBody(
                     Text("✅ 已记下", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.weight(1f))
                     Text(
-                        "撤销",
+                        t("撤销"),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier
@@ -450,7 +451,7 @@ internal fun SpeedEntryPanelBody(
                             }
                     ) {
                         Text(
-                            "再记一笔",
+                            t("再记一笔"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -549,8 +550,8 @@ private fun DirChip(label: String, active: Boolean, onClick: () -> Unit) {
 @Composable
 private fun DateChip(label: String, current: Long, onClick: () -> Unit) {
     val target = when (label) {
-        "今天" -> startOfToday()
-        "昨天" -> startOfToday() - DAY_MS
+        t("今天") -> startOfToday()
+        t("昨天") -> startOfToday() - DAY_MS
         else -> startOfToday() - 2 * DAY_MS
     }
     val active = current / DAY_MS == target / DAY_MS
@@ -614,7 +615,7 @@ private fun Modifier.speedChip(active: Boolean): Modifier = this
 @Composable
 private fun UndoAction(onClick: () -> Unit) {
     Text(
-        "撤销",
+        t("撤销"),
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium,
         color = MaterialTheme.colorScheme.primary,

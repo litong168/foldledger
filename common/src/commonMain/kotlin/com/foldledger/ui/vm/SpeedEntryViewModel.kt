@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * 一句话记账（v8.6 / v9.3）。
@@ -106,7 +107,7 @@ class SpeedEntryViewModel(
         val id = repo.addTransaction(
             ledgerId = ledgerId,
             categoryId = category?.id,
-            categoryName = category?.name ?: if (direction == Direction.INCOME) "其他收入" else "其他支出",
+            categoryName = category?.name ?: if (direction == Direction.INCOME) t("其他收入") else t("其他支出"),
             categoryEmoji = category?.emoji ?: if (direction == Direction.INCOME) "✨" else "📦",
             direction = direction,
             amountCents = amountCents,

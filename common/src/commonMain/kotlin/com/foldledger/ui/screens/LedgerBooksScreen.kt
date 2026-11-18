@@ -112,6 +112,7 @@ import com.foldledger.ui.theme.sheenBrush
 import com.foldledger.ui.theme.HeroNumber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * 账本页 —— 所有已创建的分账本都在这里。
@@ -529,7 +530,7 @@ fun LedgerBooksScreen(
                             subtitle = "选中后会显示在「明细」页，不会自动跳转",
                             trailing = {
                                 Text(
-                                    "＋ 新建",
+                                    t("＋ 新建"),
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier
@@ -575,8 +576,8 @@ fun LedgerBooksScreen(
                     item(span = { GridItemSpan(maxLineSpan) }, key = "sceneHeader") {
                         Spacer(Modifier.height(4.dp))
                         SectionHeader(
-                            title = "从场景模板新建",
-                            subtitle = "点一下即生成账本 + 整套分类"
+                            title = t("从场景模板新建"),
+                            subtitle = t("点一下即生成账本 + 整套分类")
                         )
                     }
                     items(ScenePresets.gallery, key = { "scene-${it.key}" }) { scene ->
@@ -615,7 +616,7 @@ fun LedgerBooksScreen(
             },
             dismissButton = {
                 Text(
-                    "取消",
+                    t("取消"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
@@ -715,7 +716,7 @@ private fun AggregateCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "合计范围",
+                        t("合计范围"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
@@ -741,7 +742,7 @@ private fun AggregateCard(
                         Text("⚙️", fontSize = 13.sp)
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            "自定义",
+                            t("自定义"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary
@@ -757,7 +758,7 @@ private fun AggregateCard(
                 style = HeroNumber
             )
             Text(
-                "结余",
+                t("结余"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp
             )
@@ -766,13 +767,13 @@ private fun AggregateCard(
             Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
                 // 浅色玻璃上红绿语义可以回来了：总支出用暖红、总收入用冷绿
                 HeroMetric(
-                    label = "总支出",
+                    label = t("总支出"),
                     cents = expense,
                     valueColor = if (expense > 0) dc.expense else MaterialTheme.colorScheme.onSurface,
                     dotColor = if (expense > 0) dc.expense else MaterialTheme.colorScheme.outline
                 )
                 HeroMetric(
-                    label = "总收入",
+                    label = t("总收入"),
                     cents = income,
                     valueColor = if (income > 0) dc.income else MaterialTheme.colorScheme.onSurface,
                     dotColor = if (income > 0) dc.income else MaterialTheme.colorScheme.outline
@@ -979,7 +980,7 @@ private fun LedgerBookCard(
                             ) {
                                 Icon(
                                     Icons.Filled.Check,
-                                    contentDescription = "当前账本",
+                                    contentDescription = t("当前账本"),
                                     tint = onColorFor(accent),
                                     modifier = Modifier.size(11.dp)
                                 )
@@ -993,7 +994,7 @@ private fun LedgerBookCard(
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(
                             Icons.Filled.MoreVert,
-                            contentDescription = "更多",
+                            contentDescription = t("更多"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -1025,7 +1026,7 @@ private fun LedgerBookCard(
             Spacer(Modifier.height(12.dp))
             // 小米钱包式：小标签 + 大数字，支出是这张卡的视觉焦点
             Text(
-                "累计支出",
+                t("累计支出"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1064,7 +1065,7 @@ private fun LedgerBookCard(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MiniStat("收入", Money.format(ui.incomeCents), Direction.INCOME, Modifier.weight(1f))
                 MiniStat(
-                    "结余",
+                    t("结余"),
                     Money.format(ui.balanceCents),
                     if (ui.balanceCents >= 0) Direction.INCOME else Direction.EXPENSE,
                     Modifier.weight(1f)
@@ -1137,7 +1138,7 @@ private fun BookMasterList(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                "＋ 新建",
+                t("＋ 新建"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -1224,7 +1225,7 @@ private fun BookMasterList(
                             ) {
                                 Icon(
                                     Icons.Filled.MoreVert,
-                                    contentDescription = "更多",
+                                    contentDescription = t("更多"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -1342,10 +1343,10 @@ private fun CurrentLedgerPanel(
             }
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickAction("记一笔", accent, onAdd)
-                QuickAction("明细", MaterialTheme.colorScheme.primary, onDetail)
-                QuickAction("统计", MaterialTheme.colorScheme.primary, onStats)
-                QuickAction("分类", MaterialTheme.colorScheme.primary, onCategories)
+                QuickAction(t("记一笔"), accent, onAdd)
+                QuickAction(t("明细"), MaterialTheme.colorScheme.primary, onDetail)
+                QuickAction(t("统计"), MaterialTheme.colorScheme.primary, onStats)
+                QuickAction(t("分类"), MaterialTheme.colorScheme.primary, onCategories)
             }
         }
     }
@@ -1385,8 +1386,8 @@ private fun SceneTemplateSection(
 ) {
     Column {
         SectionHeader(
-            title = "从场景模板新建",
-            subtitle = "点一下即生成账本 + 整套分类"
+            title = t("从场景模板新建"),
+            subtitle = t("点一下即生成账本 + 整套分类")
         )
         Spacer(Modifier.height(8.dp))
         if (stretch) {
@@ -1669,7 +1670,7 @@ private fun SceneQuickRow(
                 softShadow = false
             ) {
                 Text(
-                    "创建",
+                    t("创建"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = accent,

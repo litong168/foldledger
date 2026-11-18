@@ -35,6 +35,7 @@ import com.foldledger.ui.theme.Space
 import com.foldledger.ui.theme.dividerBrush
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 账本页里的**内联**创建面板。
@@ -81,7 +82,7 @@ fun CreateLedgerInlinePanel(
         val s = ScenePresets.byKey(key)
         emoji = s.emoji
         colorHex = s.colorHex
-        if (name.isBlank() || ScenePresets.all.any { it.name + "账本" == name }) {
+        if (name.isBlank() || ScenePresets.all.any { it.name + t("账本") == name }) {
             name = "${s.name}账本"
         }
         budgetText = s.suggestedBudgetYuan.takeIf { it > 0 }?.toString() ?: ""
@@ -124,7 +125,7 @@ fun CreateLedgerInlinePanel(
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        "＋ 新建分账本",
+                        t("＋ 新建分账本"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -132,7 +133,7 @@ fun CreateLedgerInlinePanel(
                 }
                 Spacer(Modifier.width(Space.sm))
                 Text(
-                    "选个场景，分类自动配好",
+                    t("选个场景，分类自动配好"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -152,7 +153,7 @@ fun CreateLedgerInlinePanel(
                     ) {
                         FormColumn(
                             modifier = Modifier.fillMaxWidth(),
-                            title = "告诉它叫什么",
+                            title = t("告诉它叫什么"),
                             name = name, onName = { name = it },
                             emoji = emoji, onEmoji = { emoji = it },
                             colorHex = colorHex, onColor = { colorHex = it },
@@ -182,7 +183,7 @@ fun CreateLedgerInlinePanel(
             } else {
                 FormColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    title = "告诉它叫什么",
+                    title = t("告诉它叫什么"),
                     name = name, onName = { name = it },
                     emoji = emoji, onEmoji = { emoji = it },
                     colorHex = colorHex, onColor = { colorHex = it },

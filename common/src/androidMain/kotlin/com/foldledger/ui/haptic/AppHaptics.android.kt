@@ -7,6 +7,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
 import com.foldledger.ServiceLocator
+import com.foldledger.ui.l10n.t
 
 /**
  * 触感反馈引擎（Android 实现，v5.0）。
@@ -43,7 +44,7 @@ actual object AppHaptics {
     /** 普通按钮 / 切换 */
     actual fun tap() = play(durationMs = 10L, amplitude = amplitude())
 
-    /** 确认类动作（保存、删除、创建）：稍重一点，给"事情办成了"的实感 */
+    /** 确认类动作（保存、删除、创建）：稍重一点，给t("事情办成了")的实感 */
     actual fun confirm() = play(durationMs = 18L, amplitude = (amplitude() * 1.15f).toInt())
 
     /** 设置页「试一下」用：按当前强度播一次确认反馈 */

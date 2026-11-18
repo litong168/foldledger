@@ -20,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.foldledger.ui.l10n.t
 
 /**
  * iOS 式「长按拖拽排序」。
@@ -53,7 +54,7 @@ class BookDragState {
     var pointer by mutableStateOf(Offset.Zero)
         internal set
 
-    /** 抓取点相对条目左上角的偏移（避免卡片"跳"到手指中心） */
+    /** 抓取点相对条目左上角的偏移（避免卡片t("跳")到手指中心） */
     var grab by mutableStateOf(Offset.Zero)
         internal set
 

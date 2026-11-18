@@ -39,6 +39,23 @@ class UpdateCheckerTest {
         assertEquals("def", m.assetFor("windows")?.sha256)
     }
 
+    /** Gitee manifest 会在 asset 里带 `url`（指向 Release 附件）；缺省时为空串，由源自己拼。 */
+    @Test
+    fun parseManifest_readsAssetUrl() {
+        val json = """
+            {"versionCode":234,"versionName":"16.7.0","minVersionCode":1,"notes":"",
+             "assets":{"windows":{"name":"w.exe","size":9,"sha256":"x",
+               "url":"https://gitee.com/litong168/foldledger/releases/download/v16.7.0/w.exe"}}}
+        """.trimIndent()
+        val m = UpdateChecker.parseManifest(json)
+        assertEquals(
+            "https://gitee.com/litong168/foldledger/releases/download/v16.7.0/w.exe",
+            m.assetFor("windows")?.url
+        )
+        // 没有 url 字段的老格式（GitHub）应回落到空串
+        assertEquals("", UpdateChecker.parseManifest(manifest()).assetFor("android")?.url)
+    }
+
     @Test
     fun evaluate_newerVersion_hasUpdate() {
         val r = UpdateChecker.evaluate(UpdateChecker.parseManifest(manifest(233)), 232, "android")

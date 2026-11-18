@@ -30,6 +30,7 @@ import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.LocalDirectionColors
 import com.foldledger.ui.theme.wellSurface
 import com.foldledger.ui.vm.LedgerUi
+import com.foldledger.ui.l10n.t
 
 /**
  * 顶栏标题下拉里的账本列表（v13.7）。
@@ -108,7 +109,7 @@ fun LedgerTitleMenuContent(
                 if (active) {
                     Icon(
                         Icons.Filled.Check,
-                        contentDescription = "当前账本",
+                        contentDescription = t("当前账本"),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(17.dp)
                     )

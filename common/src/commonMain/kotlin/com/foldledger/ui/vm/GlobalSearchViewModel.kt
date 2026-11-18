@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.foldledger.ui.l10n.t
 
 /**
  * 全局搜索（v5.9）。
@@ -44,7 +45,7 @@ class GlobalSearchViewModel(private val repo: LedgerRepository) : ViewModel() {
     private val _directionFilter = MutableStateFlow(-1)
     val directionFilter: StateFlow<Int> = _directionFilter.asStateFlow()
 
-    /** 0 = 不限时间；否则为"近 N 天" */
+    /** 0 = 不限时间；否则为t("近 N 天") */
     private val _rangeFilter = MutableStateFlow(0)
     val rangeFilter: StateFlow<Int> = _rangeFilter.asStateFlow()
 
@@ -84,7 +85,7 @@ class GlobalSearchViewModel(private val repo: LedgerRepository) : ViewModel() {
                 val meta = nameOf[txn.ledgerId]
                 SearchHit(
                     txn = txn,
-                    ledgerName = meta?.second ?: "已删除账本",
+                    ledgerName = meta?.second ?: t("已删除账本"),
                     ledgerEmoji = meta?.first ?: "📒"
                 )
             }

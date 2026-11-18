@@ -79,6 +79,7 @@ import com.foldledger.ui.theme.dividerBrush
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import java.util.Calendar
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 @Composable
 fun StatsScreen(
@@ -224,10 +225,10 @@ fun StatsScreen(
                             // v16.3.1：双栏右栏左右留白对称（原 16/20 让内容整体偏左 4dp）
                             .padding(start = 20.dp, end = 20.dp)
                     ) {
-                        SectionCard(overline = "结构", title = "分类排行") {
+                        SectionCard(overline = t("结构"), title = t("分类排行")) {
                             if (totals.isEmpty()) {
                                 Text(
-                                    "本月暂无数据",
+                                    t("本月暂无数据"),
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -326,7 +327,7 @@ private fun InsightEntryCard(onOpenInsight: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("智能洞察", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "周期支出识别 · 净资产走势 · 年度支出预测",
+                    t("周期支出识别 · 净资产走势 · 年度支出预测"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -387,9 +388,9 @@ private fun MonthSummaryCard(expense: Long, income: Long, monthLabel: String) {
                 when {
                     // v9.9.0：零数据时两张卡都是 0，唯一的空态文案藏在下面的分类面板里，
                     // 新用户不知道下一步做什么 —— 这里直接给一句话
-                    expense == 0L && income == 0L -> "这个月还没有记录，回明细页点「记一笔」就有数了"
-                    net >= 0 -> "收入扣掉支出后还剩这么多"
-                    else -> "这个月支出超过了收入"
+                    expense == 0L && income == 0L -> t("这个月还没有记录，回明细页点「记一笔」就有数了")
+                    net >= 0 -> t("收入扣掉支出后还剩这么多")
+                    else -> t("这个月支出超过了收入")
                 },
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -398,8 +399,8 @@ private fun MonthSummaryCard(expense: Long, income: Long, monthLabel: String) {
             Spacer(Modifier.height(Space.lg))
             // v4.4.0：与明细页概览卡一致 —— ▲收 / ▼支 两个粉彩格对称排列
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryMetric("本月支出", "▼", expense, dc.expense, Modifier.weight(1f))
-                SummaryMetric("本月收入", "▲", income, dc.income, Modifier.weight(1f))
+                SummaryMetric(t("本月支出"), "▼", expense, dc.expense, Modifier.weight(1f))
+                SummaryMetric(t("本月收入"), "▲", income, dc.income, Modifier.weight(1f))
             }
         }
     }
@@ -428,12 +429,12 @@ private fun InsightsCard(
     val net = monthIncome - monthExpense
 
     SectionCard(
-        overline = "体检",
-        title = "本月体检",
-        subtitle = (monthLabel.ifBlank { "本月" }) + " · 自动生成"
+        overline = t("体检"),
+        title = t("本月体检"),
+        subtitle = (monthLabel.ifBlank { t("本月") }) + t(" · 自动生成")
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            InsightRow("💰", "本月结余") {
+            InsightRow("💰", t("本月结余")) {
                 val color = if (net >= 0) dc.income else dc.expense
                 Text(
                     if (net >= 0) "结余 ${Money.format(net)}，收入覆盖支出"
@@ -448,7 +449,7 @@ private fun InsightsCard(
             if (top != null) {
                 val total = expenseCategories.sumOf { it.totalCents }
                 val pct = if (total > 0) (top.totalCents * 100 / total).toInt() else 0
-                InsightRow("🔝", "最大支出项") {
+                InsightRow("🔝", t("最大支出项")) {
                     Text(
                         "「${top.name}」占支出的 $pct%",
                         fontSize = 13.sp,
@@ -500,24 +501,24 @@ private fun BudgetHealthCard(
 ) {
     val dc = LocalDirectionColors.current
     SectionCard(
-        overline = "预算",
-        title = "预算健康度",
-        subtitle = (monthLabel.ifBlank { "本月" }) + " · 用量从高到低"
+        overline = t("预算"),
+        title = t("预算健康度"),
+        subtitle = (monthLabel.ifBlank { t("本月") }) + t(" · 用量从高到低")
     ) {
         if (items.isEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "还没有给分类设预算。",
+                    t("还没有给分类设预算。"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    "到「分类管理」给常花的几个月度预算，这里就能看到谁快爆了、还剩多少可花。",
+                    t("到「分类管理」给常花的几个月度预算，这里就能看到谁快爆了、还剩多少可花。"),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "去设置预算 ›",
+                    t("去设置预算 ›"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -597,7 +598,7 @@ private fun BudgetHealthRow(item: BudgetHealth) {
             Text(
                 when {
                     item.overBudget -> "超 ${Money.format(-item.remainingCents)}"
-                    item.nearLimit -> "快到上限"
+                    item.nearLimit -> t("快到上限")
                     else -> "剩 ${Money.format(item.remainingCents)}"
                 },
                 fontSize = 11.sp,
@@ -634,20 +635,20 @@ private fun AnnualCard(summary: AnnualSummary) {
     }
 
     SectionCard(
-        overline = "年度",
+        overline = t("年度"),
         title = "${summary.year} 年总结",
-        subtitle = "1 月至今 · 自动汇总"
+        subtitle = t("1 月至今 · 自动汇总")
     ) {
         // 三个数：总支出 / 总收入 / 结余
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            AnnualMetric("支出", summary.totalExpense, dc.expense, Modifier.weight(1f))
-            AnnualMetric("收入", summary.totalIncome, dc.income, Modifier.weight(1f))
-            AnnualMetric("结余", net, if (net >= 0) dc.income else dc.expense, Modifier.weight(1f))
+            AnnualMetric(t("支出"), summary.totalExpense, dc.expense, Modifier.weight(1f))
+            AnnualMetric(t("收入"), summary.totalIncome, dc.income, Modifier.weight(1f))
+            AnnualMetric(t("结余"), net, if (net >= 0) dc.income else dc.expense, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(14.dp))
         Text(
-            "月度支出走势",
+            t("月度支出走势"),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -798,7 +799,7 @@ private fun CategoryPanel(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                if (direction == Direction.EXPENSE) "本月支出合计" else "本月收入合计",
+                if (direction == Direction.EXPENSE) t("本月支出合计") else t("本月收入合计"),
                 style = com.foldledger.ui.theme.OverlineLabel,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -823,7 +824,7 @@ private fun CategoryPanel(
                     colors = SceneColors,
                     modifier = Modifier.size(132.dp),
                     strokeWidth = 16.dp,
-                    centerTitle = "分类数",
+                    centerTitle = t("分类数"),
                     centerValue = totals.size.toString(),
                     // 屏幕级驱动的扫入进度：折叠展开不重播（v3.1.1）
                     sweep = donutSweep
@@ -832,7 +833,7 @@ private fun CategoryPanel(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (totals.isEmpty()) {
                         Text(
-                            "本月还没有记录",
+                            t("本月还没有记录"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -880,7 +881,7 @@ private fun CategoryPanel(
             if (showTrend) {
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    "本月日趋势",
+                    t("本月日趋势"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -954,7 +955,7 @@ private fun DirectionToggleRow(direction: Int, onChange: (Int) -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf(Direction.EXPENSE to "支出", Direction.INCOME to "收入").forEach { (d, label) ->
+            listOf(Direction.EXPENSE to t("支出"), Direction.INCOME to t("收入")).forEach { (d, label) ->
                 val active = d == direction
                 val c = if (d == Direction.EXPENSE) dc.expense else dc.income
                 Surface(
@@ -1060,9 +1061,9 @@ private fun MonthlyTrendCard(trend: List<MonthTotal>, direction: Int) {
     val filtered = trend.filter { it.direction == direction }.takeLast(6)
     val max = (filtered.maxOfOrNull { it.totalCents } ?: 0L).coerceAtLeast(1L)
 
-    SectionCard(overline = "趋势", title = "近 6 个月趋势") {
+    SectionCard(overline = t("趋势"), title = t("近 6 个月趋势")) {
         if (filtered.isEmpty()) {
-            EmptyHint(emoji = "📉", title = "暂无历史数据")
+            EmptyHint(emoji = "📉", title = t("暂无历史数据"))
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 filtered.forEach { m ->
@@ -1124,14 +1125,14 @@ private fun YearOverviewCard(
     val totalInc = remember(months) { months.sumOf { it.third } }
 
     SectionCard(
-        overline = "回顾",
+        overline = t("回顾"),
         title = "$year 年度回顾",
         subtitle = "支出 ${Money.format(totalExp)} · 收入 ${Money.format(totalInc)} · 结余 ${
             Money.format(totalInc - totalExp)
         }"
     ) {
         if (totalExp == 0L && totalInc == 0L) {
-            EmptyHint(emoji = "📅", title = "今年还没有记录")
+            EmptyHint(emoji = "📅", title = t("今年还没有记录"))
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 LegendDot("支出", dc.expense)

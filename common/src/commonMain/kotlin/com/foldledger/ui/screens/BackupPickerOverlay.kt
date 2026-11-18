@@ -40,6 +40,7 @@ import com.foldledger.ui.theme.cardSurface
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.wellSurface
 import com.foldledger.ui.vm.BackupViewModel
+import com.foldledger.ui.l10n.t
 
 /**
  * 「从备份恢复」的选份器。
@@ -86,7 +87,7 @@ fun BackupPickerOverlay(
                 ) {
                     Icon(
                         Icons.Filled.Close,
-                        contentDescription = "关闭",
+                        contentDescription = t("关闭"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
@@ -187,7 +188,7 @@ private fun BackupPickRow(
                     PillTag("最新", MaterialTheme.colorScheme.primary, filled = true)
                     Spacer(Modifier.width(Space.xs))
                 }
-                if (entry.isAuto) PillTag("自动", CoolGreen, filled = true)
+                if (entry.isAuto) PillTag(t("自动"), CoolGreen, filled = true)
             }
             Spacer(Modifier.height(4.dp))
             if (entry.corrupt) {

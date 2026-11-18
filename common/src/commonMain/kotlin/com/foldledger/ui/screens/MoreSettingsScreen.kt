@@ -17,6 +17,7 @@ import com.foldledger.ui.adaptive.AdaptiveScaffold
 import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.vm.AppViewModel
+import com.foldledger.ui.l10n.t
 
 /**
  * 更多设置（v9.5）——「我的」页里不常用、但值得调的那些。
@@ -38,8 +39,8 @@ fun MoreSettingsScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "更多设置",
-        subtitle = "提醒 · 手感 · 配色 · 关于",
+        title = t("更多设置"),
+        subtitle = t("提醒 · 手感 · 配色 · 关于"),
         onBack = onBack,
         showNavigation = false
     ) { padding ->

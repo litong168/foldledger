@@ -61,6 +61,7 @@ import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.Space
 import com.foldledger.ui.vm.AccountViewModel
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 资产账户管理（v6.1）。
@@ -93,7 +94,7 @@ fun AccountManageScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "资产账户",
+        title = t("资产账户"),
         subtitle = "${accounts.size} 个账户 · 余额按流水实时推算",
         onBack = onBack
     ) { padding ->
@@ -200,7 +201,7 @@ fun AccountManageScreen(
             },
             confirmButton = {
                 Text(
-                    "删除",
+                    t("删除"),
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -214,7 +215,7 @@ fun AccountManageScreen(
             },
             dismissButton = {
                 Text(
-                    "取消",
+                    t("取消"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -236,7 +237,7 @@ private fun NetWorthCard(netWorth: Long, accountCount: Int) {
     ) {
         Column(Modifier.padding(Space.lg)) {
             Text(
-                "净资产",
+                t("净资产"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -350,7 +351,7 @@ private fun AccountRow(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "删除",
+                    t("删除"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f),
@@ -545,7 +546,7 @@ private fun AccountEditorDialog(
         },
         confirmButton = {
             Text(
-                if (initial.id == 0L) "创建" else "保存",
+                if (initial.id == 0L) t("创建") else t("保存"),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
@@ -569,7 +570,7 @@ private fun AccountEditorDialog(
         },
         dismissButton = {
             Text(
-                "取消",
+                t("取消"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))

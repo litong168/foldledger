@@ -55,6 +55,7 @@ import com.foldledger.ui.theme.SurfaceCard
 import com.foldledger.util.Money
 import com.foldledger.ui.theme.cardSurface
 import com.foldledger.ui.theme.wellSurface
+import com.foldledger.ui.l10n.t
 
 private val EMOJI_CHOICES = listOf(
     "🏠", "🛠️", "🧾", "🍼", "🚗", "🏡",
@@ -104,7 +105,7 @@ fun CreateLedgerOverlay(
         if (editing == null) {
             emoji = s.emoji
             colorHex = s.colorHex
-            name = if (name.isBlank() || ScenePresets.all.any { it.name + "账本" == name }) "${s.name}账本" else name
+            name = if (name.isBlank() || ScenePresets.all.any { it.name + t("账本") == name }) "${s.name}账本" else name
             budgetText = s.suggestedBudgetYuan.takeIf { it > 0 }?.toString() ?: ""
         }
     }
@@ -126,7 +127,7 @@ fun CreateLedgerOverlay(
     val confirmLabel = if (editing == null) {
         "创建账本（自动生成 ${ScenePresets.byKey(sceneKey).allCategories.size} 个分类）"
     } else {
-        "保存修改"
+        t("保存修改")
     }
 
     AppOverlay(env = env, onDismiss = onDismiss) {
@@ -143,7 +144,7 @@ fun CreateLedgerOverlay(
                         // （名称/图标/颜色/预算/备注/场景/按钮）超过可视高度时，底部的确认按钮
                         // 会被挤出屏幕且**没有滚动容器**够不着。加上 verticalScroll 后按钮始终可达。
                         .verticalScroll(rememberScrollState()),
-                    title = if (editing == null) "新建分账本" else "编辑账本",
+                    title = if (editing == null) t("新建分账本") else t("编辑账本"),
                     name = name, onName = { name = it },
                     emoji = emoji, onEmoji = { emoji = it },
                     colorHex = colorHex, onColor = { colorHex = it },
@@ -175,7 +176,7 @@ fun CreateLedgerOverlay(
                         .weight(1f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
-                    title = if (editing == null) "新建分账本" else "编辑账本",
+                    title = if (editing == null) t("新建分账本") else t("编辑账本"),
                     name = name, onName = { name = it },
                     emoji = emoji, onEmoji = { emoji = it },
                     colorHex = colorHex, onColor = { colorHex = it },
@@ -219,7 +220,7 @@ fun CreateLedgerOverlay(
                     ) {
                         Box(Modifier.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
                             Text(
-                                if (editing == null) "创建账本" else "保存修改",
+                                if (editing == null) t("创建账本") else t("保存修改"),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -244,7 +245,7 @@ internal fun FormColumn(
     note: String, onNote: (String) -> Unit,
     sceneKey: String, lockedScene: Boolean, onPickScene: (String) -> Unit,
     onQuickCreate: ((String) -> Unit)?,
-    confirmLabel: String = "创建账本",
+    confirmLabel: String = t("创建账本"),
     onConfirm: (() -> Unit)?,
     onCancel: (() -> Unit)?
 ) {
@@ -259,7 +260,7 @@ internal fun FormColumn(
             )
             if (onCancel != null) {
                 Text(
-                    "取消",
+                    t("取消"),
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -285,14 +286,14 @@ internal fun FormColumn(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        "⚡ 一键创建预置账本",
+                        t("⚡ 一键创建预置账本"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        "点一下即可按模板生成账本 + 整套分类，之后再改名字也行",
+                        t("点一下即可按模板生成账本 + 整套分类，之后再改名字也行"),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -376,7 +377,7 @@ internal fun FormColumn(
 
         Spacer(Modifier.height(14.dp))
         Text(
-            "记账场景",
+            t("记账场景"),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -384,7 +385,7 @@ internal fun FormColumn(
         if (lockedScene) {
             Spacer(Modifier.height(4.dp))
             Text(
-                "已创建的账本不能更换场景（分类已按原场景生成）",
+                t("已创建的账本不能更换场景（分类已按原场景生成）"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -437,7 +438,7 @@ internal fun FormColumn(
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "图标",
+            t("图标"),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -468,7 +469,7 @@ internal fun FormColumn(
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "主题色",
+            t("主题色"),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -558,7 +559,7 @@ internal fun PreviewColumn(
             .padding(18.dp)
     ) {
         Text(
-            "实时预览",
+            t("实时预览"),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
@@ -609,13 +610,13 @@ internal fun PreviewColumn(
 
         Spacer(Modifier.height(14.dp))
         SectionCard(
-            title = "将自动生成的分类",
+            title = t("将自动生成的分类"),
             subtitle = "支出 ${scene.expenses.size} 个 · 收入 ${scene.incomes.size} 个"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                CategoryPreviewGroup("支出", scene.expenses.map { it.emoji to it.name }, accent)
+                CategoryPreviewGroup(t("支出"), scene.expenses.map { it.emoji to it.name }, accent)
                 CategoryPreviewGroup(
-                    "收入",
+                    t("收入"),
                     scene.incomes.map { it.emoji to it.name },
                     MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -624,7 +625,7 @@ internal fun PreviewColumn(
 
         if (scene.fields.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
-            SectionCard(title = "场景专属字段", subtitle = "记一笔时会出现这些输入项") {
+            SectionCard(title = t("场景专属字段"), subtitle = t("记一笔时会出现这些输入项")) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     scene.fields.forEach { f ->
                         Row(verticalAlignment = Alignment.CenterVertically) {

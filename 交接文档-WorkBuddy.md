@@ -52,12 +52,14 @@
 
 ---
 
-## 3. 当前版本与双端状态（2026-11-17，已更新到 16.6.0）
+## 3. 当前版本与双端状态（2026-11-18，已更新到 16.7.0）
 
 | 端 | 版本 | 状态 |
 |---|---|---|
-| 桌面 | 16.6.0 (233) | ✅ **安装包分发**：`dist/滴水记账-v16.6.0-win-x64-setup.exe`，静默升级装到 `%LOCALAPPDATA%\滴水记账`；安装态核验 10 项全绿、用户数据保留 |
-| 手机 | 16.6.0 (233) | ✅ `dist/滴水记账-v16.6.0-release.apk`，4 ABI 齐全、签名指纹不变；`adb install -r` 覆盖装到 `09029C6247444540` |
+| 桌面 | 16.7.0 (234) | ✅ **安装包分发**：`dist/滴水记账-v16.7.0-win-x64-setup.exe`（90.2MB），静默升级装到 `%LOCALAPPDATA%\滴水记账`；用 `-Ddrip.lang=en` 跑通英文整树渲染验收 |
+| 手机 | 16.7.0 (234) | ✅ `dist/滴水记账-v16.7.0-release.apk`（4.2MB），4 ABI 齐全、签名指纹 `3f001553…32e2` 不变；**真机验收待插线**（本轮 adb 未连接） |
+
+> **16.7.0 中英双语 + Gitee 国内镜像**（详见 §6.8）：① **界面语言**：新增 `common/src/commonMain/kotlin/com/foldledger/ui/l10n/`（`Strings.kt` 定义 `Language` 枚举 + `L10n` 全局状态 + `t()`；`EnStrings.kt` 由 `scripts/gen_l10n.py` 从 `scripts/l10n-dict.json` 生成，737 条；`LanguageCard.kt` 双端共用语言卡）。文案表**用中文原文作 key**（`t("记一笔")`），未翻译自动回退中文。`L10n.language` 用 `mutableStateOf` 包裹 —— 这是关键：非 Composable 的 `t()` 在组合期读它会被 Compose 记为该 Composable 的依赖，语言一变自动重组。`AppPreferences` 加 `language` 键（默认 "zh"），`AppViewModel.setLanguage()` 写入，`AppRoot` 用 `SideEffect` 把偏好同步到 `L10n.current`。双端「更多设置」各插一张 `LanguageCard`。批量替换用 `scripts/wrap_l10n.py`（幂等、跳过 `==/!=/const val` 比较上下文与含 `${}` 的模板串），共替换 **1576 处、67 文件**；导航/明细/账本/记一笔/统计/报销/备份/同步/自动记账/更新/捐赠/设置等主要界面已英化。② **Gitee 镜像**：`scripts/publish_gitee_mirror.sh`（需 `GITEE_TOKEN`，建仓 + Contents API 传 `release/` 三个固定名资产）；客户端 `UpdateHttp` 加 `GITEE_MANIFEST_URL` / `giteeAssetUrl()`，`UpdateManager.check` 改为 **GitHub 优先、失败回退 Gitee** 双源。**零 DB 改动、零迁移、备份格式不变**；新增 `L10nTest` 5 个单测。
 
 > **16.6.0 公开发布 + 双端自动更新 + 捐赠入口**（详见 §6.7）：源码/安装包上 GitHub `litong168/foldledger`（Apache-2.0）。自动更新：`common/data/update/`（`UpdateChecker` 纯函数 + `UpdateHttp` GET/下载/校验 + `UpdateManager` 协调），GitHub Releases latest → `update-manifest.json`（versionCode 权威）→ 资产 SHA256 校验 → 桌面 `DesktopAutoUpdater` 走 GitHub（本地目录兜底）、手机 `AndroidUpdateInstaller` 走 FileProvider + ACTION_VIEW。捐赠：双端「关于」页底部「支持作者」一行 + `DonationQrDialog`（微信收款码：`app/src/main/assets/` + `common/src/desktopMain/resources/` 各一份，`loadAssetBitmap` expect/actual 加载）。Android 新增 `REQUEST_INSTALL_PACKAGES` + FileProvider（`provider_paths.xml` 暴露 files/updates/）。一键发版 `scripts/publish_github_release.sh`（从 AppInfo 读版本、算 sha256、生成 manifest、push、建 Release、传 3 资产，可重跑）。**零 DB 改动**；新增 8 个更新单测。
 

@@ -125,6 +125,7 @@ import com.foldledger.ui.theme.onColorFor
 import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -145,32 +146,32 @@ internal fun FilteredEmptyHint(searchQuery: String, projectFilter: Long, reimbur
     when {
         reimburseFilter.isNotEmpty() -> {
             val label = when {
-                ReimburseState.PENDING in reimburseFilter && ReimburseState.SUBMITTED in reimburseFilter -> "未回款"
-                ReimburseState.SETTLED in reimburseFilter -> "已回款"
-                ReimburseState.PENDING in reimburseFilter -> "待提交"
-                ReimburseState.SUBMITTED in reimburseFilter -> "已提交"
-                else -> "已回款"
+                ReimburseState.PENDING in reimburseFilter && ReimburseState.SUBMITTED in reimburseFilter -> t("未回款")
+                ReimburseState.SETTLED in reimburseFilter -> t("已回款")
+                ReimburseState.PENDING in reimburseFilter -> t("待提交")
+                ReimburseState.SUBMITTED in reimburseFilter -> t("已提交")
+                else -> t("已回款")
             }
             EmptyHint(
                 emoji = "📭",
                 title = "没有「$label」的流水",
-                subtitle = "点上方的「清除 ✕」或再点一次那一格，就能回到全部"
+                subtitle = t("点上方的「清除 ✕」或再点一次那一格，就能回到全部")
             )
         }
         searchQuery.isNotBlank() -> EmptyHint(
             emoji = "🔍",
-            title = "没有匹配的记录",
-            subtitle = "换个关键词试试"
+            title = t("没有匹配的记录"),
+            subtitle = t("换个关键词试试")
         )
         projectFilter > LedgerDetailViewModel.PROJECT_UNASSIGNED -> EmptyHint(
             emoji = "📁",
-            title = "这个项目还没有记录",
-            subtitle = "记一笔时选上它，或在流水里把其他笔归进来"
+            title = t("这个项目还没有记录"),
+            subtitle = t("记一笔时选上它，或在流水里把其他笔归进来")
         )
         else -> EmptyHint(
             emoji = "🔍",
-            title = "没有匹配的记录",
-            subtitle = "换个关键词试试"
+            title = t("没有匹配的记录"),
+            subtitle = t("换个关键词试试")
         )
     }
 }
@@ -189,11 +190,11 @@ internal fun ReimburseFilterBar(
 ) {
     val (label, color) = when {
         states.contains(ReimburseState.PENDING) && states.contains(ReimburseState.SUBMITTED) ->
-            "未回款" to pendingTone()
-        states.contains(ReimburseState.SETTLED) -> "已回款" to ReimburseSettled
-        states.contains(ReimburseState.PENDING) -> "待提交" to pendingTone()
-        states.contains(ReimburseState.SUBMITTED) -> "已提交" to ReimburseSubmitted
-        else -> "已回款" to ReimburseSettled
+            t("未回款") to pendingTone()
+        states.contains(ReimburseState.SETTLED) -> t("已回款") to ReimburseSettled
+        states.contains(ReimburseState.PENDING) -> t("待提交") to pendingTone()
+        states.contains(ReimburseState.SUBMITTED) -> t("已提交") to ReimburseSubmitted
+        else -> t("已回款") to ReimburseSettled
     }
     val count = groups.sumOf { it.items.size }
     val total = groups.sumOf { it.expenseCents }
@@ -232,7 +233,7 @@ internal fun ReimburseFilterBar(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                "清除 ✕",
+                t("清除 ✕"),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = color,
@@ -265,17 +266,17 @@ internal fun ReimburseBoard(
     val recoveredActive = selected == setOf(ReimburseState.SETTLED)
 
     SectionCard(
-        title = "垫付 · 回款",
+        title = t("垫付 · 回款"),
         subtitle = when {
-            summary.allSettled -> "全部垫付都已回款 ✓"
-            summary.advancedCents == 0L -> "记一笔垫付后，这里显示公司还欠你多少"
+            summary.allSettled -> t("全部垫付都已回款 ✓")
+            summary.advancedCents == 0L -> t("记一笔垫付后，这里显示公司还欠你多少")
             aging.oldestDays >= 30 -> "最久一笔已压 ${aging.oldestDays} 天，该催了"
-            else -> "点大数字或任意一格筛出相关流水"
+            else -> t("点大数字或任意一格筛出相关流水")
         }
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ReimburseHeroCell(
-                label = "尚余垫付",
+                label = t("尚余垫付"),
                 cents = summary.outstandingCents,
                 color = pendingTone(),
                 sub = if (aging.oldestDays > 0) "${summary.outstandingCount} 笔 · 最久 ${aging.oldestDays} 天"
@@ -285,7 +286,7 @@ internal fun ReimburseBoard(
                 onClick = onPickOutstanding
             )
             ReimburseHeroCell(
-                label = "已回款",
+                label = t("已回款"),
                 cents = summary.recoveredCents,
                 color = ReimburseSettled,
                 sub = "回款率 ${(summary.recoveredFraction * 100).toInt()}%",
@@ -332,17 +333,17 @@ internal fun ReimburseBoard(
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ReimburseTile(
-                "待提交", summary.pendingCents, pendingTone(),
+                t("待提交"), summary.pendingCents, pendingTone(),
                 active = selected.contains(ReimburseState.PENDING) && selected.size == 1,
                 modifier = Modifier.weight(1f)
             ) { onToggleState(ReimburseState.PENDING) }
             ReimburseTile(
-                "已提交", summary.submittedCents, ReimburseSubmitted,
+                t("已提交"), summary.submittedCents, ReimburseSubmitted,
                 active = selected.contains(ReimburseState.SUBMITTED) && selected.size == 1,
                 modifier = Modifier.weight(1f)
             ) { onToggleState(ReimburseState.SUBMITTED) }
             ReimburseTile(
-                "已回款", summary.settledCents, ReimburseSettled,
+                t("已回款"), summary.settledCents, ReimburseSettled,
                 active = selected.contains(ReimburseState.SETTLED) && selected.size == 1,
                 modifier = Modifier.weight(1f)
             ) { onToggleState(ReimburseState.SETTLED) }
@@ -433,7 +434,7 @@ internal fun ChaseListCard(
     var copied by remember { mutableStateOf(false) }
 
     SectionCard(
-        title = "催办清单",
+        title = t("催办清单"),
         subtitle = "未回款按垫付天数从久到近 · 共 ${items.size} 笔"
     ) {
         items.take(6).forEach { t ->
@@ -521,7 +522,7 @@ internal fun ChaseListCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    if (copied) "已复制 ✓ 粘贴发给财务" else "复制催办摘要",
+                    if (copied) t("已复制 ✓ 粘贴发给财务") else t("复制催办摘要"),
                     fontSize = 13.sp,
                     lineHeight = 19.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -541,7 +542,7 @@ internal fun ChaseListCard(
                 ) { onFilterAll() }
             ) {
                 Text(
-                    "看全部未回款",
+                    t("看全部未回款"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -640,9 +641,9 @@ private fun ReimburseCompositionBar(summary: ReimburseSummary) {
     val faint = MaterialTheme.colorScheme.onSurfaceVariant
     val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (dark) 0.10f else 0.08f)
     val segs = listOf(
-        Triple(summary.pendingCents, pendingTone(), "待提交"),
-        Triple(summary.submittedCents, ReimburseSubmitted, "已提交"),
-        Triple(summary.settledCents, ReimburseSettled, "已回款"),
+        Triple(summary.pendingCents, pendingTone(), t("待提交")),
+        Triple(summary.submittedCents, ReimburseSubmitted, t("已提交")),
+        Triple(summary.settledCents, ReimburseSettled, t("已回款")),
     ).filter { it.first > 0L }
 
     Column {
@@ -667,9 +668,9 @@ private fun ReimburseCompositionBar(summary: ReimburseSummary) {
             // 图例始终列出三态（含 0%），让"钱压在哪一步"一眼完整；
             // 金额为 0 的档在条里只是 0 宽不可见段，但图例要交代清楚。
             listOf(
-                Triple(summary.pendingCents, pendingTone(), "待提交"),
-                Triple(summary.submittedCents, ReimburseSubmitted, "已提交"),
-                Triple(summary.settledCents, ReimburseSettled, "已回款"),
+                Triple(summary.pendingCents, pendingTone(), t("待提交")),
+                Triple(summary.submittedCents, ReimburseSubmitted, t("已提交")),
+                Triple(summary.settledCents, ReimburseSettled, t("已回款")),
             ).forEach { (cents, color, label) ->
                 val pct = ((cents * 100 + total / 2) / total).toInt()
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -87,6 +87,7 @@ import com.foldledger.ui.vm.AddTxnViewModel
 import com.foldledger.ui.vm.TxnFormState
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 记一笔 / 编辑一笔（外壳）。
@@ -242,7 +243,7 @@ private fun TxnEditor(
                     onDismiss = onDismiss,
                     leadingContent = {
                         PickArea(
-                            title = if (editTxnId == null) "选择分类" else "编辑这一笔",
+                            title = if (editTxnId == null) t("选择分类") else t("编辑这一笔"),
                             subtitle = "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""} · ${scene.name}",
                             form = form,
                             scene = scene,
@@ -261,7 +262,7 @@ private fun TxnEditor(
                             onApplyTemplate = vm::applyTemplate,
                             onSaveTemplate = {
                                 val ok = vm.saveTemplate("")
-                                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+                                AppToastBus.show(if (ok) t("已存为模板，下次一点就用") else t("先填金额、选好分类再存模板"))
                             },
                             columns = 6,
                             compact = false,
@@ -302,7 +303,7 @@ private fun TxnEditor(
                     onDismiss = onDismiss,
                     leadingContent = {
                         PickArea(
-                            title = if (editTxnId == null) "选择分类" else "编辑这一笔",
+                            title = if (editTxnId == null) t("选择分类") else t("编辑这一笔"),
                             subtitle = "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""} · ${scene.name}",
                             form = form,
                             scene = scene,
@@ -321,7 +322,7 @@ private fun TxnEditor(
                             onApplyTemplate = vm::applyTemplate,
                             onSaveTemplate = {
                                 val ok = vm.saveTemplate("")
-                                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+                                AppToastBus.show(if (ok) t("已存为模板，下次一点就用") else t("先填金额、选好分类再存模板"))
                             },
                             columns = if (env.widthDp >= 1000) 6 else 5,
                             compact = false,
@@ -380,7 +381,7 @@ private fun TxnEditor(
                     if (twoColumn) {
                         Row(Modifier.fillMaxSize()) {
                             PickArea(
-                                title = if (editTxnId == null) "记一笔" else "编辑这一笔",
+                                title = if (editTxnId == null) t("记一笔") else t("编辑这一笔"),
                                 subtitle = "${ledger?.emoji ?: "📒"} ${ledger?.name ?: ""} · ${scene.emoji}${scene.name}",
                                 form = form,
                                 scene = scene,
@@ -399,7 +400,7 @@ private fun TxnEditor(
                                 onApplyTemplate = vm::applyTemplate,
                                 onSaveTemplate = {
                                     val ok = vm.saveTemplate("")
-                                    AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+                                    AppToastBus.show(if (ok) t("已存为模板，下次一点就用") else t("先填金额、选好分类再存模板"))
                                 },
                                 columns = pickColumns,
                                 // 矮屏（横屏展开：608dp 高）用紧凑芯片 + 省掉小标题，
@@ -512,7 +513,7 @@ private fun TxnStackedBody(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "取消",
+                t("取消"),
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -522,7 +523,7 @@ private fun TxnStackedBody(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                if (editTxnId == null) "记一笔" else "编辑",
+                if (editTxnId == null) t("记一笔") else t("编辑"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -558,7 +559,7 @@ private fun TxnStackedBody(
             onApplyTemplate = vm::applyTemplate,
             onSaveTemplate = {
                 val ok = vm.saveTemplate("")
-                AppToastBus.show(if (ok) "已存为模板，下次一点就用" else "先填金额、选好分类再存模板")
+                AppToastBus.show(if (ok) t("已存为模板，下次一点就用") else t("先填金额、选好分类再存模板"))
             },
             columns = columns,
             compact = compact,
@@ -683,7 +684,7 @@ private fun PickArea(
         if (showLedgerPicker && allLedgers.isNotEmpty()) {
             if (!dense) {
                 Text(
-                    "账本",
+                    t("账本"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -840,7 +841,7 @@ private fun PickArea(
         if (accounts.isNotEmpty()) {
             Spacer(Modifier.height(gap))
             Text(
-                "账户",
+                t("账户"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -851,7 +852,7 @@ private fun PickArea(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 ProjectPickChip(
-                    label = "未指定",
+                    label = t("未指定"),
                     emoji = null,
                     active = form.accountId == 0L
                 ) { onAccount(0L) }
@@ -867,7 +868,7 @@ private fun PickArea(
 
         Spacer(Modifier.height(gap))
         Text(
-            "分类",
+            t("分类"),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -988,7 +989,7 @@ private fun PickArea(
 
         Spacer(Modifier.height(Space.sm))
         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            listOf("今天" to 0, "昨天" to 1, "前天" to 2).forEach { (label, days) ->
+            listOf(t("今天") to 0, t("昨天") to 1, t("前天") to 2).forEach { (label, days) ->
                 val active = DateExt.isSameDay(
                     form.occurredAt,
                     System.currentTimeMillis() - days * 86_400_000L
@@ -1038,7 +1039,7 @@ private fun DirectionToggle(direction: Int, onChange: (Int) -> Unit) {
         modifier = Modifier.width(180.dp)
     ) {
         Row(Modifier.padding(3.dp)) {
-            listOf(Direction.EXPENSE to "支出", Direction.INCOME to "收入").forEach { (d, label) ->
+            listOf(Direction.EXPENSE to t("支出"), Direction.INCOME to t("收入")).forEach { (d, label) ->
                 val active = d == direction
                 val c = if (d == Direction.EXPENSE) dc.expense else dc.income
                 // v13.9：原来是"方向色实心胶囊"（整块深豆沙 + 白字），
@@ -1480,7 +1481,7 @@ private fun NumberPad(
         }
         Column(Modifier.weight(1f)) {
             PadKey(
-                label = "清空",
+                label = t("清空"),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -1490,7 +1491,7 @@ private fun NumberPad(
                 fontSize = 15
             )
             PadKey(
-                label = "保存",
+                label = t("保存"),
                 modifier = Modifier
                     .weight(2f)
                     .fillMaxWidth()

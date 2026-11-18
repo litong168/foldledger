@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * 智能洞察（v8.0）——从「记录」到「懂账」。
@@ -59,7 +60,7 @@ class InsightViewModel(
                 categoryEmoji = s.categoryEmoji,
                 direction = s.direction,
                 amountCents = s.amountCents,
-                note = "智能识别加入",
+                note = t("智能识别加入"),
                 intervalKind = s.intervalKind,
                 nextDueAt = s.predictedNextAt,
                 enabled = true

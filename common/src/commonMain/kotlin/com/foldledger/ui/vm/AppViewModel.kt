@@ -180,6 +180,9 @@ class AppViewModel(
     fun setDynamicColor(v: Boolean) = viewModelScope.launch { ServiceLocator.preferences.setDynamicColor(v) }
     fun setColorConvention(v: Int) = viewModelScope.launch { ServiceLocator.preferences.setColorConvention(v) }
 
+    /** 界面语言："zh" / "en"。settings 流会把新值推给 AppRoot 的 LocalLanguage。 */
+    fun setLanguage(code: String) = viewModelScope.launch { ServiceLocator.preferences.setLanguage(code) }
+
     fun setHighRefreshRate(v: Boolean) =
         viewModelScope.launch { ServiceLocator.preferences.setHighRefreshRate(v) }
 

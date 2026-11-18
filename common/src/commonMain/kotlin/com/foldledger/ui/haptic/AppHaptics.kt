@@ -1,5 +1,6 @@
 package com.foldledger.ui.haptic
 
+import com.foldledger.ui.l10n.t
 /**
  * 触感反馈引擎（v5.0）。
  *
@@ -24,7 +25,7 @@ expect object AppHaptics {
     /** 普通按钮 / 切换 */
     fun tap()
 
-    /** 确认类动作（保存、删除、创建）：稍重一点，给"事情办成了"的实感 */
+    /** 确认类动作（保存、删除、创建）：稍重一点，给t("事情办成了")的实感 */
     fun confirm()
 
     /** 设置页「试一下」用：按当前强度播一次确认反馈 */

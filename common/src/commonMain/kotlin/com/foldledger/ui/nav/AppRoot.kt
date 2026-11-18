@@ -85,11 +85,14 @@ import com.foldledger.ui.screens.StatsScreen
 import com.foldledger.ui.theme.FoldLedgerTheme
 import com.foldledger.ui.theme.GlassGlowController
 import com.foldledger.ui.theme.LocalGlassGlow
+import com.foldledger.ui.l10n.Language
+import com.foldledger.ui.l10n.L10n
 import com.foldledger.ui.nav.rememberPlatformScreens
 import com.foldledger.ui.vm.AppViewModel
 import com.foldledger.ui.vm.BackupViewModel
 import com.foldledger.ui.vm.rememberBackupViewModel
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 object Routes {
     const val LEDGERS = "ledgers"
@@ -216,6 +219,12 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
             rawCards.sortedBy { rank[it.ledger.id] ?: Int.MAX_VALUE }
         }
     }
+
+    // v16.7：语言从偏好派生，组合成功后再同步到全局 L10n（SideEffect 避免在组合期写 Snapshot 状态）。
+    // settings 是唯一数据源；语言变化 → settings 流发新值 → 本函数重组 → SideEffect 更新
+    // L10n.language → 所有读过 t() 的 Composable 因依赖该 Snapshot 状态而重组、取到新文案。
+    val language = Language.fromCode(settings.language)
+    androidx.compose.runtime.SideEffect { L10n.current = language }
 
     FoldLedgerTheme(settings = settings) {
         CompositionLocalProvider(LocalGlassGlow provides remember { GlassGlowController() }) {
@@ -354,12 +363,12 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
         val chromeSubtitle: String
         when (currentTab) {
             AppTab.LEDGERS -> {
-                chromeTitle = "账本"
+                chromeTitle = t("账本")
                 chromeSubtitle =
-                    if (cards.isEmpty()) "还没有账本" else "${cards.size} 个分账本 · 点一下选中它"
+                    if (cards.isEmpty()) t("还没有账本") else "${cards.size} 个分账本 · 点一下选中它"
             }
             AppTab.MINE -> {
-                chromeTitle = "我的"
+                chromeTitle = t("我的")
                 chromeSubtitle = "备份 · 外观 · 数据安全"
             }
             else -> {
@@ -367,11 +376,11 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
                 // 原来 23sp 写着恒定的「明细」，账本名挤在 11sp 的副标题里，
                 // 下面再排一整行账本 chips —— 最大的字没信息量，有信息量的字最小。
                 // 现在反过来：大标题 = 当前账本名（点右侧箭头换），小字 = 场景。
-                chromeTitle = currentLedger?.ledger?.name ?: "明细"
+                chromeTitle = currentLedger?.ledger?.name ?: t("明细")
                 chromeSubtitle = currentLedger?.let {
                     val scene = ScenePresets.byKey(it.ledger.sceneKey)
                     "${scene.emoji} ${scene.name}"
-                } ?: "还没有账本"
+                } ?: t("还没有账本")
             }
         }
 
@@ -435,7 +444,7 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
                         // 账本页右上角直达「我的」
                         AppTab.LEDGERS -> {
                             IconButton(onClick = { goTab(AppTab.MINE) }) {
-                                Icon(Icons.Filled.Settings, contentDescription = "设置")
+                                Icon(Icons.Filled.Settings, contentDescription = t("设置"))
                             }
                         }
                         // 明细页（v12）：顶栏只留两个**单色**动作 —— 搜索 + 更多。
@@ -753,7 +762,7 @@ fun AppRoot(pendingQuickAdd: MutableState<Boolean> = mutableStateOf(false)) {
                     // 用户滚在看老账时根本不知道新的一笔进没进
                     onSaved = {
                         com.foldledger.ui.components.AppToastBus.show(
-                            if (target.txnId != null) "已保存修改" else "已记下一笔"
+                            if (target.txnId != null) t("已保存修改") else "已记下一笔"
                         )
                     }
                 )
@@ -876,19 +885,19 @@ private fun DetailToolsMenu(
             // 这里再传一套等于让"材质"有两个出处，改一处忘一处就会出现
             // "这个菜单是玻璃、那个菜单是实色"。
         ) {
-            ToolMenuItem("📊", "统计", "收支结构 · 趋势 · 智能洞察") {
+            ToolMenuItem("📊", t("统计"), "收支结构 · 趋势 · 智能洞察") {
                 open = false
                 openPage(OverlayTarget.Stats(ledgerId))
             }
-            ToolMenuItem("📅", "消费日历", "哪天花得多，一眼看出来") {
+            ToolMenuItem("📅", t("消费日历"), "哪天花得多，一眼看出来") {
                 open = false
                 openPage(OverlayTarget.SpendCalendar(ledgerId))
             }
-            ToolMenuItem("🏷️", "分类管理", "增删分类、设置预算") {
+            ToolMenuItem("🏷️", t("分类管理"), "增删分类、设置预算") {
                 open = false
                 openPage(OverlayTarget.Categories(ledgerId))
             }
-            ToolMenuItem("💳", "资产账户", "银行卡 / 钱包 / 余额") {
+            ToolMenuItem("💳", t("资产账户"), "银行卡 / 钱包 / 余额") {
                 open = false
                 openPage(OverlayTarget.Accounts(ledgerId))
             }

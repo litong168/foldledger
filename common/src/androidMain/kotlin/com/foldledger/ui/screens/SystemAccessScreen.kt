@@ -47,6 +47,7 @@ import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.theme.dividerBrush
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import com.foldledger.util.MiuiSettings
+import com.foldledger.ui.l10n.t
 
 /**
  * 系统权限引导（v8.1.1）——给小米 HyperOS 的管控开路。
@@ -90,8 +91,8 @@ fun SystemAccessScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "系统权限引导",
-        subtitle = "小米 HyperOS 三道闸门 · 逐项解锁",
+        title = t("系统权限引导"),
+        subtitle = t("小米 HyperOS 三道闸门 · 逐项解锁"),
         onBack = onBack,
         showNavigation = false
     ) { padding ->
@@ -160,20 +161,20 @@ fun SystemAccessScreen(
 private fun InstallBlockedCard() {
     val context = LocalContext.current
     SectionCard(
-        title = "安装时被拦？",
-        subtitle = "「未知来源应用」/「纯净模式」是 HyperOS 对侧载安装的默认拦截"
+        title = t("安装时被拦？"),
+        subtitle = t("「未知来源应用」/「纯净模式」是 HyperOS 对侧载安装的默认拦截")
     ) {
         StepLine("1", "系统弹「未知来源应用」→ 点提示进设置，给**文件管理/浏览器**（你用来打开 APK 的那个 App）开「允许安装应用」")
         StepLine("2", "提示「已被纯净模式/安全守护拦截」→ 打开**手机管家**，搜「纯净模式」（或安全守护）→ 关闭，或选「仍要安装」")
         StepLine("3", "以上都没有 → 设置 › 隐私保护 › 特殊权限 › 安装未知应用，手动打开来源开关")
         Spacer(Modifier.height(4.dp))
         Text(
-            "同签名更新（8.x 覆盖安装）不会再弹这个提示，只第一次装 / 换来源装会拦。",
+            t("同签名更新（8.x 覆盖安装）不会再弹这个提示，只第一次装 / 换来源装会拦。"),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(12.dp))
-        GuideButton(label = "打开「安装未知应用」设置") {
+        GuideButton(label = t("打开「安装未知应用」设置")) {
             MiuiSettings.openInstallUnknownApps(context)
         }
     }
@@ -190,55 +191,55 @@ private fun AccessList(
 ) {
     val context = LocalContext.current
     SectionCard(
-        title = "自动记账需要的权限",
-        subtitle = "前三项是硬性前提：缺任何一项都收不到账"
+        title = t("自动记账需要的权限"),
+        subtitle = t("前三项是硬性前提：缺任何一项都收不到账")
     ) {
         AccessRow(
             emoji = "🔔",
-            label = "通知使用权",
-            hint = "读取微信/支付宝/云闪付的支付通知",
+            label = t("通知使用权"),
+            hint = t("读取微信/支付宝/云闪付的支付通知"),
             ok = notifGranted,
-            actionLabel = "去授权"
+            actionLabel = t("去授权")
         ) { MiuiSettings.openNotificationAccess(context) }
 
         AccessRow(
             emoji = "✉️",
-            label = "短信权限",
-            hint = "接收银行动账短信（系统弹窗点「允许」）",
+            label = t("短信权限"),
+            hint = t("接收银行动账短信（系统弹窗点「允许」）"),
             ok = smsGranted,
-            actionLabel = "授予权限",
+            actionLabel = t("授予权限"),
             onAction = onSmsRequest
         )
 
         AccessRow(
             emoji = "🚀",
-            label = "自启动",
-            hint = "小米管控重点：不给自启动，通知监听被杀、短信广播收不到",
+            label = t("自启动"),
+            hint = t("小米管控重点：不给自启动，通知监听被杀、短信广播收不到"),
             ok = null, // 无法可靠探测，只给入口
-            actionLabel = "去开启"
+            actionLabel = t("去开启")
         ) { MiuiSettings.openAutostart(context) }
 
         AccessRow(
             emoji = "🔋",
-            label = "省电策略 · 无限制",
-            hint = "被省电策略管住的 App 会被冻结，捕获全停。设为「无限制」",
+            label = t("省电策略 · 无限制"),
+            hint = t("被省电策略管住的 App 会被冻结，捕获全停。设为「无限制」"),
             ok = null,
-            actionLabel = "去设置"
+            actionLabel = t("去设置")
         ) { MiuiSettings.openBatteryPolicy(context) }
 
         AccessRow(
             emoji = "⚡",
-            label = "电池优化白名单",
-            hint = "标准安卓通道，多一道保险（会弹系统确认框）",
+            label = t("电池优化白名单"),
+            hint = t("标准安卓通道，多一道保险（会弹系统确认框）"),
             ok = batteryOk,
-            actionLabel = "加入白名单"
+            actionLabel = t("加入白名单")
         ) { MiuiSettings.requestIgnoreBatteryOptimizations(context) }
 
         Spacer(Modifier.height(10.dp))
         Text(
-            "各机型入口略有不同 —— 打不开的会落到「应用详情」页，" +
-                "自启动 / 耗电策略 / 权限都在那里面。全部打 ✅ 后，" +
-                "付一笔款就会出现在「自动记账」账本里。",
+            t("各机型入口略有不同 —— 打不开的会落到「应用详情」页，") +
+                t("自启动 / 耗电策略 / 权限都在那里面。全部打 ✅ 后，") +
+                t("付一笔款就会出现在「自动记账」账本里。"),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

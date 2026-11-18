@@ -29,8 +29,11 @@ import com.foldledger.APP_VERSION_NAME
 import com.foldledger.data.prefs.AppSettings
 import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.components.SectionCard
+import com.foldledger.ui.l10n.Language
+import com.foldledger.ui.l10n.LanguageCard
 import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.vm.AppViewModel
+import com.foldledger.ui.l10n.t
 
 /** 桌面端「更多设置」卡：提醒偏好可写，关于卡显示版本。 */
 @Composable
@@ -48,12 +51,15 @@ actual fun MoreSettingsCards(
             .padding(horizontal = Layout.sidePadding(env.widthDp)),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SectionCard(overline = "提醒", title = "记账提醒", subtitle = "每天定时提醒你记一笔") {
+        SectionCard(overline = t("提醒"), title = t("记账提醒"), subtitle = t("每天定时提醒你记一笔")) {
             Row_Reminder(enabled = settings.reminderEnabled, onToggle = toggleReminder)
+        }
+        LanguageCard(current = Language.fromCode(settings.language)) { lang ->
+            appVm.setLanguage(lang.code)
         }
         // v16.6：关于卡加捐赠入口（不打扰、不捆绑功能）
         val showDonation = remember { mutableStateOf(false) }
-        SectionCard(overline = "关于", title = "滴水记账") {
+        SectionCard(overline = t("关于"), title = t("滴水记账")) {
             Text(
                 "Windows 桌面版 · 版本 $APP_VERSION_NAME",
                 fontSize = 13.sp,
@@ -79,9 +85,9 @@ actual fun MoreSettingsCards(
             }
         }
         if (showDonation.value) DonationQrDialog(onDismiss = { showDonation.value = false })
-        SectionCard(overline = "说明", title = "其余设置") {
+        SectionCard(overline = t("说明"), title = t("其余设置")) {
             Text(
-                "手感 / 配色 / 折叠屏适配等设置将在桌面版后续版本提供",
+                t("手感 / 配色 / 折叠屏适配等设置将在桌面版后续版本提供"),
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -101,7 +107,7 @@ private fun Row_Reminder(enabled: Boolean, onToggle: (Boolean) -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            "每日提醒",
+            t("每日提醒"),
             fontSize = 15.sp,
             lineHeight = 22.sp,
             color = MaterialTheme.colorScheme.onSurface

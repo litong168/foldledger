@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import java.util.Calendar
+import com.foldledger.ui.l10n.t
 
 private val STOP_EAGER = SharingStarted.WhileSubscribed(5_000)
 
@@ -254,7 +255,7 @@ class LedgerDetailViewModel(
     //  周期记账（v5.7 固定支出）
     // ============================================================
 
-    /** 到期判定用的"现在"。App 长时间开着跨过月末时，靠 [refreshRecurring] 重算 */
+    /** 到期判定用的t("现在")。App 长时间开着跨过月末时，靠 [refreshRecurring] 重算 */
     private val recurringClock = MutableStateFlow(System.currentTimeMillis())
 
     /** 已到期、等入账的固定支出 */
@@ -389,7 +390,7 @@ class LedgerDetailViewModel(
             }.sortedBy { it.occurredAt }
         }.stateIn(viewModelScope, STOP_EAGER, emptyList())
 
-    /** 未回款账龄分档（7天内/8-30/31-90/90天+）+ 最久天数 + 30 天以上"该催的" */
+    /** 未回款账龄分档（7天内/8-30/31-90/90天+）+ 最久天数 + 30 天以上t("该催的") */
     val reimburseAging: StateFlow<ReimburseAging.Summary> =
         outstandingItems
             .map { ReimburseAging.summarize(it, System.currentTimeMillis()) }
@@ -408,7 +409,7 @@ class LedgerDetailViewModel(
     fun deleteTransaction(id: Long) = viewModelScope.launch {
         repo.deleteTransaction(id)
         // v9.8.0：删完给一句回执 —— 唯一的变化是"那行消失了"，分不清是删掉了还是列表刷掉了
-        com.foldledger.ui.components.AppToastBus.show("已删除这一笔")
+        com.foldledger.ui.components.AppToastBus.show(t("已删除这一笔"))
     }
 
     fun setReimburseState(ids: List<Long>, state: Int) =
@@ -542,9 +543,9 @@ class LedgerDetailViewModel(
         viewModelScope.launch {
             repo.moveTransactionTo(txnId, target)
             undoConfirm = listOf(txnId) to ledgerId
-            val name = repo.ledger(target).first()?.name ?: "目标账本"
+            val name = repo.ledger(target).first()?.name ?: t("目标账本")
             com.foldledger.ui.components.AppToastBus.show(
-                "已入账到「$name」", "撤销"
+                "已入账到「$name」", t("撤销")
             ) { undoLastConfirm() }
         }
         return true
@@ -556,9 +557,9 @@ class LedgerDetailViewModel(
         com.foldledger.ServiceLocator.preferences.setLastConfirmLedger(targetLedgerId)
         ids.forEach { repo.moveTransactionTo(it, targetLedgerId) }
         undoConfirm = ids to ledgerId
-        val name = repo.ledger(targetLedgerId).first()?.name ?: "目标账本"
+        val name = repo.ledger(targetLedgerId).first()?.name ?: t("目标账本")
         com.foldledger.ui.components.AppToastBus.show(
-            "已确认 ${ids.size} 笔入账到「$name」", "撤销"
+            "已确认 ${ids.size} 笔入账到「$name」", t("撤销")
         ) { undoLastConfirm() }
         exitMultiSelect()
     }
@@ -869,7 +870,7 @@ private fun buildCheckup(
             diff < 0L && pct <= -5 ->
                 CheckupLine("📉", "比上月少花 ${Money.format(-diff)}", "下降 ${-pct}%", 1)
             else ->
-                CheckupLine("➖", "和上月基本持平", "相差 ${Money.format(kotlin.math.abs(diff))}", 0)
+                CheckupLine("➖", t("和上月基本持平"), "相差 ${Money.format(kotlin.math.abs(diff))}", 0)
         }
 
         // ② 涨得最多的那个分类（只报"涨"，且要有上月基数可比）
@@ -1427,20 +1428,20 @@ class AddTxnViewModel(
 
 /** 时间范围 */
 enum class FilterTimeRange(val label: String) {
-    ALL("全部时间"),
-    TODAY("今天"),
-    THIS_WEEK("本周"),
-    THIS_MONTH("本月"),
-    LAST_MONTH("上月")
+    ALL(t("全部时间")),
+    TODAY(t("今天")),
+    THIS_WEEK(t("本周")),
+    THIS_MONTH(t("本月")),
+    LAST_MONTH(t("上月"))
 }
 
 /** 金额区间（单位：元；流水内部存分，所以这里也是分） */
 enum class FilterAmount(val label: String, val minCents: Long, val maxCents: Long?) {
-    ANY("不限金额", 0, null),
-    LT_50("50 元以下", 0, 50_00),
+    ANY(t("不限金额"), 0, null),
+    LT_50(t("50 元以下"), 0, 50_00),
     B50_200("50 ~ 200", 50_00, 200_00),
     B200_1000("200 ~ 1000", 200_00, 1000_00),
-    GT_1000("1000 元以上", 1000_00, null)
+    GT_1000(t("1000 元以上"), 1000_00, null)
 }
 
 /**
@@ -1461,8 +1462,8 @@ data class TxnFilter(
     fun summary(): String {
         val parts = ArrayList<String>(3)
         if (timeRange != FilterTimeRange.ALL) parts.add(timeRange.label)
-        if (direction == Direction.EXPENSE) parts.add("支出")
-        if (direction == Direction.INCOME) parts.add("收入")
+        if (direction == Direction.EXPENSE) parts.add(t("支出"))
+        if (direction == Direction.INCOME) parts.add(t("收入"))
         if (amount != FilterAmount.ANY) parts.add(amount.label)
         return parts.joinToString(" · ")
     }

@@ -35,6 +35,7 @@ import com.foldledger.ui.anim.clickableScale
 import com.foldledger.ui.components.SectionCard
 import com.foldledger.ui.theme.Radius
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * M4.5 双端共享同步卡：开关 / 服务器地址 / 注册 / 手动与自动同步 / 状态。
@@ -53,9 +54,9 @@ fun SyncSectionCard(
     val scope = rememberCoroutineScope()
 
     SectionCard(
-        overline = "同步",
-        title = "手机 ↔ 电脑",
-        subtitle = "自托管服务，双端账本自动保持一致"
+        overline = t("同步"),
+        title = t("手机 ↔ 电脑"),
+        subtitle = t("自托管服务，双端账本自动保持一致")
     ) {
         // 总开关
         Row(
@@ -66,7 +67,7 @@ fun SyncSectionCard(
             Column(Modifier.weight(1f)) {
                 Text("启用双端同步", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    if (state.registered) "本机设备 ID：${state.deviceId}" else "把账本同步到你自己的服务器",
+                    if (state.registered) "本机设备 ID：${state.deviceId}" else t("把账本同步到你自己的服务器"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -80,7 +81,7 @@ fun SyncSectionCard(
         if (state.enabled) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "服务器地址",
+                t("服务器地址"),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -99,7 +100,7 @@ fun SyncSectionCard(
 
             Spacer(Modifier.height(8.dp))
             Text(
-                "访问密钥（可选）",
+                t("访问密钥（可选）"),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,7 +125,7 @@ fun SyncSectionCard(
                     enabled = !state.syncing,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (state.syncing) "注册中…" else "注册此设备")
+                    Text(if (state.syncing) t("注册中…") else t("注册此设备"))
                 }
             } else {
                 Spacer(Modifier.height(6.dp))
@@ -144,7 +145,7 @@ fun SyncSectionCard(
                     enabled = !state.syncing,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (state.syncing) "同步中…" else "立即同步")
+                    Text(if (state.syncing) t("同步中…") else t("立即同步"))
                 }
                 Spacer(Modifier.height(6.dp))
                 OutlinedButton(
@@ -186,10 +187,10 @@ fun SyncSectionCard(
 
         Spacer(Modifier.height(10.dp))
         Text(
-            "同步会把账本数据发送到你填写的服务器（建议内网或自配 HTTPS）；" +
+            t("同步会把账本数据发送到你填写的服务器（建议内网或自配 HTTPS）；") +
                 "「自动记账」账本不参与同步。\n" +
-                "地址只写到端口，例如 http://192.168.1.4:8451 —— 不要带 /sync，也不要带路径；" +
-                "端口要填服务端映射出来的宿主端口（本项目自建服务容器内默认 8701，部署时可能被映射成别的，以 docker 端口表为准）。",
+                t("地址只写到端口，例如 http://192.168.1.4:8451 —— 不要带 /sync，也不要带路径；") +
+                t("端口要填服务端映射出来的宿主端口（本项目自建服务容器内默认 8701，部署时可能被映射成别的，以 docker 端口表为准）。"),
             fontSize = 11.sp,
             lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -206,7 +207,7 @@ fun SyncSectionCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "同步记录",
+                t("同步记录"),
                 // v16.3.1：入口行主文本与同页其它二级卡统一 15.sp + 固定行盒
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
@@ -214,7 +215,7 @@ fun SyncSectionCard(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                if (history.isEmpty()) "还没有记录" else "最近 ${history.size} 次 · 冲突可展开",
+                if (history.isEmpty()) t("还没有记录") else "最近 ${history.size} 次 · 冲突可展开",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

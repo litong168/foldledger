@@ -66,6 +66,7 @@ import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.glassSurface
 import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.SurfaceCard
+import com.foldledger.ui.l10n.t
 
 // ============================================================
 //  通用小组件
@@ -603,7 +604,7 @@ fun TrendBars(
     if (days.isEmpty()) {
         Box(modifier = modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
             Text(
-                "暂无数据",
+                t("暂无数据"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -125,6 +125,7 @@ import com.foldledger.ui.theme.onColorFor
 import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -395,7 +396,7 @@ private fun TxnRow(
             IconButton(onClick = { menu = true }) {
                 Icon(
                     Icons.Filled.MoreVert,
-                    contentDescription = "更多",
+                    contentDescription = t("更多"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
@@ -417,9 +418,9 @@ private fun TxnRow(
 /** 报销状态 → (文案, 配色)，列表徽标与选择菜单共用一份，避免两处写差 */
 @Composable
 private fun reimburseLook(state: Int): Pair<String, Color> = when (state) {
-    ReimburseState.PENDING -> "待提交" to pendingTone()
-    ReimburseState.SUBMITTED -> "已提交" to ReimburseSubmitted
-    else -> "已回款" to ReimburseSettled
+    ReimburseState.PENDING -> t("待提交") to pendingTone()
+    ReimburseState.SUBMITTED -> t("已提交") to ReimburseSubmitted
+    else -> t("已回款") to ReimburseSettled
 }
 
 /**
@@ -465,7 +466,7 @@ private fun ReimburseStateChip(
 
         GlassMenu(expanded = expanded, onDismissRequest = { onExpandChange(false) }) {
             Text(
-                "报销状态",
+                t("报销状态"),
                 fontSize = 11.sp,
                 letterSpacing = 0.3.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

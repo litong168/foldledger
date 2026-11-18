@@ -27,6 +27,7 @@ import java.util.Locale
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 import kotlin.coroutines.resume
+import com.foldledger.ui.l10n.t
 
 /**
  * 桌面端备份实现：与 Android 共用同一套备份格式（BackupFormat / BackupCipher / ExcelExporter /
@@ -83,7 +84,7 @@ private class DesktopBackupViewModel(
                     // 用户点了按钮、什么都没弹、卡片上一个字都没变，观感等同"按钮坏了"
                     _state.value = _state.value.copy(
                         phase = BackupPhase.IDLE,
-                        message = "已取消选择备份文件夹"
+                        message = t("已取消选择备份文件夹")
                     )
                     return@launch
                 }
@@ -110,7 +111,7 @@ private class DesktopBackupViewModel(
                 val path = pickFolder() ?: run {
                     _state.value = _state.value.copy(
                         phase = BackupPhase.IDLE,
-                        message = "已取消选择备份文件夹"
+                        message = t("已取消选择备份文件夹")
                     )
                     return@launch
                 }
@@ -132,7 +133,7 @@ private class DesktopBackupViewModel(
                         prefs.setAutoBackupEnabled(false)
                         _state.value = _state.value.copy(
                             autoBackupEnabled = false,
-                            message = "没有选备份文件夹，自动备份未开启"
+                            message = t("没有选备份文件夹，自动备份未开启")
                         )
                         return@launch
                     }
@@ -209,15 +210,15 @@ private class DesktopBackupViewModel(
         val entry = _state.value.pendingDelete ?: return
         val dir = folderPath?.let { File(it) } ?: return
         _state.value = _state.value.copy(pendingDelete = null)
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在移入回收站…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在移入回收站…"))
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
                     if (!BackupFormat.isBackupFileName(entry.fileName)) {
-                        error("这个文件不是滴水记账的备份，已拒绝删除")
+                        error(t("这个文件不是滴水记账的备份，已拒绝删除"))
                     }
                     val json = File(dir, entry.fileName)
-                    if (!json.isFile) error("删除失败，可能文件已被移除")
+                    if (!json.isFile) error(t("删除失败，可能文件已被移除"))
 
                     // v16.3：与 Android 一样「先留副本 → 记清单 → 最后才删原件」。
                     // 顺序不能反：副本写失败就绝不删用户的文件；清单用原子读改写，
@@ -226,7 +227,7 @@ private class DesktopBackupViewModel(
                     prefs.mutateRecycledBackups { current -> current + item }
 
                     File(dir, DesktopRecycleStore.xlsxNameOf(entry.fileName)).delete()
-                    if (!json.delete()) error("删除失败，可能文件已被移除")
+                    if (!json.delete()) error(t("删除失败，可能文件已被移除"))
                 }
             }
                 .onSuccess {
@@ -239,7 +240,7 @@ private class DesktopBackupViewModel(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         phase = BackupPhase.FAILED,
-                        message = e.message ?: "删除失败"
+                        message = e.message ?: t("删除失败")
                     )
                 }
         }
@@ -273,7 +274,7 @@ private class DesktopBackupViewModel(
             val path = pickFolder() ?: run {
                 _state.value = _state.value.copy(
                     phase = BackupPhase.IDLE,
-                    message = "已取消更换备份文件夹"
+                    message = t("已取消更换备份文件夹")
                 )
                 return@launch
             }
@@ -286,14 +287,14 @@ private class DesktopBackupViewModel(
         }
     }
 
-    /** 用资源管理器打开备份目录 —— "导出的文件到底在哪"最直接的答案 */
+    /** 用资源管理器打开备份目录 —— t("导出的文件到底在哪")最直接的答案 */
     override fun openFolder(): Boolean {
         val dir = folderPath?.let { File(it) }?.takeIf { it.isDirectory } ?: run {
-            _state.value = _state.value.copy(phase = BackupPhase.FAILED, message = "还没设置备份文件夹")
+            _state.value = _state.value.copy(phase = BackupPhase.FAILED, message = t("还没设置备份文件夹"))
             return false
         }
         return runCatching {
-            if (!java.awt.Desktop.isDesktopSupported()) error("当前系统不支持打开文件夹")
+            if (!java.awt.Desktop.isDesktopSupported()) error(t("当前系统不支持打开文件夹"))
             java.awt.Desktop.getDesktop().open(dir)
             true
         }.getOrElse { e ->
@@ -321,7 +322,7 @@ private class DesktopBackupViewModel(
             _state.value = _state.value.copy(
                 pickingRestore = false,
                 phase = BackupPhase.FAILED,
-                message = "备份目录里没有可恢复的备份"
+                message = t("备份目录里没有可恢复的备份")
             )
         } else if (newest.encrypted) {
             _state.value = _state.value.copy(pendingRestorePassword = newest)
@@ -362,7 +363,7 @@ private class DesktopBackupViewModel(
                 val chooser = JFileChooser().apply {
                     fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
                     isAcceptAllFileFilterUsed = false
-                    dialogTitle = "选择备份文件夹"
+                    dialogTitle = t("选择备份文件夹")
                     val home = System.getProperty("user.home")
                     File(home, "Downloads").takeIf { it.isDirectory }?.let { selectedFile = it }
                 }
@@ -393,14 +394,14 @@ private class DesktopBackupViewModel(
         val dir = folderPath?.let { File(it) } ?: return
         _state.value = _state.value.copy(
             phase = BackupPhase.WORKING,
-            message = if (auto) "正在自动备份…" else "正在导出备份…"
+            message = if (auto) t("正在自动备份…") else t("正在导出备份…")
         )
         runCatching { exportInternal(dir, auto, passphrase) }
             .onSuccess { r ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.DONE,
                     message = buildString {
-                        append(if (r.isAuto) "已自动备份" else "已导出")
+                        append(if (r.isAuto) t("已自动备份") else t("已导出"))
                         append(" ${r.ledgerCount} 个账本 / ${r.txnCount} 笔流水")
                         append(" → ").append(r.folderLabel)
                         if (r.prunedFiles > 0) append("（清理了 ${r.prunedFiles} 个旧文件）")
@@ -413,7 +414,7 @@ private class DesktopBackupViewModel(
             .onFailure { e ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.FAILED,
-                    message = e.message ?: "导出失败，请重试"
+                    message = e.message ?: t("导出失败，请重试")
                 )
             }
     }
@@ -430,7 +431,7 @@ private class DesktopBackupViewModel(
         val snapshot = repo.snapshot()
         if (snapshot.ledgerCount == 0) {
             if (auto) return@withContext ExportOutcome("", 0, 0, 0, true)
-            error("还没有任何账本，没什么可备份的")
+            error(t("还没有任何账本，没什么可备份的"))
         }
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.CHINA).format(Date(snapshot.exportedAt))
@@ -508,13 +509,13 @@ private class DesktopBackupViewModel(
 
     private suspend fun doImport() {
         val dir = folderPath?.let { File(it) } ?: return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在查找备份…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在查找备份…"))
         runCatching { listBackups(dir) }
             .onSuccess { list ->
                 if (list.isEmpty()) {
                     _state.value = _state.value.copy(
                         phase = BackupPhase.FAILED,
-                        message = "备份目录里没找到「滴水记账」的备份文件，先导出一次吧"
+                        message = t("备份目录里没找到「滴水记账」的备份文件，先导出一次吧")
                     )
                 } else {
                     _state.value = _state.value.copy(
@@ -528,7 +529,7 @@ private class DesktopBackupViewModel(
             .onFailure { e ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.FAILED,
-                    message = e.message ?: "读取备份目录失败"
+                    message = e.message ?: t("读取备份目录失败")
                 )
             }
     }
@@ -539,7 +540,7 @@ private class DesktopBackupViewModel(
         asNew: Boolean = false
     ) {
         val dir = folderPath?.let { File(it) } ?: return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在恢复…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在恢复…"))
         runCatching {
             // 覆盖恢复前先留一份当前现场；追加恢复不动现有数据，不用留
             if (!asNew && !repo.isDatabaseEmpty()) {
@@ -643,14 +644,14 @@ private class DesktopBackupViewModel(
         passphrase: String? = null
     ): BackupSnapshot = withContext(Dispatchers.IO) {
         val file = File(dir, fileName)
-        if (!file.isFile) error("读取备份文件失败")
+        if (!file.isFile) error(t("读取备份文件失败"))
         val bytes = file.readBytes()
         val plaintext = if (BackupCipher.isEncrypted(bytes)) {
-            if (passphrase.isNullOrBlank()) error("这份备份已加密，需要输入密码才能恢复")
+            if (passphrase.isNullOrBlank()) error(t("这份备份已加密，需要输入密码才能恢复"))
             try {
                 BackupCipher.decrypt(bytes, passphrase)
             } catch (e: IllegalStateException) {
-                error(e.message ?: "备份密码不正确，无法解密")
+                error(e.message ?: t("备份密码不正确，无法解密"))
             }
         } else {
             bytes

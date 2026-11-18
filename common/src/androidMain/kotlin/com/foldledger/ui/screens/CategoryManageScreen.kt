@@ -82,6 +82,7 @@ import com.foldledger.util.IconStore
 import com.foldledger.util.Money
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * 分类管理。
@@ -175,14 +176,14 @@ fun CategoryManageScreen(
 
         AdaptiveScaffold(
             env = env,
-            title = "分类管理",
+            title = t("分类管理"),
             subtitle = "共 ${categories.size} 个分类 · 删了预置分类也能一键找回",
             onBack = onBack,
             showNavigation = false,
             actions = {
                 Box {
                     IconButton(onClick = { confirmRestore = true }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "恢复预置分类")
+                        Icon(Icons.Filled.Refresh, contentDescription = t("恢复预置分类"))
                     }
                     if (missing > 0) {
                         Box(
@@ -220,7 +221,7 @@ fun CategoryManageScreen(
                 if (env.twoPane) {
                     Row(Modifier.fillMaxSize()) {
                         CategoryColumn(
-                            title = "支出分类",
+                            title = t("支出分类"),
                             direction = Direction.EXPENSE,
                             items = categories.filter { it.direction == Direction.EXPENSE },
                             draftName = draftName[Direction.EXPENSE].orEmpty(),
@@ -248,7 +249,7 @@ fun CategoryManageScreen(
                                 .background(dividerBrush())
                         )
                         CategoryColumn(
-                            title = "收入分类",
+                            title = t("收入分类"),
                             direction = Direction.INCOME,
                             items = categories.filter { it.direction == Direction.INCOME },
                             draftName = draftName[Direction.INCOME].orEmpty(),
@@ -402,21 +403,21 @@ fun CategoryManageScreen(
                         )
                         Spacer(Modifier.height(Space.sm))
                         Text(
-                            "删掉之后，可以在右上角 ↺ 里一键恢复回来，所以你随时能反悔。",
+                            t("删掉之后，可以在右上角 ↺ 里一键恢复回来，所以你随时能反悔。"),
                             fontSize = 13.sp,
                             lineHeight = 20.sp,
                             color = CoolGreen
                         )
                     } else {
                         Text(
-                            "这是你自己新建的分类，删除后记录里就找不回来了（需要重新创建）。",
+                            t("这是你自己新建的分类，删除后记录里就找不回来了（需要重新创建）。"),
                             fontSize = 13.sp,
                             lineHeight = 20.sp
                         )
                     }
                     Spacer(Modifier.height(Space.md))
                     Text(
-                        "已经记过的流水不受影响 —— 分类名和图标是冗余存在每条流水里的，历史记录照常显示。",
+                        t("已经记过的流水不受影响 —— 分类名和图标是冗余存在每条流水里的，历史记录照常显示。"),
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -452,7 +453,7 @@ fun CategoryManageScreen(
                         )
                         Spacer(Modifier.height(Space.sm))
                         Text(
-                            "已有的分类不会被改动 —— 你改过的名字、换过的图标都会原样保留。",
+                            t("已有的分类不会被改动 —— 你改过的名字、换过的图标都会原样保留。"),
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -472,7 +473,7 @@ fun CategoryManageScreen(
                     onClick = {
                         confirmRestore = false
                         vm.restorePresetCategories { n ->
-                            showToast(if (n > 0) "已恢复 $n 个预置分类" else "没有需要恢复的分类")
+                            showToast(if (n > 0) "已恢复 $n 个预置分类" else t("没有需要恢复的分类"))
                         }
                     }
                 ) { Text("恢复") }
@@ -558,7 +559,7 @@ private fun CategoryColumn(
                     }
             ) {
                 Text(
-                    "添加",
+                    t("添加"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (draftName.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
@@ -628,14 +629,14 @@ private fun CategoryRow(
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (category.builtIn) {
-                        PillTag("预置", accent, filled = true)
+                        PillTag(t("预置"), accent, filled = true)
                         Spacer(Modifier.width(Space.sm))
                     }
                     Text(
                         when {
                             category.budgetCents > 0 -> "月预算 ${Money.format(category.budgetCents)}"
-                            IconRef.isCustom(category.emoji) -> "自定义图片"
-                            else -> "点一下改名、换图标或设预算"
+                            IconRef.isCustom(category.emoji) -> t("自定义图片")
+                            else -> t("点一下改名、换图标或设预算")
                         },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -645,7 +646,7 @@ private fun CategoryRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "删除",
+                    contentDescription = t("删除"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
@@ -720,12 +721,12 @@ private fun EditCategoryDialog(
                     Spacer(Modifier.width(Space.md))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "点左侧图标可以换",
+                            t("点左侧图标可以换"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "预置图标库 / 上传自己的图片",
+                            t("预置图标库 / 上传自己的图片"),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -760,7 +761,7 @@ private fun EditCategoryDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "用这个值 ›",
+                            t("用这个值 ›"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,

@@ -25,6 +25,22 @@ object UpdateHttp {
 
     const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/litong168/foldledger/releases/latest"
+
+    /**
+     * 国内镜像（Gitee）的固定直链。
+     *
+     * 为什么不走 Gitee API：Gitee 的 Release 附件 API 需要鉴权且对小文件限流，直链更简单稳。
+     * 约定 Gitee 仓库 `litong168/foldledger` 的 `release/` 目录里放三个**固定文件名**资产
+     * （发版脚本负责覆盖）：`update-manifest.json` / `drip-ledger-latest.apk` / `drip-ledger-latest-setup.exe`。
+     * raw 直链国内可直连，作为 GitHub 不可达时的兜底。
+     */
+    const val GITEE_MANIFEST_URL =
+        "https://gitee.com/litong168/foldledger/raw/master/release/update-manifest.json"
+
+    /** Gitee 资产直链（manifest 里的 name 若是固定名，可直接拼；否则用 manifest 的 url 字段） */
+    fun giteeAssetUrl(name: String): String =
+        "https://gitee.com/litong168/foldledger/raw/master/release/$name"
+
     private const val UA = "DripLedger-Updater/1.0"
     private const val RETRIES = 4
 

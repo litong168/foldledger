@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.foldledger.ui.l10n.t
 
 /**
  * 记账助手（v9.0 / v9.3）——**今天该做什么，一页说清**。
@@ -71,7 +72,7 @@ class AssistantViewModel(
     /** 当前锚点的毫秒值（算「还有几天到期」这类相对时间用） */
     private val now: Long get() = periodAnchor.value
 
-    /** 自动记账账本 id（"待确认"那件事的落点） */
+    /** 自动记账账本 id（t("待确认")那件事的落点） */
     val autoLedgerId: StateFlow<Long?> =
         ledgers.map { list -> list.firstOrNull { it.sceneKey == ScenePresets.AUTO_KEY }?.id }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -120,10 +121,10 @@ class AssistantViewModel(
             if (todayLedgers == 0) {
                 out += Todo(
                     emoji = "⚡",
-                    title = "今天还没记账",
-                    detail = "一句话就记完：昨天打车35",
+                    title = t("今天还没记账"),
+                    detail = t("一句话就记完：昨天打车35"),
                     action = Action.SPEED,
-                    actionLabel = "去速记",
+                    actionLabel = t("去速记"),
                     tone = 1
                 )
             }
@@ -133,9 +134,9 @@ class AssistantViewModel(
                 out += Todo(
                     emoji = "🤖",
                     title = "自动记账有 $autoPending 笔待确认",
-                    detail = "确认后移去正式账本，分类会自动适配",
+                    detail = t("确认后移去正式账本，分类会自动适配"),
                     action = Action.AUTO_LEDGER,
-                    actionLabel = "去处理",
+                    actionLabel = t("去处理"),
                     tone = 1
                 )
             }
@@ -157,7 +158,7 @@ class AssistantViewModel(
                         title = "${l.name} · 尚余垫付 ${Money.format(v.first)}",
                         detail = "${v.second} 笔待回款",
                         action = Action.LEDGER,
-                        actionLabel = "去账本",
+                        actionLabel = t("去账本"),
                         tone = 1,
                         ledgerId = l.id,
                         ledgerName = l.name
@@ -179,7 +180,7 @@ class AssistantViewModel(
                         title = "${l.name} · 预算已用 $pct%",
                         detail = "${Money.format(used)} / ${Money.format(l.budgetCents)}",
                         action = Action.STATS,
-                        actionLabel = "看统计",
+                        actionLabel = t("看统计"),
                         tone = if (pct >= 100) 2 else 1,
                         ledgerId = l.id,
                         ledgerName = l.name
@@ -192,13 +193,13 @@ class AssistantViewModel(
             dueByLedger.forEach { (lid, items) ->
                 val soon = items.filter { it.nextDueAt - now <= 3 * 24L * 3600 * 1000 }
                 if (soon.isEmpty()) return@forEach
-                val lname = nameOf[lid] ?: "账本"
+                val lname = nameOf[lid] ?: t("账本")
                 out += Todo(
                     emoji = "🔁",
                     title = "$lname · ${soon.size} 笔周期记账即将到期",
                     detail = soon.take(2).joinToString("、") { it.name },
                     action = Action.ADD,
-                    actionLabel = "去记账",
+                    actionLabel = t("去记账"),
                     tone = 1,
                     ledgerId = lid,
                     ledgerName = lname

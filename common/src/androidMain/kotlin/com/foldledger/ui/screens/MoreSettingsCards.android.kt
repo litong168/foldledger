@@ -15,6 +15,8 @@ import com.foldledger.data.prefs.AppSettings
 import com.foldledger.data.reminder.ReminderScheduler
 import com.foldledger.data.reminder.needsNotificationPermission
 import com.foldledger.ui.adaptive.FoldEnv
+import com.foldledger.ui.l10n.Language
+import com.foldledger.ui.l10n.LanguageCard
 import com.foldledger.ui.theme.Layout
 import com.foldledger.ui.vm.AppViewModel
 
@@ -48,6 +50,11 @@ actual fun MoreSettingsCards(
         }
         item { HapticsCard(settings = settings, appVm = appVm) }
         item { PreferenceCard(settings = settings, appVm = appVm) }
+        item {
+            LanguageCard(current = Language.fromCode(settings.language)) { lang ->
+                appVm.setLanguage(lang.code)
+            }
+        }
         item { FoldAdaptationCard(env) }
         item { AboutCard() }
     }

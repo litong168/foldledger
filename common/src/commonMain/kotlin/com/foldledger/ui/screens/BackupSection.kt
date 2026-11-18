@@ -50,6 +50,7 @@ import com.foldledger.ui.vm.BackupViewModel
 import com.foldledger.ui.theme.cardSurface
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.wellSurface
+import com.foldledger.ui.l10n.t
 
 /**
  * 「备份与恢复」区块。
@@ -70,8 +71,8 @@ fun BackupSection(
 
     Column(modifier) {
         SectionCard(
-            title = "备份与恢复",
-            subtitle = "备份存放在系统目录，卸载 App 不会删掉，重装后可一键恢复"
+            title = t("备份与恢复"),
+            subtitle = t("备份存放在系统目录，卸载 App 不会删掉，重装后可一键恢复")
         ) {
             // ---------- 备份位置状态 ----------
             Box(
@@ -92,7 +93,7 @@ fun BackupSection(
                     Column(Modifier.weight(1f)) {
                         Text(
                             if (s.folderReady) "备份位置：${s.folderLabel ?: "已授权目录"}"
-                            else "还没设置备份位置",
+                            else t("还没设置备份位置"),
                             // v16.3.1：二级页面卡主文本统一 15.sp SemiBold + 固定行盒，
                             // 与同步记录 / 全局搜索的列表主文本同层级，副文本仍 11.sp。
                             fontSize = 15.sp,
@@ -105,23 +106,23 @@ fun BackupSection(
                                 // 刚导出过就先给导出回执 —— 用户最想确认的就是"我刚才那次成了没"
                                 s.lastExportAt > 0L -> "上次导出：${BackupViewModel.formatTime(s.lastExportAt)}"
                                 s.folderReady -> "上次自动备份：${BackupViewModel.formatTime(s.lastAutoBackupAt)}"
-                                else -> "点一次「导出备份」，把目录选成「下载」即可，以后全自动"
+                                else -> t("点一次「导出备份」，把目录选成「下载」即可，以后全自动")
                             },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (s.folderReady) {
-                        PillTag("已就绪", CoolGreen, filled = true)
+                        PillTag(t("已就绪"), CoolGreen, filled = true)
                         Spacer(Modifier.width(6.dp))
                     }
                     // v16.2.7：目录不是一次性设置 —— 选错、换盘、目录被删，都得能改
-                    SmallAction(if (s.folderReady) "更换" else "选择") {
+                    SmallAction(if (s.folderReady) t("更换") else t("选择")) {
                         backupVm.requestFolderChange()
                     }
                     if (s.canOpenFolder) {
                         Spacer(Modifier.width(2.dp))
-                        SmallAction("打开") { backupVm.openFolder() }
+                        SmallAction(t("打开")) { backupVm.openFolder() }
                     }
                 }
             }
@@ -131,7 +132,7 @@ fun BackupSection(
             // ---------- 两个主操作 ----------
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BigButton(
-                    label = "导出备份",
+                    label = t("导出备份"),
                     emoji = "⬆️",
                     primary = true,
                     enabled = !working && hasData,
@@ -140,7 +141,7 @@ fun BackupSection(
                     onClick = { backupVm.requestExport() }
                 )
                 BigButton(
-                    label = "从备份恢复",
+                    label = t("从备份恢复"),
                     emoji = "⬇️",
                     primary = false,
                     enabled = !working,
@@ -152,14 +153,14 @@ fun BackupSection(
             if (!hasData) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "当前还没有账本，先创建一些记录再导出",
+                    t("当前还没有账本，先创建一些记录再导出"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "「从备份恢复」会先把目录里的每一份都列出来，由你决定用哪一份",
+                    t("「从备份恢复」会先把目录里的每一份都列出来，由你决定用哪一份"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -172,12 +173,12 @@ fun BackupSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "每次打开 App 自动备份一次",
+                        t("每次打开 App 自动备份一次"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        "保留最近 3 份自动备份，更旧的自动清理，不会堆成山",
+                        t("保留最近 3 份自动备份，更旧的自动清理，不会堆成山"),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -210,10 +211,10 @@ fun BackupSection(
         // 也就不会想到去点「立即导出」。空态给一句去处。
         if (s.backups.isEmpty()) {
             Spacer(Modifier.height(12.dp))
-            SectionCard(title = "备份文件", subtitle = "还没有备份") {
+            SectionCard(title = t("备份文件"), subtitle = t("还没有备份")) {
                 Text(
-                    "点上面的「立即导出」，会在你选的文件夹里生成一份 .foldledger.json；" +
-                        "导出过的文件都会列在这里，随时能用来恢复或删除。",
+                    t("点上面的「立即导出」，会在你选的文件夹里生成一份 .foldledger.json；") +
+                        t("导出过的文件都会列在这里，随时能用来恢复或删除。"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -224,7 +225,7 @@ fun BackupSection(
         if (s.backups.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             SectionCard(
-                title = "备份文件",
+                title = t("备份文件"),
                 subtitle = "最近 ${s.backups.size} 份，点「恢复」可选覆盖当前数据或作为新账本加入"
             ) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -335,7 +336,7 @@ private fun BigButton(
                 Spacer(Modifier.width(6.dp))
             }
             Text(
-                if (working && primary) "正在导出…" else label,
+                if (working && primary) t("正在导出…") else label,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = when {
@@ -374,10 +375,10 @@ private fun BackupRow(
                     )
                 if (entry.encrypted) {
                     Spacer(Modifier.width(6.dp))
-                    PillTag("加密", pendingTone(), filled = true)
+                    PillTag(t("加密"), pendingTone(), filled = true)
                 } else if (entry.isAuto) {
                     Spacer(Modifier.width(6.dp))
-                    PillTag("自动", CoolGreen, filled = true)
+                    PillTag(t("自动"), CoolGreen, filled = true)
                 }
                 }
                 Text(
@@ -400,7 +401,7 @@ private fun BackupRow(
                     .clickableScale { onRestore() }
             ) {
                 Text(
-                    "恢复",
+                    t("恢复"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary,
@@ -418,7 +419,7 @@ private fun BackupRow(
             ) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "删除这份备份",
+                    contentDescription = t("删除这份备份"),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(17.dp)
                 )
@@ -452,7 +453,7 @@ private fun DeleteConfirmDialog(
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "会同时删除配对的 .xlsx 文件（如果有）。删除后可在「回收站」里找回，但**不会**影响 App 里当前的数据。",
+                    t("会同时删除配对的 .xlsx 文件（如果有）。删除后可在「回收站」里找回，但**不会**影响 App 里当前的数据。"),
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )
@@ -491,7 +492,7 @@ private fun ExportPasswordDialog(
         text = {
             Column {
                 Text(
-                    "设置密码后，备份文件会被加密，恢复时必须输入同样的密码；留空则保持明文（同时生成一份 Excel 对账表）。",
+                    t("设置密码后，备份文件会被加密，恢复时必须输入同样的密码；留空则保持明文（同时生成一份 Excel 对账表）。"),
                     fontSize = 13.sp, lineHeight = 18.sp
                 )
                 Spacer(Modifier.height(10.dp))
@@ -519,10 +520,10 @@ private fun ExportPasswordDialog(
         confirmButton = {
             TextButton(onClick = {
                 if (pass.isBlank()) { onConfirm(""); return@TextButton }
-                if (pass.length < 4) { error = "密码至少 4 位"; return@TextButton }
-                if (pass != confirm) { error = "两次输入的密码不一致"; return@TextButton }
+                if (pass.length < 4) { error = t("密码至少 4 位"); return@TextButton }
+                if (pass != confirm) { error = t("两次输入的密码不一致"); return@TextButton }
                 onConfirm(pass)
-            }) { Text(if (pass.isBlank()) "直接导出" else "加密导出") }
+            }) { Text(if (pass.isBlank()) t("直接导出") else t("加密导出")) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
@@ -589,7 +590,7 @@ private fun RestoreConfirmDialog(
                 )
                 if (entry.encrypted) {
                     Text(
-                        "加密备份（密码已验证）",
+                        t("加密备份（密码已验证）"),
                         fontSize = 11.sp,
                         color = pendingTone()
                     )
@@ -598,7 +599,7 @@ private fun RestoreConfirmDialog(
                 // 两条路的后果必须写清楚 —— 这正是用户最怕点错的地方
                 Text("作为新账本", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    "把备份里的账本追加进来，名字后面加「（恢复）」。当前数据一条不动，两份可以摆在一起看。",
+                    t("把备份里的账本追加进来，名字后面加「（恢复）」。当前数据一条不动，两份可以摆在一起看。"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -607,9 +608,9 @@ private fun RestoreConfirmDialog(
                 Text("覆盖当前数据", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
                     if (hasData) {
-                        "当前所有账本、分类与流水都会被替换（恢复前会自动留一份「自动备份」，万一恢复错了还能退回来）。"
+                        t("当前所有账本、分类与流水都会被替换（恢复前会自动留一份「自动备份」，万一恢复错了还能退回来）。")
                     } else {
-                        "当前是空库，恢复后即得到备份里的全部账本与记录。"
+                        t("当前是空库，恢复后即得到备份里的全部账本与记录。")
                     },
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -653,13 +654,13 @@ fun BackupPromptBanner(
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "开启自动备份",
+                    t("开启自动备份"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "备份存到系统下载目录，卸载重装后也能一键找回账本",
+                    t("备份存到系统下载目录，卸载重装后也能一键找回账本"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -675,7 +676,7 @@ fun BackupPromptBanner(
                     .clickableScale { onEnable() }
             ) {
                 Text(
-                    "开启",
+                    t("开启"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,

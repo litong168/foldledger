@@ -86,6 +86,7 @@ import com.foldledger.ui.vm.AppViewModel
 import com.foldledger.ui.vm.BackupViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import com.foldledger.ui.l10n.t
 
 @Composable
 fun SettingsScreen(
@@ -132,24 +133,24 @@ fun SettingsScreen(
             // v9.3：全局能力入口 —— 一句话记账 / 记账助手 / 存钱目标 都跨账本，
             // 放在「我的」里作为全局入口，明细页的快捷行只是顺手的位置。
             item {
-                SectionCard(overline = "全局", title = "随手记 · 助手 · 目标") {
+                SectionCard(overline = t("全局"), title = t("随手记 · 助手 · 目标")) {
                     GlobalToolRow(
                         emoji = "⚡",
-                        title = "一句话记账",
-                        subtitle = "说一句话记一笔，账本当场选",
+                        title = t("一句话记账"),
+                        subtitle = t("说一句话记一笔，账本当场选"),
                         onClick = { onOpenSpeedEntry(settings.lastLedgerId) }
                     )
                     SettingDivider()
                     GlobalToolRow(
                         emoji = "💡",
-                        title = "记账助手",
-                        subtitle = "全部账本的待办，一页说清",
+                        title = t("记账助手"),
+                        subtitle = t("全部账本的待办，一页说清"),
                         onClick = { onOpenAssistant() }
                     )
                     SettingDivider()
                     GlobalToolRow(
                         emoji = "🎯",
-                        title = "存钱目标",
+                        title = t("存钱目标"),
                         subtitle = "所有账本的钱罐，攒钱不混进流水",
                         onClick = { onOpenGoal(settings.lastLedgerId) }
                     )
@@ -171,13 +172,13 @@ fun SettingsScreen(
             }
 
             item {
-            SectionCard(overline = "主题", title = "外观") {
-                LabeledRow("深色模式") {
+            SectionCard(overline = t("主题"), title = t("外观")) {
+                LabeledRow(t("深色模式")) {
                     ChipRow(
                         options = listOf(
-                            DarkMode.FOLLOW_SYSTEM to "跟随系统",
-                            DarkMode.LIGHT to "浅色",
-                            DarkMode.DARK to "深色"
+                            DarkMode.FOLLOW_SYSTEM to t("跟随系统"),
+                            DarkMode.LIGHT to t("浅色"),
+                            DarkMode.DARK to t("深色")
                         ),
                         selected = settings.darkMode,
                         onSelect = appVm::setDarkMode
@@ -185,9 +186,9 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(14.dp))
                 LabeledRow(
-                    "动态取色（Material You）",
-                    hint = "只换按钮/进度条的强调色；底色、语义色和玻璃材质不跟随 —— " +
-                        "那三层是按固定色温标定过对比度的"
+                    t("动态取色（Material You）"),
+                    hint = t("只换按钮/进度条的强调色；底色、语义色和玻璃材质不跟随 —— ") +
+                        t("那三层是按固定色温标定过对比度的")
                 ) {
                     Switch(
                         checked = settings.dynamicColor,
@@ -206,8 +207,8 @@ fun SettingsScreen(
                 // 设置页的判据始终是「一项设置必须改变一个用户看得见的东西」——
                 // 不满足的就去掉，而不是留着占一行。
                 Text(
-                    "背景是静态的三段色温底色 + 一层极细颗粒（用来消除渐变色带），" +
-                        "没有可调项。玻璃的透明度、棱边与投影都按固定值标定过对比度。",
+                    t("背景是静态的三段色温底色 + 一层极细颗粒（用来消除渐变色带），") +
+                        t("没有可调项。玻璃的透明度、棱边与投影都按固定值标定过对比度。"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -232,9 +233,9 @@ fun SettingsScreen(
 
         item {
             SectionCard(
-                overline = "安全",
-                title = "数据",
-                subtitle = "账本默认仅保存在本机 SQLite；启用同步后上传到你自填的服务器"
+                overline = t("安全"),
+                title = t("数据"),
+                subtitle = t("账本默认仅保存在本机 SQLite；启用同步后上传到你自填的服务器")
             ) {
                 // v9.4：升级成全局回收站（账本 + 存钱目标 + 备份文件）
                 val trashCount by appVm.trashTotalCount.collectAsStateWithLifecycle()
@@ -255,7 +256,7 @@ fun SettingsScreen(
                         Text("导入账单", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "微信 / 支付宝导出的 Excel 或 CSV，一键变流水",
+                            t("微信 / 支付宝导出的 Excel 或 CSV，一键变流水"),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -263,12 +264,12 @@ fun SettingsScreen(
                     Text("›", fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 SettingDivider()
-                DangerRow("清空所有流水记录") { confirmWipeRecords = true }
+                DangerRow(t("清空所有流水记录")) { confirmWipeRecords = true }
                 SettingDivider()
-                DangerRow("清空全部数据（含账本与分类）") { confirmWipeAll = true }
+                DangerRow(t("清空全部数据（含账本与分类）")) { confirmWipeAll = true }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "清空前建议先「导出备份」；恢复时把备份带回同一个目录即可一键找回。",
+                    t("清空前建议先「导出备份」；恢复时把备份带回同一个目录即可一键找回。"),
                     fontSize = 11.sp,
                     lineHeight = 17.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -349,24 +350,24 @@ fun SettingsScreen(
 internal fun HapticsCard(settings: AppSettings, appVm: AppViewModel) {
     val ctx = LocalContext.current
     SectionCard(
-        overline = "手感",
-        title = "触感反馈",
-        subtitle = "数字键盘每按一下都会给一次短震动，力度按你的习惯调"
+        overline = t("手感"),
+        title = t("触感反馈"),
+        subtitle = t("数字键盘每按一下都会给一次短震动，力度按你的习惯调")
     ) {
-        LabeledRow("震动强度") {
+        LabeledRow(t("震动强度")) {
             ChipRow(
                 options = listOf(
-                    com.foldledger.data.prefs.HapticStrength.OFF to "关",
-                    com.foldledger.data.prefs.HapticStrength.LIGHT to "轻",
-                    com.foldledger.data.prefs.HapticStrength.MEDIUM to "中",
-                    com.foldledger.data.prefs.HapticStrength.STRONG to "强"
+                    com.foldledger.data.prefs.HapticStrength.OFF to t("关"),
+                    com.foldledger.data.prefs.HapticStrength.LIGHT to t("轻"),
+                    com.foldledger.data.prefs.HapticStrength.MEDIUM to t("中"),
+                    com.foldledger.data.prefs.HapticStrength.STRONG to t("强")
                 ),
                 selected = settings.hapticStrength,
                 onSelect = appVm::setHapticStrength
             )
         }
         Spacer(Modifier.height(14.dp))
-        LabeledRow("数字键盘震动", hint = "记账输金额时的按键反馈") {
+        LabeledRow(t("数字键盘震动"), hint = t("记账输金额时的按键反馈")) {
             Switch(
                 checked = settings.hapticKeypad,
                 onCheckedChange = appVm::setHapticKeypad
@@ -374,7 +375,7 @@ internal fun HapticsCard(settings: AppSettings, appVm: AppViewModel) {
         }
         Spacer(Modifier.height(14.dp))
         GlassButton(
-            text = "试一下手感",
+            text = t("试一下手感"),
             onClick = { AppHaptics.preview() },
             enabled = settings.hapticStrength != com.foldledger.data.prefs.HapticStrength.OFF,
             modifier = Modifier.fillMaxWidth()
@@ -386,15 +387,15 @@ internal fun HapticsCard(settings: AppSettings, appVm: AppViewModel) {
 @Composable
 internal fun PreferenceCard(settings: AppSettings, appVm: AppViewModel) {
     SectionCard(
-        overline = "偏好",
-        title = "记账偏好",
+        overline = t("偏好"),
+        title = t("记账偏好"),
         subtitle = "中国用户有两种收支配色习惯，按你的手感来"
     ) {
-        LabeledRow("收支配色") {
+        LabeledRow(t("收支配色")) {
             ChipRow(
                 options = listOf(
-                    ColorConvention.LEDGER to "支出红 · 收入绿",
-                    ColorConvention.MARKET to "涨红跌绿"
+                    ColorConvention.LEDGER to t("支出红 · 收入绿"),
+                    ColorConvention.MARKET to t("涨红跌绿")
                 ),
                 selected = settings.colorConvention,
                 onSelect = appVm::setColorConvention
@@ -403,19 +404,19 @@ internal fun PreferenceCard(settings: AppSettings, appVm: AppViewModel) {
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             ColorSample(
-                "支出", "-",
+                t("支出"), "-",
                 if (settings.colorConvention == ColorConvention.LEDGER) WarmRed else CoolGreen
             )
             ColorSample(
-                "收入", "+",
+                t("收入"), "+",
                 if (settings.colorConvention == ColorConvention.LEDGER) CoolGreen else WarmRed
             )
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "展开态的分栏宽度不再手动设置：已按 15 档展开宽度（653~1366dp）离线搜索比对，" +
-                "定为「左栏 min(368dp, 可分栏宽度 × 48%)」，并把 800dp 以下的侧栏换成底部导航。" +
-                "理由与数据见 README。",
+            t("展开态的分栏宽度不再手动设置：已按 15 档展开宽度（653~1366dp）离线搜索比对，") +
+                t("定为「左栏 min(368dp, 可分栏宽度 × 48%)」，并把 800dp 以下的侧栏换成底部导航。") +
+                t("理由与数据见 README。"),
             fontSize = 11.sp,
             lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -428,27 +429,27 @@ internal fun PreferenceCard(settings: AppSettings, appVm: AppViewModel) {
 internal fun FoldAdaptationCard(env: FoldEnv) {
 
     SectionCard(
-        overline = "设备",
-        title = "折叠屏适配状态（实时）",
-        subtitle = "改变折叠形态，这里的数值会立即刷新"
+        overline = t("设备"),
+        title = t("折叠屏适配状态（实时）"),
+        subtitle = t("改变折叠形态，这里的数值会立即刷新")
     ) {
-        InfoRow("窗口尺寸", "${env.widthDp} × ${env.heightDp} dp")
-        InfoRow("宽度断点", env.widthSizeClass.toString())
-        InfoRow("高度断点", env.heightSizeClass.toString())
-        InfoRow("设备姿态", env.postureLabel)
-        InfoRow("可折叠设备", if (env.isFoldable) "是" else "否")
-        InfoRow("铰链分割窗口", if (env.isSeparating) "是" else "否")
-        InfoRow("铰链占比", "${(env.hingeFraction * 100).roundToInt()}%")
-        InfoRow("布局策略", layoutStrategy(env))
+        InfoRow(t("窗口尺寸"), "${env.widthDp} × ${env.heightDp} dp")
+        InfoRow(t("宽度断点"), env.widthSizeClass.toString())
+        InfoRow(t("高度断点"), env.heightSizeClass.toString())
+        InfoRow(t("设备姿态"), env.postureLabel)
+        InfoRow(t("可折叠设备"), if (env.isFoldable) t("是") else t("否"))
+        InfoRow(t("铰链分割窗口"), if (env.isSeparating) t("是") else t("否"))
+        InfoRow(t("铰链占比"), "${(env.hingeFraction * 100).roundToInt()}%")
+        InfoRow(t("布局策略"), layoutStrategy(env))
     }
 }
 
 private fun layoutStrategy(env: FoldEnv): String = when {
-    env.isTabletop -> "上下分屏：内容区 / 操作区隔离，控件不跨铰链"
-    env.isBook -> "左右分栏：避开垂直铰链"
+    env.isTabletop -> t("上下分屏：内容区 / 操作区隔离，控件不跨铰链")
+    env.isBook -> t("左右分栏：避开垂直铰链")
     // v12.1.4：内外屏统一 —— 导航恒为底部悬浮胶囊，双栏只发生在展开态内容区
-    env.twoPane -> "Master-Detail 双栏 + 底部悬浮胶囊（内外屏统一）"
-    else -> "单栏 + 底部悬浮胶囊"
+    env.twoPane -> t("Master-Detail 双栏 + 底部悬浮胶囊（内外屏统一）")
+    else -> t("单栏 + 底部悬浮胶囊")
 }
 
 @Composable
@@ -540,13 +541,13 @@ private fun ColorSample(label: String, sign: String, color: Color) {
 private fun rustSelfCheck(): String {
     val moneyOk = DripCore.formatCents(12_345_678L, true) == "¥123,456.78" &&
         DripCore.toPlain(1_234L) == "12.34"
-    val searchOk = DripCore.matchesQuery("餐饮", "午饭", 3_500L, "午饭") &&
-        DripCore.matchesQuery("餐饮", "午饭", 3_500L, "35") &&
-        !DripCore.matchesQuery("餐饮", "午饭", 3_500L, "打车")
+    val searchOk = DripCore.matchesQuery(t("餐饮"), t("午饭"), 3_500L, t("午饭")) &&
+        DripCore.matchesQuery(t("餐饮"), t("午饭"), 3_500L, "35") &&
+        !DripCore.matchesQuery(t("餐饮"), t("午饭"), 3_500L, t("打车"))
     val parseOk = DripCore.parseToCents("12.345") == 1235L
     val allOk = moneyOk && searchOk && parseOk
     return if (allOk) {
-        "通过（金额 / 搜索 / 解析）"
+        t("通过（金额 / 搜索 / 解析）")
     } else {
         "异常（金额=${moneyOk} 搜索=${searchOk} 解析=${parseOk}）"
     }
@@ -609,7 +610,7 @@ private fun MoreSettingsRow(onClick: () -> Unit) {
             Text("更多设置", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
             Text(
-                "提醒 · 自动记账 · 手感 · 配色 · 关于",
+                t("提醒 · 自动记账 · 手感 · 配色 · 关于"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -694,7 +695,7 @@ private fun TrashRow(count: Int, onClick: () -> Unit) {
         Text("🗑", fontSize = 15.sp)
         Spacer(Modifier.width(10.dp))
         Text(
-            "回收站",
+            t("回收站"),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
@@ -739,11 +740,11 @@ internal fun ReminderCard(
     onTimeChange: (Int, Int) -> Unit
 ) {
     SectionCard(
-        overline = "提醒",
-        title = "记账提醒",
-        subtitle = "每天定时提醒你记一笔"
+        overline = t("提醒"),
+        title = t("记账提醒"),
+        subtitle = t("每天定时提醒你记一笔")
     ) {
-        LabeledRow("每日提醒") {
+        LabeledRow(t("每日提醒")) {
             Switch(checked = enabled, onCheckedChange = onToggle)
         }
         if (enabled) {
@@ -775,7 +776,7 @@ internal fun ReminderCard(
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "Android 13+ 首次开启会请求通知权限；提醒由系统调度，可能在设定时间附近略有偏差。",
+                t("Android 13+ 首次开启会请求通知权限；提醒由系统调度，可能在设定时间附近略有偏差。"),
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -837,15 +838,15 @@ internal fun AutoBookkeepingCard(
     }
 
     SectionCard(
-        overline = "自动化",
-        title = "自动记账",
-        subtitle = "支付通知 / 银行动账短信自动进「自动记账」账本，确认后移去正式账本"
+        overline = t("自动化"),
+        title = t("自动记账"),
+        subtitle = t("支付通知 / 银行动账短信自动进「自动记账」账本，确认后移去正式账本")
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("自动捕获", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    "关掉后不再自动进账，已记的条目保留",
+                    t("关掉后不再自动进账，已记的条目保留"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -857,19 +858,19 @@ internal fun AutoBookkeepingCard(
         }
         Spacer(Modifier.height(8.dp))
         PermissionRow(
-            label = "通知使用权",
-            hint = "读取微信/支付宝/云闪付的支付通知",
+            label = t("通知使用权"),
+            hint = t("读取微信/支付宝/云闪付的支付通知"),
             granted = notifGranted,
-            actionLabel = "去授权"
+            actionLabel = t("去授权")
         ) {
             context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
         Spacer(Modifier.height(6.dp))
         PermissionRow(
-            label = "短信权限",
-            hint = "接收银行动账短信",
+            label = t("短信权限"),
+            hint = t("接收银行动账短信"),
             granted = smsState,
-            actionLabel = "授予权限"
+            actionLabel = t("授予权限")
         ) {
             smsLauncher.launch(android.Manifest.permission.RECEIVE_SMS)
         }
@@ -883,7 +884,7 @@ internal fun AutoBookkeepingCard(
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (last.accepted) "最近一次 · 已入账" else "最近一次 · 未入账",
+                    if (last.accepted) t("最近一次 · 已入账") else t("最近一次 · 未入账"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (last.accepted) dc.income else pendingTone()
@@ -922,9 +923,9 @@ internal fun AutoBookkeepingCard(
             Spacer(Modifier.height(12.dp))
             Text(
                 if (settings.autoBookkeepingEnabled) {
-                    "还没有捕获记录。付一笔、或等一条银行短信，这里就会出现。"
+                    t("还没有捕获记录。付一笔、或等一条银行短信，这里就会出现。")
                 } else {
-                    "自动捕获是关的 —— 打开之后支付通知才会进账。"
+                    t("自动捕获是关的 —— 打开之后支付通知才会进账。")
                 },
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -937,14 +938,14 @@ internal fun AutoBookkeepingCard(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CaptureActionTile(
                 emoji = "🧾",
-                title = "捕获日志",
-                hint = if (diagCount > 0) "最近 $diagCount 条判定" else "看每次为什么",
+                title = t("捕获日志"),
+                hint = if (diagCount > 0) "最近 $diagCount 条判定" else t("看每次为什么"),
                 modifier = Modifier.weight(1f)
             ) { diagOpen = true }
             CaptureActionTile(
                 emoji = "🧭",
-                title = "权限排查",
-                hint = "小米管控逐项解锁",
+                title = t("权限排查"),
+                hint = t("小米管控逐项解锁"),
                 modifier = Modifier.weight(1f)
             ) { onOpenSystemAccess() }
         }
@@ -952,8 +953,8 @@ internal fun AutoBookkeepingCard(
         // ---------- 一句说明 ----------
         Spacer(Modifier.height(10.dp))
         Text(
-            "全部解析在本机完成，不上传任何数据。想停用请用上面的开关 —— " +
-                "删掉「自动记账」账本不会停用，下次支付会自动重建。",
+            t("全部解析在本机完成，不上传任何数据。想停用请用上面的开关 —— ") +
+                t("删掉「自动记账」账本不会停用，下次支付会自动重建。"),
             fontSize = 11.sp,
             lineHeight = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1028,7 +1029,7 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
             Column(Modifier.fillMaxWidth()) {
                 // v12.1：日志降噪后这里只会有"和钱有关"的条目
                 Text(
-                    "只记录与金额相关的通知 / 短信。已入账的那条如果记错了，点「撤销」直接删掉。",
+                    t("只记录与金额相关的通知 / 短信。已入账的那条如果记错了，点「撤销」直接删掉。"),
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1037,8 +1038,8 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
                 if (entries.isEmpty()) {
                     Text(
                         "还没有捕获记录。\n\n" +
-                            "开着自动记账，随便付一笔或等一条银行短信，这里就会出现记录。" +
-                            "如果一笔支付没记上，来这里看它被拒的原因。",
+                            t("开着自动记账，随便付一笔或等一条银行短信，这里就会出现记录。") +
+                            t("如果一笔支付没记上，来这里看它被拒的原因。"),
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1061,7 +1062,7 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
                                 Column(Modifier.padding(10.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            if (e.accepted) "已记账" else "未记账",
+                                            if (e.accepted) t("已记账") else t("未记账"),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = if (e.accepted)
@@ -1133,7 +1134,7 @@ private fun AutoDiagDialog(context: Context, onDismiss: () -> Unit) {
                                             horizontalArrangement = Arrangement.End
                                         ) {
                                             Text(
-                                                "撤销这笔",
+                                                t("撤销这笔"),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.error,
@@ -1196,21 +1197,21 @@ internal fun AboutCard() {
         silentFound = has
     }
 
-    SectionCard(overline = "信息", title = "关于") {
-        InfoRow("应用名称", "滴水记账")
-        InfoRow("版本", "$APP_VERSION_NAME ($APP_VERSION_CODE)")
-        InfoRow("技术栈", "Kotlin 2.0 · Jetpack Compose · Material 3 · Room")
-        InfoRow("核心引擎", if (DripCore.nativeAvailable) "Rust 原生（JNI）" else "Kotlin 回退")
-        InfoRow("核心自检", rustSelfCheck())
-        InfoRow("自适应", "WindowManager FoldingFeature + WindowSizeClass")
-        InfoRow("备份格式", ".foldledger.json 可恢复 + .xlsx 可阅读")
-        InfoRow("最低版本", "Android 8.0 (API 26) · 目标 Android 15 (API 35)")
+    SectionCard(overline = t("信息"), title = t("关于")) {
+        InfoRow(t("应用名称"), t("滴水记账"))
+        InfoRow(t("版本"), "$APP_VERSION_NAME ($APP_VERSION_CODE)")
+        InfoRow(t("技术栈"), "Kotlin 2.0 · Jetpack Compose · Material 3 · Room")
+        InfoRow(t("核心引擎"), if (DripCore.nativeAvailable) t("Rust 原生（JNI）") else t("Kotlin 回退"))
+        InfoRow(t("核心自检"), rustSelfCheck())
+        InfoRow(t("自适应"), "WindowManager FoldingFeature + WindowSizeClass")
+        InfoRow(t("备份格式"), t(".foldledger.json 可恢复 + .xlsx 可阅读"))
+        InfoRow(t("最低版本"), t("Android 8.0 (API 26) · 目标 Android 15 (API 35)"))
         Spacer(Modifier.height(6.dp))
         // v16.6：检查更新 + 捐赠入口（不打扰、不捆绑功能）
         GlobalToolRow(
             emoji = "⬆️",
-            title = if (silentFound) "发现新版本 · 点击更新" else "检查更新",
-            subtitle = if (checking) "正在检查…"
+            title = if (silentFound) t("发现新版本 · 点击更新") else t("检查更新"),
+            subtitle = if (checking) t("正在检查…")
                 else if (silentFound) "v${manager.available?.versionName ?: "新版本"} 已发布"
                 else "当前 v$APP_VERSION_NAME，点击检查新版本"
         ) {
@@ -1226,8 +1227,8 @@ internal fun AboutCard() {
         }
         GlobalToolRow(
             emoji = "💝",
-            title = "支持作者",
-            subtitle = "滴水记账免费开源，自愿打赏"
+            title = t("支持作者"),
+            subtitle = t("滴水记账免费开源，自愿打赏")
         ) { showDonation = true }
     }
 
@@ -1247,7 +1248,7 @@ internal fun AboutCard() {
                     scope.launch {
                         if (!com.foldledger.update.AndroidUpdateInstaller.canInstallUnknownApps(context)) {
                             com.foldledger.update.AndroidUpdateInstaller.openInstallPermissionSettings(context)
-                            errorText = "请先开启「安装未知应用」权限，再点立即更新"
+                            errorText = t("请先开启「安装未知应用」权限，再点立即更新")
                             downloadBusy = false
                             return@launch
                         }
@@ -1256,7 +1257,7 @@ internal fun AboutCard() {
                         ) { done, total -> progress = done to total }
                         downloadBusy = false
                         progress = 0L to -1L
-                        result.exceptionOrNull()?.let { errorText = it.message ?: "下载失败" }
+                        result.exceptionOrNull()?.let { errorText = it.message ?: t("下载失败") }
                     }
                 },
                 onLater = { showUpdate = false },

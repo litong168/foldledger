@@ -32,6 +32,7 @@ import com.foldledger.data.update.UpdateManager
 import com.foldledger.platform.loadAssetBitmap
 import com.foldledger.ui.components.AccentPill
 import com.foldledger.ui.components.GlassDialog
+import com.foldledger.ui.l10n.t
 
 /** 收款码资源逻辑名（两端各自放在 assets / resources） */
 const val DONATION_QR_ASSET = "donation_wechat.png"
@@ -48,7 +49,7 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "支持作者",
+                t("支持作者"),
                 fontSize = 17.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -56,7 +57,7 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "滴水记账免费开源，若对你有帮助，可自愿打赏一杯咖啡 ☕",
+                    t("滴水记账免费开源，若对你有帮助，可自愿打赏一杯咖啡 ☕"),
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
                     textAlign = TextAlign.Center,
@@ -73,7 +74,7 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
                     if (bmp != null) {
                         Image(
                             bitmap = bmp,
-                            contentDescription = "微信收款码",
+                            contentDescription = t("微信收款码"),
                             modifier = Modifier
                                 .heightIn(max = 400.dp)
                                 .widthIn(max = 320.dp)
@@ -84,7 +85,7 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "用微信扫一扫 · 感谢你的支持",
+                    t("用微信扫一扫 · 感谢你的支持"),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -121,7 +122,7 @@ fun UpdateAvailableDialog(
         text = {
             Column {
                 Text(
-                    info.notes.ifBlank { "已发布新版本，建议更新。" },
+                    info.notes.ifBlank { t("已发布新版本，建议更新。") },
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -141,7 +142,7 @@ fun UpdateAvailableDialog(
         },
         confirmButton = {
             AccentPill(
-                text = if (busy) "下载中…" else "立即更新",
+                text = if (busy) t("下载中…") else t("立即更新"),
                 fontSize = 13,
                 onClick = { if (!busy) onUpdate() }
             )

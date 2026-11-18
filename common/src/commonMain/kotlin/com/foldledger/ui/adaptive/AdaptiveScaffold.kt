@@ -101,6 +101,7 @@ import com.foldledger.ui.theme.SurfaceCard
 import com.foldledger.ui.theme.dividerBrush
 import com.foldledger.ui.theme.panelSurface
 import com.foldledger.ui.theme.primaryGradientBrush
+import com.foldledger.ui.l10n.t
 
 /**
  * 底部导航 / 侧边导航的三个分区。
@@ -110,13 +111,13 @@ import com.foldledger.ui.theme.primaryGradientBrush
  */
 enum class AppTab(val label: String, val icon: ImageVector) {
     /** 明细页：显示「账本页」当前选中的那个分账本的流水 */
-    DETAIL("明细", Icons.Filled.DateRange),
+    DETAIL(t("明细"), Icons.Filled.DateRange),
 
     /** 账本页：所有已创建的分账本、合计范围设置、以及从场景模板新建 */
-    LEDGERS("账本", Icons.AutoMirrored.Filled.List),
+    LEDGERS(t("账本"), Icons.AutoMirrored.Filled.List),
 
     /** 我的：备份、主题、折叠屏适配状态 */
-    MINE("我的", Icons.Filled.Settings)
+    MINE(t("我的"), Icons.Filled.Settings)
 }
 
 /** 导航胶囊的高度（系统手势条 inset 另补在下方 padding 里） */
@@ -312,7 +313,7 @@ private fun AppTopBar(
                 navigationIcon = {
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = t("返回"))
                         }
                     }
                 },
@@ -666,7 +667,7 @@ private fun AddKey(size: Dp, onClick: () -> Unit) {
     ) {
         Icon(
             Icons.Filled.Add,
-            contentDescription = "记一笔",
+            contentDescription = t("记一笔"),
             tint = ink,
             modifier = Modifier.size(20.dp)
         )

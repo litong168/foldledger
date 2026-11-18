@@ -136,6 +136,7 @@ import com.foldledger.ui.theme.glassSelectChip
 import com.foldledger.data.CategoryIconLibrary
 import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -198,7 +199,7 @@ internal fun ProjectBar(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ProjectChip(
-                label = "全部",
+                label = t("全部"),
                 emoji = null,
                 active = selected == LedgerDetailViewModel.PROJECT_ALL
             ) { onSelect(LedgerDetailViewModel.PROJECT_ALL) }
@@ -213,7 +214,7 @@ internal fun ProjectBar(
             }
             if (projects.isNotEmpty()) {
                 ProjectChip(
-                    label = "未归类",
+                    label = t("未归类"),
                     emoji = "🗂",
                     active = selected == LedgerDetailViewModel.PROJECT_UNASSIGNED
                 ) { onSelect(LedgerDetailViewModel.PROJECT_UNASSIGNED) }
@@ -229,7 +230,7 @@ internal fun ProjectBar(
                     .padding(horizontal = 13.dp, vertical = 7.dp)
             ) {
                 Text(
-                    "＋ 新建项目",
+                    t("＋ 新建项目"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary
@@ -263,7 +264,7 @@ internal fun ProjectBar(
     ) {
         item {
             ProjectChip(
-                label = "全部",
+                label = t("全部"),
                 emoji = null,
                 active = selected == LedgerDetailViewModel.PROJECT_ALL
             ) { onSelect(LedgerDetailViewModel.PROJECT_ALL) }
@@ -280,7 +281,7 @@ internal fun ProjectBar(
         if (projects.isNotEmpty()) {
             item {
                 ProjectChip(
-                    label = "未归类",
+                    label = t("未归类"),
                     emoji = "🗂",
                     active = selected == LedgerDetailViewModel.PROJECT_UNASSIGNED
                 ) { onSelect(LedgerDetailViewModel.PROJECT_UNASSIGNED) }
@@ -301,7 +302,7 @@ internal fun ProjectBar(
                     .padding(horizontal = 13.dp, vertical = 7.dp)
             ) {
                 Text(
-                    "＋ 新建项目",
+                    t("＋ 新建项目"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary
@@ -500,7 +501,7 @@ internal fun ProjectSummaryCard(
     /** v5.2：按报销状态筛选（点三格切换）；v7.1 起是集合（可含「未回款」组合） */
     selectedStates: Set<Int> = emptySet(),
     onSelectState: (Int) -> Unit = {},
-    /** v13.8：这个项目已经在归档抽屉里 —— 卡里补一句"它去哪了"，否则像凭空消失 */
+    /** v13.8：这个项目已经在归档抽屉里 —— 卡里补一句t("它去哪了")，否则像凭空消失 */
     archived: Boolean = false,
     onEdit: () -> Unit
 ) {
@@ -535,11 +536,11 @@ internal fun ProjectSummaryCard(
                         )
                         if (rsum.allSettled) {
                             Spacer(Modifier.width(6.dp))
-                            PillTag("已结清", ReimburseSettled, filled = true)
+                            PillTag(t("已结清"), ReimburseSettled, filled = true)
                         }
                         if (project.closed) {
                             Spacer(Modifier.width(6.dp))
-                            PillTag("已结束", MaterialTheme.colorScheme.onSurfaceVariant, filled = true)
+                            PillTag(t("已结束"), MaterialTheme.colorScheme.onSurfaceVariant, filled = true)
                         }
                     }
                     Text(
@@ -551,7 +552,7 @@ internal fun ProjectSummaryCard(
                     )
                 }
                 Text(
-                    "编辑",
+                    t("编辑"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary,
@@ -612,17 +613,17 @@ internal fun ProjectSummaryCard(
             // 三格：待提交 / 已提交 / 已回款 —— 点一下筛出这一档的流水
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ProjectStatCell(
-                    "待提交", sumOf(ReimburseState.PENDING), pendingTone(),
+                    t("待提交"), sumOf(ReimburseState.PENDING), pendingTone(),
                     active = selectedStates == setOf(ReimburseState.PENDING),
                     modifier = Modifier.weight(1f)
                 ) { onSelectState(ReimburseState.PENDING) }
                 ProjectStatCell(
-                    "已提交", sumOf(ReimburseState.SUBMITTED), ReimburseSubmitted,
+                    t("已提交"), sumOf(ReimburseState.SUBMITTED), ReimburseSubmitted,
                     active = selectedStates == setOf(ReimburseState.SUBMITTED),
                     modifier = Modifier.weight(1f)
                 ) { onSelectState(ReimburseState.SUBMITTED) }
                 ProjectStatCell(
-                    "已回款", sumOf(ReimburseState.SETTLED), dc.income,
+                    t("已回款"), sumOf(ReimburseState.SETTLED), dc.income,
                     active = selectedStates == setOf(ReimburseState.SETTLED),
                     modifier = Modifier.weight(1f)
                 ) { onSelectState(ReimburseState.SETTLED) }
@@ -798,7 +799,7 @@ internal fun ProjectEditorDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (initial.id == 0L) "新建项目 / 空间" else "编辑项目",
+                if (initial.id == 0L) t("新建项目 / 空间") else t("编辑项目"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -809,7 +810,7 @@ internal fun ProjectEditorDialog(
         text = {
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    "把一次差旅、一次招待的费用装进同一个空间，整批看、整批报。",
+                    t("把一次差旅、一次招待的费用装进同一个空间，整批看、整批报。"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -927,7 +928,7 @@ internal fun ProjectEditorDialog(
                     Spacer(Modifier.height(14.dp))
                     val danger = MaterialTheme.colorScheme.error
                     Text(
-                        if (confirmDelete) "再点一次确认删除（流水会退回未归类）" else "删除这个项目",
+                        if (confirmDelete) t("再点一次确认删除（流水会退回未归类）") else t("删除这个项目"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = danger,
@@ -943,7 +944,7 @@ internal fun ProjectEditorDialog(
         },
         confirmButton = {
             TextButton(onClick = save, enabled = name.isNotBlank()) {
-                Text(if (initial.id == 0L) "创建" else "保存")
+                Text(if (initial.id == 0L) t("创建") else t("保存"))
             }
         },
         dismissButton = {

@@ -40,6 +40,7 @@ import com.foldledger.ui.theme.GlassKey
 import com.foldledger.ui.theme.LocalDarkTheme
 import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.glassSurface
+import com.foldledger.ui.l10n.t
 
 /**
  * 左侧导航导轨（v16.4，≥1024dp 时代替底部胶囊）。
@@ -128,7 +129,7 @@ fun AppNavRail(
                 ) {
                     Icon(
                         Icons.Filled.Add,
-                        contentDescription = "记一笔",
+                        contentDescription = t("记一笔"),
                         tint = if (dark) MaterialTheme.colorScheme.primary
                         else androidx.compose.ui.graphics.lerp(
                             MaterialTheme.colorScheme.primary, Color.Black, 0.24f
@@ -138,7 +139,7 @@ fun AppNavRail(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "记一笔",
+                    t("记一笔"),
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
                     fontWeight = FontWeight.Medium,

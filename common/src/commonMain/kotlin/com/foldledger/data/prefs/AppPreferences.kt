@@ -120,7 +120,10 @@ data class AppSettings(
     /** 用户「跳过此版本」记下的 versionCode（-1 = 没跳过） */
     val skippedVersionCode: Int = -1,
     /** 上次检查更新的时间（毫秒），用于节流；0 = 从未 */
-    val lastUpdateCheckAt: Long = 0L
+    val lastUpdateCheckAt: Long = 0L,
+    // ---------- 界面语言（v16.7.0）----------
+    /** 界面语言代码："zh" 简体中文（默认）/ "en" English */
+    val language: String = "zh"
 )
 
 /** 触感强度档位（v5.0） */
@@ -187,6 +190,8 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
         val AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         val SKIPPED_VERSION_CODE = intPreferencesKey("skipped_version_code")
         val LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
+        // 界面语言
+        val LANGUAGE = stringPreferencesKey("language")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -229,7 +234,8 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
             desktopUpdateDir = p[Keys.DESKTOP_UPDATE_DIR],
             autoCheckUpdate = p[Keys.AUTO_CHECK_UPDATE] ?: true,
             skippedVersionCode = p[Keys.SKIPPED_VERSION_CODE] ?: -1,
-            lastUpdateCheckAt = p[Keys.LAST_UPDATE_CHECK_AT] ?: 0L
+            lastUpdateCheckAt = p[Keys.LAST_UPDATE_CHECK_AT] ?: 0L,
+            language = p[Keys.LANGUAGE] ?: "zh"
         )
     }
 
@@ -384,4 +390,7 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
 
     suspend fun markUpdateChecked(at: Long) =
         dataStore.edit { it[Keys.LAST_UPDATE_CHECK_AT] = at }
+
+    // ---- 界面语言 ----
+    suspend fun setLanguage(code: String) = dataStore.edit { it[Keys.LANGUAGE] = code }
 }

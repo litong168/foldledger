@@ -40,6 +40,7 @@ import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.vm.BillImportViewModel
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 账单文件选择器（平台槽）：返回一个「打开文件选择」的动作。
@@ -77,8 +78,8 @@ fun BillImportScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "导入账单",
-        subtitle = "微信 / 支付宝导出的 Excel 或 CSV",
+        title = t("导入账单"),
+        subtitle = t("微信 / 支付宝导出的 Excel 或 CSV"),
         onBack = onBack,
         showNavigation = false
     ) { padding ->
@@ -86,7 +87,7 @@ fun BillImportScreen(
             when (val s = state) {
                 is BillImportViewModel.State.Idle -> IdlePane(onPick = pick)
 
-                is BillImportViewModel.State.Loading -> CenterPane("正在解析…")
+                is BillImportViewModel.State.Loading -> CenterPane(t("正在解析…"))
 
                 is BillImportViewModel.State.Failed -> FailPane(s.message) {
                     vm.reset()
@@ -121,11 +122,11 @@ private fun IdlePane(onPick: () -> Unit) {
         Spacer(Modifier.height(40.dp))
         EmptyHint(
             emoji = "📥",
-            title = "把账单文件变成流水",
+            title = t("把账单文件变成流水"),
             subtitle = "微信「我 › 服务 › 钱包 › 账单 › 常见问题 › 下载账单」导出 Excel；\n支付宝「我的 › 账单 › 右上角 › 开具交易流水证明」导出 CSV。"
         )
         Spacer(Modifier.height(8.dp))
-        PrimaryButton("选择账单文件", onPick)
+        PrimaryButton(t("选择账单文件"), onPick)
         Spacer(Modifier.height(16.dp))
         Text(
             "全程本机解析，文件不会上传。\n转账、退款、已关闭的记录会自动跳过；重复的流水也不会重复导入。",
@@ -156,11 +157,11 @@ private fun ReadyPane(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            SectionCard(title = "解析完成", subtitle = preview.fileName) {
+            SectionCard(title = t("解析完成"), subtitle = preview.fileName) {
                 Row {
-                    Stat(Modifier.weight(1f), "可导入", "${preview.items.size} 笔")
-                    Stat(Modifier.weight(1f), "支出", Money.format(preview.expenseCents), dc.expense)
-                    Stat(Modifier.weight(1f), "收入", Money.format(preview.incomeCents), dc.income)
+                    Stat(Modifier.weight(1f), t("可导入"), "${preview.items.size} 笔")
+                    Stat(Modifier.weight(1f), t("支出"), Money.format(preview.expenseCents), dc.expense)
+                    Stat(Modifier.weight(1f), t("收入"), Money.format(preview.incomeCents), dc.income)
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
@@ -175,7 +176,7 @@ private fun ReadyPane(
             }
         }
         item {
-            SectionCard(title = "预览", subtitle = "前 20 笔") {
+            SectionCard(title = t("预览"), subtitle = t("前 20 笔")) {
                 preview.items.take(20).forEach { m ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -183,7 +184,7 @@ private fun ReadyPane(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                m.counterparty.ifBlank { "（无对方）" },
+                                m.counterparty.ifBlank { t("（无对方）") },
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -239,7 +240,7 @@ private fun DonePane(imported: Int, skipped: Int, onClose: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(24.dp))
-        PrimaryButton("完成", onClose)
+        PrimaryButton(t("完成"), onClose)
     }
 }
 
@@ -257,7 +258,7 @@ private fun FailPane(message: String, onRetry: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Text(message, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(20.dp))
-        PrimaryButton("换个文件试试", onRetry)
+        PrimaryButton(t("换个文件试试"), onRetry)
     }
 }
 

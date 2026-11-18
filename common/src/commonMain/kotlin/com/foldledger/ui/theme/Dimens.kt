@@ -2,6 +2,7 @@ package com.foldledger.ui.theme
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.foldledger.ui.l10n.t
 
 /**
  * 间距节奏（对齐 Apple HIG 的 4pt 栅格）。
@@ -30,7 +31,7 @@ object Space {
     /** 区块之间的间距 */
     val gapSection: Dp = 20.dp
 
-    /** 卡片内边距 —— 玻璃要"呼吸"，比实色卡多 2dp */
+    /** 卡片内边距 —— 玻璃要t("呼吸")，比实色卡多 2dp */
     val cardPad: Dp = 18.dp
 
     /**

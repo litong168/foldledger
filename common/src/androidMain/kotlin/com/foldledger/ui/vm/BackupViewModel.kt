@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.foldledger.ui.l10n.t
 
 /**
  * Android 备份视图模型：SAF 目录授权 + 文件备份/恢复。
@@ -94,7 +95,7 @@ class AndroidBackupViewModel(
         )
     }
 
-    /** Android 没有稳定的"用文件管理器打开某个 SAF 目录"入口 → 交回 false，UI 隐藏这个按钮 */
+    /** Android 没有稳定的t("用文件管理器打开某个 SAF 目录")入口 → 交回 false，UI 隐藏这个按钮 */
     override fun openFolder(): Boolean = false
 
     override fun setAutoBackupEnabled(enabled: Boolean) {
@@ -120,7 +121,7 @@ class AndroidBackupViewModel(
             _state.value = _state.value.copy(
                 needsFolderFor = null,
                 phase = BackupPhase.FAILED,
-                message = "没能取得该文件夹的长期读写权限，请换一个文件夹（建议选「下载」）"
+                message = t("没能取得该文件夹的长期读写权限，请换一个文件夹（建议选「下载」）")
             )
             return
         }
@@ -223,20 +224,20 @@ class AndroidBackupViewModel(
         val uri = treeUri
         _state.value = _state.value.copy(pendingDelete = null)
         if (uri == null) return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在删除…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在删除…"))
         viewModelScope.launch {
             runCatching { manager.deleteBackup(uri, entry) }
                 .onSuccess { ok ->
                     _state.value = _state.value.copy(
                         phase = if (ok) BackupPhase.DONE else BackupPhase.FAILED,
-                        message = if (ok) "已删除备份：${entry.fileName}" else "删除失败，可能文件已被移除"
+                        message = if (ok) "已删除备份：${entry.fileName}" else t("删除失败，可能文件已被移除")
                     )
                     refreshListInternal()
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         phase = BackupPhase.FAILED,
-                        message = e.message ?: "删除失败"
+                        message = e.message ?: t("删除失败")
                     )
                 }
         }
@@ -284,7 +285,7 @@ class AndroidBackupViewModel(
             _state.value = _state.value.copy(
                 pickingRestore = false,
                 phase = BackupPhase.FAILED,
-                message = "备份目录里没有可恢复的备份"
+                message = t("备份目录里没有可恢复的备份")
             )
         } else if (newest.encrypted) {
             _state.value = _state.value.copy(pendingRestorePassword = newest)
@@ -316,13 +317,13 @@ class AndroidBackupViewModel(
 
     private suspend fun doExport(auto: Boolean, passphrase: String? = null) {
         val uri = treeUri ?: return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = if (auto) "正在自动备份…" else "正在导出备份…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = if (auto) t("正在自动备份…") else t("正在导出备份…"))
         runCatching { manager.export(uri, auto, passphrase) }
             .onSuccess { r ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.DONE,
                     message = buildString {
-                        append(if (auto) "已自动备份" else "已导出")
+                        append(if (auto) t("已自动备份") else t("已导出"))
                         append(" ${r.ledgerCount} 个账本 / ${r.txnCount} 笔流水")
                         append(" → ").append(r.folderLabel)
                         if (r.prunedFiles > 0) append("（清理了 ${r.prunedFiles} 个旧文件）")
@@ -335,7 +336,7 @@ class AndroidBackupViewModel(
             .onFailure { e ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.FAILED,
-                    message = e.message ?: "导出失败，请重试"
+                    message = e.message ?: t("导出失败，请重试")
                 )
             }
     }
@@ -346,13 +347,13 @@ class AndroidBackupViewModel(
      */
     private suspend fun doImport() {
         val uri = treeUri ?: return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在查找备份…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在查找备份…"))
         runCatching { manager.listBackups(uri) }
             .onSuccess { list ->
                 if (list.isEmpty()) {
                     _state.value = _state.value.copy(
                         phase = BackupPhase.FAILED,
-                        message = "备份目录里没找到「滴水记账」的备份文件，先导出一次吧"
+                        message = t("备份目录里没找到「滴水记账」的备份文件，先导出一次吧")
                     )
                 } else {
                     _state.value = _state.value.copy(
@@ -366,7 +367,7 @@ class AndroidBackupViewModel(
             .onFailure { e ->
                 _state.value = _state.value.copy(
                     phase = BackupPhase.FAILED,
-                    message = e.message ?: "读取备份目录失败"
+                    message = e.message ?: t("读取备份目录失败")
                 )
             }
     }
@@ -377,7 +378,7 @@ class AndroidBackupViewModel(
         asNew: Boolean = false
     ) {
         val uri = treeUri ?: return
-        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = "正在恢复…")
+        _state.value = _state.value.copy(phase = BackupPhase.WORKING, message = t("正在恢复…"))
         runCatching {
             // 覆盖恢复前先把「当前现场」写成自动备份，万一恢复错了还能退回来；
             // 追加恢复不动现有数据，不需要这一步。

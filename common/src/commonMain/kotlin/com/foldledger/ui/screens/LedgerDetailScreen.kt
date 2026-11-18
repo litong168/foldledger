@@ -161,6 +161,7 @@ import com.foldledger.ui.screens.detail.GlassSegmentBar
 import com.foldledger.ui.screens.detail.MonthBreakdownPage
 import com.foldledger.ui.screens.detail.BatchMode
 import com.foldledger.ui.screens.detail.DayGroupCard
+import com.foldledger.ui.l10n.t
 
 /**
  * 明细页 —— 显示「账本页」当前选中的那个分账本的流水。
@@ -194,7 +195,7 @@ fun LedgerDetailTabScreen(
         ) {
             EmptyHint(
                 emoji = "📒",
-                title = "还没有账本",
+                title = t("还没有账本"),
                 subtitle = "去「账本」页创建一个分账本，明细会显示在这里",
                 actionLabel = "去账本页",
                 onAction = onGoBooks
@@ -562,7 +563,7 @@ private fun LedgerDetailBody(
                                         onBatchReimburse = { batchMode = BatchMode.REIMBURSE },
                                         onBatchMove = { batchMode = BatchMode.MOVE },
                                         onBatchDelete = { batchMode = BatchMode.DELETE },
-                                        moveLabel = if (isAutoLedger) "✓ 确认入账" else "移动到账本"
+                                        moveLabel = if (isAutoLedger) "✓ 确认入账" else t("移动到账本")
                                     )
                                 }
                                 item { SearchBar(searchQuery, vm::setSearchQuery) }
@@ -574,12 +575,12 @@ private fun LedgerDetailBody(
                                         }
                                         Spacer(Modifier.width(6.dp))
                                         ToolPill(
-                                            "筛选",
+                                            t("筛选"),
                                             active = txnFilter.isActive
                                         ) { filterOpen = true }
                                         Spacer(Modifier.width(6.dp))
                                         ToolPill(
-                                            "多选",
+                                            t("多选"),
                                             enabled = visibleIds.isNotEmpty()
                                         ) { vm.enterMultiSelect() }
                                     }
@@ -601,8 +602,8 @@ private fun LedgerDetailBody(
                             groups.isEmpty() -> item {
                                 EmptyHint(
                                     emoji = "🧾",
-                                    title = "还没有记账记录",
-                                    subtitle = "点右下角那颗「＋」，给这个账本添上第一笔",
+                                    title = t("还没有记账记录"),
+                                    subtitle = t("点右下角那颗「＋」，给这个账本添上第一笔"),
                                     // ⚠️ v13.9：**空态里不再放「记一笔」按钮**。
                                     // 右下角那颗玻璃圆键是常驻的，空态再放一颗一模一样的按钮，
                                     // 用户看到的是"两个记一笔"，读不出"这里空着"。
@@ -885,7 +886,7 @@ private fun LedgerDetailBody(
                                         onBatchReimburse = { batchMode = BatchMode.REIMBURSE },
                                         onBatchMove = { batchMode = BatchMode.MOVE },
                                         onBatchDelete = { batchMode = BatchMode.DELETE },
-                                        moveLabel = if (isAutoLedger) "✓ 确认入账" else "移动到账本"
+                                        moveLabel = if (isAutoLedger) "✓ 确认入账" else t("移动到账本")
                                     )
                                     Spacer(Modifier.height(Space.sm))
                                     SearchBar(searchQuery, vm::setSearchQuery)
@@ -898,12 +899,12 @@ private fun LedgerDetailBody(
                                         }
                                         Spacer(Modifier.width(6.dp))
                                         ToolPill(
-                                            "筛选",
+                                            t("筛选"),
                                             active = txnFilter.isActive
                                         ) { filterOpen = true }
                                         Spacer(Modifier.width(6.dp))
                                         ToolPill(
-                                            "多选",
+                                            t("多选"),
                                             enabled = visibleIds.isNotEmpty()
                                         ) { vm.enterMultiSelect() }
                                     }
@@ -997,8 +998,8 @@ private fun LedgerDetailBody(
                         groups.isEmpty() -> item {
                             EmptyHint(
                                 emoji = "🧾",
-                                title = "还没有记账记录",
-                                subtitle = "点右下角那颗「＋」，给这个账本添上第一笔",
+                                title = t("还没有记账记录"),
+                                subtitle = t("点右下角那颗「＋」，给这个账本添上第一笔"),
                                 // ⚠️ v13.9：同上 —— 双栏版本的空态也不再自带按钮
                                 highlight = true
                             )
@@ -1234,7 +1235,7 @@ private fun SearchBar(
             ) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "清除",
+                    contentDescription = t("清除"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(15.dp)
                 )

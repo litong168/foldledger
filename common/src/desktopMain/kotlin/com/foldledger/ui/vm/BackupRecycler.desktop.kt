@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.foldledger.ui.l10n.t
 
 /**
  * 桌面回收站的副本目录：`~/.foldledger/recycle/backup/`。
@@ -116,7 +117,7 @@ private class DesktopBackupRecycler : BackupRecycler {
             val dir = treeUri?.let { File(it) } ?: return@withContext false
             if (!dir.isDirectory || !BackupFormat.isBackupFileName(item.fileName)) return@withContext false
             runCatching {
-                if (!DesktopRecycleStore.restore(dir, item)) error("回收站副本已不存在")
+                if (!DesktopRecycleStore.restore(dir, item)) error(t("回收站副本已不存在"))
                 prefs.mutateRecycledBackups { list -> list.filter { it.storedName != item.storedName } }
                 true
             }.getOrDefault(false)

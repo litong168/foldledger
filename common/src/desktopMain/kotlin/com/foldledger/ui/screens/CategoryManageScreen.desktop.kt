@@ -68,6 +68,7 @@ import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.coroutines.resume
+import com.foldledger.ui.l10n.t
 
 /**
  * 分类管理（桌面版，M3）。
@@ -100,7 +101,7 @@ fun DesktopCategoryManageScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "分类管理",
+        title = t("分类管理"),
         subtitle = sceneName,
         onBack = onBack,
         showNavigation = false
@@ -110,8 +111,8 @@ fun DesktopCategoryManageScreen(
                 Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                DirectionChip("支出", direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
-                DirectionChip("收入", direction == Direction.INCOME) { direction = Direction.INCOME }
+                DirectionChip(t("支出"), direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
+                DirectionChip(t("收入"), direction == Direction.INCOME) { direction = Direction.INCOME }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -168,13 +169,13 @@ fun DesktopCategoryManageScreen(
                             }
                         }
                         if (c.budgetCents > 0) {
-                            PillTag("已设预算", CoolGreen, filled = false)
+                            PillTag(t("已设预算"), CoolGreen, filled = false)
                             Spacer(Modifier.width(6.dp))
                         }
                         IconButton(onClick = { confirmingDelete = c }) {
                             Icon(
                                 Icons.Filled.Delete,
-                                contentDescription = "删除分类",
+                                contentDescription = t("删除分类"),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -344,7 +345,7 @@ private fun CategoryEditDialog(
 
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEdit) "编辑分类" else "新建${if (direction == Direction.EXPENSE) "支出" else "收入"}分类") },
+        title = { Text(if (isEdit) t("编辑分类") else "新建${if (direction == Direction.EXPENSE) "支出" else "收入"}分类") },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 OutlinedTextField(
@@ -420,12 +421,12 @@ private fun CategoryEditDialog(
                         uploadScope.launch {
                             val picked = pickIconFile()
                             if (picked == null) {
-                                uploadHint = "已取消选择图片"
+                                uploadHint = t("已取消选择图片")
                                 return@launch
                             }
                             val name = DesktopIconStore.import(picked)
                             if (name == null) {
-                                uploadHint = "这张图片读不出来，换一张试试"
+                                uploadHint = t("这张图片读不出来，换一张试试")
                             } else {
                                 icon = IconRef.of(name)
                                 uploadHint = null
@@ -437,7 +438,7 @@ private fun CategoryEditDialog(
                         CategoryIcon(ref = icon, size = 24.dp, fontSize = 20)
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "已选自定义图标",
+                            t("已选自定义图标"),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -493,7 +494,7 @@ private fun CategoryEditDialog(
                     vm.add(name, icon, direction)
                 }
                 onDismiss()
-            }) { Text(if (isEdit) "保存" else "新建") }
+            }) { Text(if (isEdit) t("保存") else t("新建")) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }
@@ -512,10 +513,10 @@ private suspend fun pickIconFile(): File? = suspendCancellableCoroutine { cont -
     SwingUtilities.invokeLater {
         val picked = runCatching {
             val chooser = JFileChooser().apply {
-                dialogTitle = "选一张分类图标"
+                dialogTitle = t("选一张分类图标")
                 isAcceptAllFileFilterUsed = false
                 fileFilter = FileNameExtensionFilter(
-                    "图片 (PNG / JPG / WEBP / BMP)", "png", "jpg", "jpeg", "webp", "bmp"
+                    t("图片 (PNG / JPG / WEBP / BMP)"), "png", "jpg", "jpeg", "webp", "bmp"
                 )
                 File(System.getProperty("user.home"), "Pictures").takeIf { it.isDirectory }
                     ?.let { currentDirectory = it }

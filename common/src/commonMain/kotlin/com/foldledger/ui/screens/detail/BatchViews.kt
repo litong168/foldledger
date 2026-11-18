@@ -124,6 +124,7 @@ import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -201,7 +202,7 @@ internal fun BatchToolbar(
     onBatchMove: () -> Unit,
     onBatchDelete: () -> Unit,
     /** v15：自动账本里「移动到账本」语义化为主行动「确认入账」 */
-    moveLabel: String = "移动到账本",
+    moveLabel: String = t("移动到账本"),
     modifier: Modifier = Modifier
 ) {
     if (!multiSelect) {
@@ -233,7 +234,7 @@ internal fun BatchToolbar(
                 }
                 Text(
                     // v9.9.5：原来写"⛃ 筛选"，⛃ 是生僻符号，部分机型字体会渲染成方框
-                    "筛选",
+                    t("筛选"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (filterActive) MaterialTheme.colorScheme.primary
@@ -243,7 +244,7 @@ internal fun BatchToolbar(
             Spacer(Modifier.weight(1f))
             // 批量入口做成低调的文字按钮：批量是低频操作，不该和「搜索」「记一笔」抢注意力
             Text(
-                "☑ 多选",
+                t("☑ 多选"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -300,7 +301,7 @@ internal fun BatchToolbar(
                     }
                 }
                 Text(
-                    "全选",
+                    t("全选"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary,
@@ -310,7 +311,7 @@ internal fun BatchToolbar(
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 )
                 Text(
-                    "反选",
+                    t("反选"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary,
@@ -322,15 +323,15 @@ internal fun BatchToolbar(
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BatchActionButton("改分类", enabled = selectedCount > 0, onClick = onBatchCategory)
-                BatchActionButton("改项目", enabled = selectedCount > 0, onClick = onBatchProject)
+                BatchActionButton(t("改分类"), enabled = selectedCount > 0, onClick = onBatchCategory)
+                BatchActionButton(t("改项目"), enabled = selectedCount > 0, onClick = onBatchProject)
                 if (hasReimburse) {
-                    BatchActionButton("报销状态", enabled = selectedCount > 0, onClick = onBatchReimburse)
+                    BatchActionButton(t("报销状态"), enabled = selectedCount > 0, onClick = onBatchReimburse)
                 }
                 // v8.1：自动记账确认后挪去正式账本（分类/场景字段自动适配）
                 BatchActionButton(moveLabel, enabled = selectedCount > 0, onClick = onBatchMove)
                 BatchActionButton(
-                    "删除",
+                    t("删除"),
                     enabled = selectedCount > 0,
                     danger = true,
                     onClick = onBatchDelete
@@ -401,7 +402,7 @@ internal fun BatchActionDialog(
             text = { Text("删除后无法恢复。确认要删掉这 $selectedCount 笔吗？") },
             confirmButton = {
                 Text(
-                    "删除",
+                    t("删除"),
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -415,7 +416,7 @@ internal fun BatchActionDialog(
             },
             dismissButton = {
                 Text(
-                    "取消",
+                    t("取消"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -453,10 +454,10 @@ internal fun BatchPickerSheet(
     onDismiss: () -> Unit
 ) {
     val title = when (mode) {
-        BatchMode.CATEGORY -> "改分类"
-        BatchMode.PROJECT -> "改项目"
-        BatchMode.REIMBURSE -> "改报销状态"
-        BatchMode.MOVE -> "移动到账本"
+        BatchMode.CATEGORY -> t("改分类")
+        BatchMode.PROJECT -> t("改项目")
+        BatchMode.REIMBURSE -> t("改报销状态")
+        BatchMode.MOVE -> t("移动到账本")
         BatchMode.DELETE -> ""
     }
     GlassDialog(
@@ -475,7 +476,7 @@ internal fun BatchPickerSheet(
                     BatchMode.CATEGORY -> {
                         if (categories.isEmpty()) {
                             Text(
-                                "这个账本还没有分类",
+                                t("这个账本还没有分类"),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -491,7 +492,7 @@ internal fun BatchPickerSheet(
 
                     BatchMode.PROJECT -> {
                         // 「未归类」放在第一个：批量把流水撤出项目是常见操作
-                        BatchPickRow(emoji = "🗂", label = "不归入项目", onClick = { onPickProject(0L) })
+                        BatchPickRow(emoji = "🗂", label = t("不归入项目"), onClick = { onPickProject(0L) })
                         projects.filter { !it.closed }.forEach { p ->
                             BatchPickRow(
                                 emoji = p.emoji,
@@ -502,15 +503,15 @@ internal fun BatchPickerSheet(
                     }
 
                     BatchMode.REIMBURSE -> {
-                        BatchPickRow("⏳", "待提交", onClick = { onPickReimburse(ReimburseState.PENDING) })
-                        BatchPickRow("📤", "已提交", onClick = { onPickReimburse(ReimburseState.SUBMITTED) })
-                        BatchPickRow("✅", "已回款", onClick = { onPickReimburse(ReimburseState.SETTLED) })
+                        BatchPickRow("⏳", t("待提交"), onClick = { onPickReimburse(ReimburseState.PENDING) })
+                        BatchPickRow("📤", t("已提交"), onClick = { onPickReimburse(ReimburseState.SUBMITTED) })
+                        BatchPickRow("✅", t("已回款"), onClick = { onPickReimburse(ReimburseState.SETTLED) })
                     }
 
                     BatchMode.MOVE -> {
                         if (moveTargets.isEmpty()) {
                             Text(
-                                "还没有别的账本可以移入",
+                                t("还没有别的账本可以移入"),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -530,7 +531,7 @@ internal fun BatchPickerSheet(
         },
         confirmButton = {
             Text(
-                "取消",
+                t("取消"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))

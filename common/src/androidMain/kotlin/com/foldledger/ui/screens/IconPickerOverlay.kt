@@ -50,6 +50,7 @@ import com.foldledger.ui.theme.Radius
 import com.foldledger.ui.theme.Space
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.theme.glassSelectChip
+import com.foldledger.ui.l10n.t
 
 /**
  * 图标选择器。
@@ -92,7 +93,7 @@ fun IconPickerOverlay(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "选择图标",
+                        t("选择图标"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -122,7 +123,7 @@ fun IconPickerOverlay(
                 ) {
                     Icon(
                         Icons.Filled.Close,
-                        contentDescription = "关闭",
+                        contentDescription = t("关闭"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
@@ -155,7 +156,7 @@ fun IconPickerOverlay(
                     Text("🖼️", fontSize = 15.sp)
                     Spacer(Modifier.width(Space.sm))
                     Text(
-                        "从相册上传图片",
+                        t("从相册上传图片"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
@@ -163,7 +164,7 @@ fun IconPickerOverlay(
                 }
                 Spacer(Modifier.width(Space.sm))
                 Text(
-                    "自动裁成正方形，存本机私有目录",
+                    t("自动裁成正方形，存本机私有目录"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

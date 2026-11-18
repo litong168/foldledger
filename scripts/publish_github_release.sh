@@ -43,7 +43,9 @@ APK_SIZE="$(stat -c%s "$APK")"
 EXE_SIZE="$(stat -c%s "$EXE")"
 APK_NAME="drip-ledger-v${VERSION}-arm64.apk"
 EXE_NAME="drip-ledger-v${VERSION}-win-x64-setup.exe"
-NOTES="$(printf '## 滴水记账 v%s\n\n双端同版（versionCode %s）。下载对应平台的安装包即可。\n' "$VERSION" "$VERSION_CODE")"
+# ⚠️ notes 用纯文本：App 的更新弹窗直接把 notes 当纯文本显示（不渲染 Markdown），
+#   写 `## 标题` 会原样露出井号。详见 16.6.0 真机验收记录。
+NOTES="$(printf '滴水记账 v%s（versionCode %s），双端同版。内置简体中文 / English 界面，下载对应平台的安装包即可。' "$VERSION" "$VERSION_CODE")"
 python - "$VERSION" "$VERSION_CODE" "$APK_NAME" "$APK_SIZE" "$APK_SHA" "$EXE_NAME" "$EXE_SIZE" "$EXE_SHA" "$NOTES" <<'PY' > update-manifest.json
 import json, sys
 v, code, apk_n, apk_s, apk_h, exe_n, exe_s, exe_h, notes = sys.argv[1:10]

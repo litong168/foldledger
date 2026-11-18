@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.foldledger.ui.l10n.t
 
 /** Android 文件选择：SAF OpenDocument（带账单 MIME 过滤），字节读出后交共享 VM。 */
 @Composable
@@ -20,7 +21,7 @@ actual fun rememberBillFilePicker(onPicked: (name: String, bytes: ByteArray) -> 
                     val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
                 }
-            }.getOrNull() ?: "账单文件"
+            }.getOrNull() ?: t("账单文件")
             val bytes = runCatching {
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.getOrNull()

@@ -123,6 +123,7 @@ import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.glassSelectChip
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -154,17 +155,17 @@ internal fun FilterOverlay(
         title = { Text("筛选流水") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                FilterGroup("时间") {
+                FilterGroup(t("时间")) {
                     FilterTimeRange.entries.forEach { r ->
                         FilterChip(r.label, r == timeRange) { timeRange = r }
                     }
                 }
-                FilterGroup("收支") {
-                    FilterChip("不限", direction == null) { direction = null }
-                    FilterChip("支出", direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
-                    FilterChip("收入", direction == Direction.INCOME) { direction = Direction.INCOME }
+                FilterGroup(t("收支")) {
+                    FilterChip(t("不限"), direction == null) { direction = null }
+                    FilterChip(t("支出"), direction == Direction.EXPENSE) { direction = Direction.EXPENSE }
+                    FilterChip(t("收入"), direction == Direction.INCOME) { direction = Direction.INCOME }
                 }
-                FilterGroup("金额") {
+                FilterGroup(t("金额")) {
                     FilterAmount.entries.forEach { a ->
                         FilterChip(a.label, a == amount) { amount = a }
                     }
@@ -173,7 +174,7 @@ internal fun FilterOverlay(
         },
         confirmButton = {
             Text(
-                "应用",
+                t("应用"),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
@@ -188,7 +189,7 @@ internal fun FilterOverlay(
         dismissButton = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "清除",
+                    t("清除"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -199,7 +200,7 @@ internal fun FilterOverlay(
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
                 Text(
-                    "取消",
+                    t("取消"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -296,7 +297,7 @@ internal fun FilterActiveBar(
             )
         }
         Text(
-            "清除 ✕",
+            t("清除 ✕"),
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary,

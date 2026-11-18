@@ -52,6 +52,7 @@ import com.foldledger.ui.vm.CalUi
 import com.foldledger.ui.vm.SpendCalendarViewModel
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 消费日历（v7.5）。
@@ -78,7 +79,7 @@ fun SpendCalendarScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "消费日历",
+        title = t("消费日历"),
         subtitle = monthSubtitle(monthTs, ui),
         onBack = onBack,
         showNavigation = false
@@ -187,7 +188,7 @@ private fun MonthHeader(monthTs: Long, onPrev: () -> Unit, onNext: () -> Unit, o
         MonthArrow("›", onNext)
         Spacer(Modifier.width(8.dp))
         Text(
-            "今天",
+            t("今天"),
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary,
@@ -242,7 +243,7 @@ private fun MonthGrid(ui: CalUi, monthTs: Long, selTs: Long, onPick: (Long) -> U
     ) {
         // 周标题（周日开头，和日历习惯一致）
         Row(Modifier.fillMaxWidth()) {
-            listOf("日", "一", "二", "三", "四", "五", "六").forEach {
+            listOf(t("日"), t("一"), t("二"), t("三"), t("四"), t("五"), t("六")).forEach {
                 Text(
                     it,
                     fontSize = 11.sp,
@@ -360,7 +361,7 @@ private fun DayCell(
 @Composable
 private fun MonthFooter(ui: CalUi, monthTs: Long) {
     val dayCount = SpendCalendarViewModel.daysInMonth(monthTs)
-    SectionCard(title = "本月概览") {
+    SectionCard(title = t("本月概览")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("本月支出", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -448,8 +449,8 @@ private fun DayPanel(
         if (ui.dayItems.isEmpty()) {
             EmptyHint(
                 emoji = "🌤",
-                title = "这一天没有记录",
-                subtitle = "用上面的「‹ ›」换个日子翻翻；补记的话回明细页点「记一笔」"
+                title = t("这一天没有记录"),
+                subtitle = t("用上面的「‹ ›」换个日子翻翻；补记的话回明细页点「记一笔」")
             )
         } else if (embedInScroll) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

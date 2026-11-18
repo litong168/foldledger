@@ -25,8 +25,14 @@ import org.json.JSONObject
  */
 object UpdateChecker {
 
-    /** 本端资产条目 */
-    data class Asset(val name: String, val size: Long, val sha256: String)
+    /** 本端资产条目。[url] 为空时由下载源按约定拼接（GitHub 走 API、Gitee 走约定直链）。 */
+    data class Asset(
+        val name: String,
+        val size: Long,
+        val sha256: String,
+        /** 直链下载地址（可选）。Gitee 镜像用它指向 Release 附件——raw 对大文件强制登录，附件不用。 */
+        val url: String = ""
+    )
 
     /** 更新清单（从 update-manifest.json 解析） */
     data class Manifest(
@@ -63,7 +69,8 @@ object UpdateChecker {
             out[k] = Asset(
                 name = a.optString("name", ""),
                 size = a.optLong("size", 0L),
-                sha256 = a.optString("sha256", "")
+                sha256 = a.optString("sha256", ""),
+                url = a.optString("url", "")
             )
         }
         return out

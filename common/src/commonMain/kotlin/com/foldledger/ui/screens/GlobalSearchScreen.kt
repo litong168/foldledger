@@ -51,6 +51,7 @@ import com.foldledger.ui.vm.GlobalSearchViewModel
 import com.foldledger.util.DateExt
 import com.foldledger.ui.theme.Layout
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 全局搜索（v5.9）：跨账本找一笔账。
@@ -77,8 +78,8 @@ fun GlobalSearchScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "搜索",
-        subtitle = if (results.isEmpty()) "跨账本查找任意一笔" else "找到 ${results.size} 笔",
+        title = t("搜索"),
+        subtitle = if (results.isEmpty()) t("跨账本查找任意一笔") else "找到 ${results.size} 笔",
         onBack = onBack
     ) { padding ->
         val side = Layout.sidePadding(env.widthDp)
@@ -109,7 +110,7 @@ fun GlobalSearchScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 FilterChip(
-                    label = "全部账本",
+                    label = t("全部账本"),
                     selected = ledgerFilter == 0L,
                     onClick = { vm.setLedgerFilter(0L) }
                 )
@@ -128,18 +129,18 @@ fun GlobalSearchScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                FilterChip("全部", directionFilter < 0) { vm.setDirectionFilter(-1) }
-                FilterChip("支出", directionFilter == Direction.EXPENSE) {
+                FilterChip(t("全部"), directionFilter < 0) { vm.setDirectionFilter(-1) }
+                FilterChip(t("支出"), directionFilter == Direction.EXPENSE) {
                     vm.setDirectionFilter(Direction.EXPENSE)
                 }
-                FilterChip("收入", directionFilter == Direction.INCOME) {
+                FilterChip(t("收入"), directionFilter == Direction.INCOME) {
                     vm.setDirectionFilter(Direction.INCOME)
                 }
                 Box(Modifier.width(2.dp))
-                FilterChip("不限时间", rangeFilter == 0) { vm.setRangeFilter(0) }
-                FilterChip("近 30 天", rangeFilter == 30) { vm.setRangeFilter(30) }
-                FilterChip("近 90 天", rangeFilter == 90) { vm.setRangeFilter(90) }
-                FilterChip("今年", rangeFilter == 365) { vm.setRangeFilter(365) }
+                FilterChip(t("不限时间"), rangeFilter == 0) { vm.setRangeFilter(0) }
+                FilterChip(t("近 30 天"), rangeFilter == 30) { vm.setRangeFilter(30) }
+                FilterChip(t("近 90 天"), rangeFilter == 90) { vm.setRangeFilter(90) }
+                FilterChip(t("今年"), rangeFilter == 365) { vm.setRangeFilter(365) }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -150,14 +151,14 @@ fun GlobalSearchScreen(
                         Text(if (query.isBlank()) "🔎" else "🙁", fontSize = 44.sp)
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            if (query.isBlank()) "输入关键词开始查找" else "没有符合条件的结果",
+                            if (query.isBlank()) t("输入关键词开始查找") else t("没有符合条件的结果"),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            if (query.isBlank()) "可以搜分类、备注，或者直接输金额"
-                            else "试试减少筛选条件，或换个说法",
+                            if (query.isBlank()) t("可以搜分类、备注，或者直接输金额")
+                            else t("试试减少筛选条件，或换个说法"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center

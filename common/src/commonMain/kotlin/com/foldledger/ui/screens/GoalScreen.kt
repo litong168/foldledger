@@ -54,6 +54,7 @@ import com.foldledger.ui.vm.GoalViewModel
 import com.foldledger.util.Money
 import com.foldledger.util.SavingsGoal
 import java.util.concurrent.TimeUnit
+import com.foldledger.ui.l10n.t
 
 /**
  * 存钱目标（v9.2）——心愿罐。
@@ -90,8 +91,8 @@ fun GoalScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "存钱目标",
-        subtitle = "全部账本 · 为将来攒下的每一笔",
+        title = t("存钱目标"),
+        subtitle = t("全部账本 · 为将来攒下的每一笔"),
         onBack = onBack,
         showNavigation = false
     ) { padding ->
@@ -125,8 +126,8 @@ fun GoalScreen(
                         Spacer(Modifier.height(20.dp))
                         EmptyHint(
                             emoji = "🎯",
-                            title = "还没有存钱目标",
-                            subtitle = "定一个目标：换手机、旅行、应急金…"
+                            title = t("还没有存钱目标"),
+                            subtitle = t("定一个目标：换手机、旅行、应急金…")
                         )
                     }
                     Spacer(Modifier.height(28.dp))
@@ -160,8 +161,8 @@ fun GoalScreen(
                     item {
                         EmptyHint(
                             emoji = "🎯",
-                            title = "还没有存钱目标",
-                            subtitle = "定一个目标：换手机、旅行、应急金…"
+                            title = t("还没有存钱目标"),
+                            subtitle = t("定一个目标：换手机、旅行、应急金…")
                         )
                     }
                 } else {
@@ -213,7 +214,7 @@ fun GoalScreen(
             text = {
                 Text(
                     "目标会先进**回收站**，随时能还原；\n" +
-                        "在回收站里再彻底删除，就真的没了。",
+                        t("在回收站里再彻底删除，就真的没了。"),
                     fontSize = 13.sp
                 )
             },
@@ -267,7 +268,7 @@ private fun GoalCreateCard(onClick: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "新建存钱目标",
+                    t("新建存钱目标"),
                     // v16.3.1：入口卡主文本统一 15.sp + 固定行盒
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
@@ -275,7 +276,7 @@ private fun GoalCreateCard(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "定个金额和期限，慢慢填满",
+                    t("定个金额和期限，慢慢填满"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -322,7 +323,7 @@ private fun GoalCard(
                         append(" / ")
                         append(Money.format(goal.targetCents))
                         if (goal.targetDate > 0) {
-                            append(if (days >= 0) " · 还剩 $days 天" else " · 已过期")
+                            append(if (days >= 0) " · 还剩 $days 天" else t(" · 已过期"))
                         }
                     },
                     fontSize = 11.sp,
@@ -331,7 +332,7 @@ private fun GoalCard(
             }
             if (done) {
                 Text(
-                    "✅ 已达成",
+                    t("✅ 已达成"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -376,13 +377,13 @@ private fun GoalCard(
                 )
             } else {
                 Text(
-                    "已攒够，达成目标 🎉",
+                    t("已攒够，达成目标 🎉"),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
             }
-            SmallButton("存入") { onDeposit() }
+            SmallButton(t("存入")) { onDeposit() }
             Spacer(Modifier.width(6.dp))
             // v9.7：编辑（改名 / 改金额 / 改期限 / 改归属）
             // v13.9：onSurface 7% 平涂 → 玻璃小胶囊
@@ -421,13 +422,13 @@ private fun GoalCard(
 
 @Composable
 private fun GoalTipsCard(goals: List<GoalEntity>) {
-    SectionCard(title = "关于存钱目标", subtitle = "只记目标，不动流水") {
+    SectionCard(title = t("关于存钱目标"), subtitle = t("只记目标，不动流水")) {
         Text(
             "攒钱不是支出，所以**不写进流水** —— 你的预算、月度结余、统计口径都不会被它影响。\n\n" +
                 "目标默认**独立于账本**：「换台相机」「存个应急金」本来就跟哪个账本无关。\n\n" +
-                "想按账本分类时，可以给它打个归属标签（可选），纯属方便筛选；" +
+                t("想按账本分类时，可以给它打个归属标签（可选），纯属方便筛选；") +
                 "账本删了，目标也只会解绑，不会跟着没。\n\n" +
-                "设了期限就会算出「每月要存多少」，没达成的目标会一直提醒你。",
+                t("设了期限就会算出「每月要存多少」，没达成的目标会一直提醒你。"),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -485,7 +486,7 @@ private fun GoalEditDialog(
 
     GlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (goal == null) "新建存钱目标" else "编辑目标") },
+        title = { Text(if (goal == null) t("新建存钱目标") else t("编辑目标")) },
         text = {
             Column {
                 OutlinedTextField(
@@ -576,7 +577,7 @@ private fun GoalEditDialog(
                 if (name.isBlank() || centsNow <= 0L) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "填好名称和金额就能" + if (goal == null) "创建" else "保存",
+                        "填好名称和金额就能" + if (goal == null) t("创建") else t("保存"),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -610,7 +611,7 @@ private fun GoalEditDialog(
                         onSubmit(name.trim(), emoji, centsNow, targetDate, selectedLedger)
                     }
                 }
-            ) { Text(if (goal == null) "创建" else "保存") }
+            ) { Text(if (goal == null) t("创建") else t("保存")) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )

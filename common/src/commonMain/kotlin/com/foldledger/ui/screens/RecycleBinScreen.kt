@@ -47,6 +47,7 @@ import com.foldledger.ui.vm.RecycleBinViewModel
 import com.foldledger.ui.vm.rememberBackupRecycler
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
+import com.foldledger.ui.l10n.t
 
 /**
  * 全局回收站（v9.4）——**最终后悔药**。
@@ -73,10 +74,10 @@ fun RecycleBinScreen(
 
     AdaptiveScaffold(
         env = env,
-        title = "回收站",
+        title = t("回收站"),
         // v9.9.0：原来写"删掉的东西都在这儿 · 随时能反悔"，但**流水是硬删**、不进回收站 ——
         // 用户删完一笔来这儿找不到，会以为数据丢了。把范围写清楚。
-        subtitle = "账本 / 存钱目标 / 备份文件 · 流水删除不在这里",
+        subtitle = t("账本 / 存钱目标 / 备份文件 · 流水删除不在这里"),
         onBack = onBack,
         showNavigation = false
     ) { padding ->
@@ -94,8 +95,8 @@ fun RecycleBinScreen(
                 item {
                     EmptyHint(
                         emoji = "🗑",
-                        title = "回收站是空的",
-                        subtitle = "删掉的账本、存钱目标、备份文件都会先放这儿"
+                        title = t("回收站是空的"),
+                        subtitle = t("删掉的账本、存钱目标、备份文件都会先放这儿")
                     )
                 }
             }
@@ -103,7 +104,7 @@ fun RecycleBinScreen(
             if (ledgers.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "账本",
+                        title = t("账本"),
                         subtitle = "${ledgers.size} 个 · 还原后流水和分类原样回来"
                     ) {
                         ledgers.forEach { l ->
@@ -116,7 +117,7 @@ fun RecycleBinScreen(
                             )
                         }
                         Spacer(Modifier.height(6.dp))
-                        SmallDangerButton("清空账本回收站") {
+                        SmallDangerButton(t("清空账本回收站")) {
                             confirmPurge = PurgeTarget.AllLedgers
                         }
                     }
@@ -126,7 +127,7 @@ fun RecycleBinScreen(
             if (goals.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "存钱目标",
+                        title = t("存钱目标"),
                         subtitle = "${goals.size} 个 · 还原后进度照旧"
                     ) {
                         goals.forEach { g ->
@@ -145,7 +146,7 @@ fun RecycleBinScreen(
             if (backups.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "备份文件",
+                        title = t("备份文件"),
                         subtitle = "${backups.size} 份 · 还原会放回备份目录"
                     ) {
                         backups.forEach { b ->
@@ -169,7 +170,7 @@ fun RecycleBinScreen(
             is PurgeTarget.Ledger -> "彻底删除「${target.ledger.name}」？"
             is PurgeTarget.Goal -> "彻底删除「${target.goal.name}」？"
             is PurgeTarget.Backup -> "彻底铲除「${target.backup.fileName}」？"
-            PurgeTarget.AllLedgers -> "清空账本回收站？"
+            PurgeTarget.AllLedgers -> t("清空账本回收站？")
         }
         GlassDialog(
             onDismissRequest = { confirmPurge = null },
@@ -177,7 +178,7 @@ fun RecycleBinScreen(
             text = {
                 Text(
                     "这一步不可逆，删掉就真的没了。\n" +
-                        "如果只是想让它从回收站消失、回到正常使用，请点「还原」。",
+                        t("如果只是想让它从回收站消失、回到正常使用，请点「还原」。"),
                     fontSize = 13.sp
                 )
             },
@@ -243,10 +244,10 @@ private fun TrashRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        SmallActionButton("还原", primary = true, onClick = onRestore)
+        SmallActionButton(t("还原"), primary = true, onClick = onRestore)
         // v9.8.0：两个胶囊同尺寸、只隔 6dp，手指一偏就从"还原"滑到"彻底删除"（不可逆）
         Spacer(Modifier.width(10.dp))
-        SmallActionButton("彻底删除", primary = false, onClick = onPurge)
+        SmallActionButton(t("彻底删除"), primary = false, onClick = onPurge)
     }
 }
 

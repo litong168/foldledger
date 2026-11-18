@@ -123,6 +123,7 @@ import com.foldledger.ui.theme.onColorFor
 import com.foldledger.ui.theme.softShadow
 import com.foldledger.ui.theme.rememberAnimatedPaneWidth
 import kotlinx.coroutines.delay
+import com.foldledger.ui.l10n.t
 
 /**
  * 拆自 LedgerDetailScreen.kt（v10.2.0）—— 把 3100 行按职责拆成 detail/ 子包。
@@ -196,7 +197,7 @@ internal fun AssetBar(
             Text("·", fontSize = 11.sp, color = faint.copy(alpha = 0.5f))
             // 入口紧跟在数字后面**左对齐**，不推到最右 —— 右下角是 FAB 的地盘。
             Text(
-                if (balances.isEmpty()) "建账户 ›" else "管理 ›",
+                if (balances.isEmpty()) t("建账户 ›") else t("管理 ›"),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,
@@ -323,7 +324,7 @@ internal fun LedgerOverviewCard(
             CompactOverviewRow(
                 emoji = emoji,
                 colorHex = colorHex,
-                label = if (reimburse != null) "尚余垫付" else "累计结余",
+                label = if (reimburse != null) t("尚余垫付") else t("累计结余"),
                 cents = if (reimburse != null) reimburse.outstandingCents else kotlin.math.abs(balance),
                 // v13.7：负结余必须**带负号**，不能只靠红色。
                 // 账本切换菜单里写的是「结余 -¥414.26」，卡片里写「¥414.26」+ 红字 ——
@@ -332,7 +333,7 @@ internal fun LedgerOverviewCard(
                 centsColor = if (reimburse != null) pendingTone()
                 else if (balance >= 0) dc.income else dc.expense,
                 note = if (reimburse != null) {
-                    if (reimburse.allSettled) "已全部回款" else "${reimburse.outstandingCount} 笔待回款"
+                    if (reimburse.allSettled) t("已全部回款") else "${reimburse.outstandingCount} 笔待回款"
                 } else {
                     "本月支 ${Money.format(monthExpense)}"
                 },
@@ -349,7 +350,7 @@ internal fun LedgerOverviewCard(
             //    省下的 60dp 直接还给数字本身。
             //    收起手柄改挂在「尚余垫付 / 累计结余」这一行的右端（HeaderLine）。
             if (reimburse != null) {
-                HeaderLine("尚余垫付", onCollapse = onToggleCompact)
+                HeaderLine(t("尚余垫付"), onCollapse = onToggleCompact)
                 Spacer(Modifier.height(3.dp))
                 AnimatedCentsText(
                     cents = reimburse.outstandingCents,
@@ -361,13 +362,13 @@ internal fun LedgerOverviewCard(
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    if (reimburse.allSettled) "全部垫付都已回款"
+                    if (reimburse.allSettled) t("全部垫付都已回款")
                     else "${reimburse.outstandingCount} 笔垫付款待回款",
                     fontSize = 13.sp,
                     color = faint
                 )
             } else {
-                HeaderLine("累计结余", onCollapse = onToggleCompact)
+                HeaderLine(t("累计结余"), onCollapse = onToggleCompact)
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -408,7 +409,7 @@ internal fun LedgerOverviewCard(
                 // 三栏收支：表格结构（竖线分隔），不是三个色块
                 Row(verticalAlignment = Alignment.Top) {
                     StatCell(
-                        label = "总收入",
+                        label = t("总收入"),
                         cents = totalIncome,
                         color = dc.income,
                         sub = "本月 ${Money.format(monthIncome)}",
@@ -417,7 +418,7 @@ internal fun LedgerOverviewCard(
                     Box(Modifier.width(1.dp).height(38.dp).background(innerLine))
                     Spacer(Modifier.width(Space.md))
                     StatCell(
-                        label = "总支出",
+                        label = t("总支出"),
                         cents = totalExpense,
                         color = dc.expense,
                         sub = "本月 ${Money.format(monthExpense)}",
@@ -427,7 +428,7 @@ internal fun LedgerOverviewCard(
                         Box(Modifier.width(1.dp).height(38.dp).background(innerLine))
                         Spacer(Modifier.width(Space.md))
                         StatCell(
-                            label = "本月预算",
+                            label = t("本月预算"),
                             cents = budgetCents,
                             color = if (used > 1f) MaterialTheme.colorScheme.error else ink,
                             sub = if (used > 1f) "已超 ${(used * 100).toInt()}%"
@@ -474,7 +475,7 @@ private fun HeaderLine(label: String, onCollapse: () -> Unit) {
         Text(label, style = OverlineLabel, color = faint)
         Spacer(Modifier.weight(1f))
         Text(
-            "收起",
+            t("收起"),
             fontSize = 11.sp,
             letterSpacing = 0.3.sp,
             color = faint,

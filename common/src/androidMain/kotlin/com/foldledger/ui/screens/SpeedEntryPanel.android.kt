@@ -37,6 +37,7 @@ import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.anim.rememberPressScale
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.vm.SpeedEntryViewModel
+import com.foldledger.ui.l10n.t
 
 /** Android 实现：面板本体共享，语音输入 = 系统语音识别（RecognizerIntent）。 */
 @Composable
@@ -102,7 +103,7 @@ internal actual fun SpeedEntryVoiceInput(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "说一句，比如：昨天打车35")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, t("说一句，比如：昨天打车35"))
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
         voice.hint = null
@@ -166,7 +167,7 @@ internal actual fun SpeedEntryVoiceInput(
                 painter = painterResource(
                     if (voiceUnavailable) R.drawable.ic_mic_off else R.drawable.ic_mic
                 ),
-                contentDescription = if (voiceUnavailable) "语音输入不可用，点一下重试" else "语音输入",
+                contentDescription = if (voiceUnavailable) t("语音输入不可用，点一下重试") else t("语音输入"),
                 tint = when {
                     // 0.85 而不是 0.55：仍要过 3:1 的可辨识门槛，读不出"禁用"就等于没提示
                     voiceUnavailable -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)

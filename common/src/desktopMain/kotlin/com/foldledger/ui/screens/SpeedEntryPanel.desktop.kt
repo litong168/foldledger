@@ -27,6 +27,7 @@ import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.anim.rememberPressScale
 import com.foldledger.ui.theme.glassChip
 import com.foldledger.ui.vm.SpeedEntryViewModel
+import com.foldledger.ui.l10n.t
 
 /** 桌面实现：面板本体共享，语音槽位用「文本填入」对齐（见 [SpeedEntryVoiceInput]）。 */
 @Composable
@@ -81,7 +82,7 @@ internal actual fun SpeedEntryVoiceInput(
                     } else {
                         unavailable = true
                         onVoiceUnavailable()
-                        voice.hint = "桌面没有系统语音识别；复制一句话后点这里填入，或直接键盘输入"
+                        voice.hint = t("桌面没有系统语音识别；复制一句话后点这里填入，或直接键盘输入")
                     }
                 }
             ),
@@ -100,7 +101,7 @@ internal actual fun SpeedEntryVoiceInput(
         ) {
             Icon(
                 imageVector = Icons.Filled.Edit,
-                contentDescription = "填入剪贴板里的一句话（桌面无系统语音识别）",
+                contentDescription = t("填入剪贴板里的一句话（桌面无系统语音识别）"),
                 tint = if (unavailable) {
                     // 与 Android voiceUnavailable 同款 0.85：仍要过 3:1 可辨识门槛
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.foldledger.ui.l10n.t
 
 /**
  * 账单导入（v9.1）——把微信/支付宝导出的账单变成本机流水。
@@ -79,8 +80,8 @@ class BillImportViewModel(
             }
             val r = result.getOrNull()
             when {
-                r == null -> _state.value = State.Failed("认不出这份账单。支持微信/支付宝导出的 Excel(.xlsx) 或 CSV。")
-                r.first.isEmpty() -> _state.value = State.Failed("文件里没找到可导入的流水（不含收支的转账行会被自动跳过）。")
+                r == null -> _state.value = State.Failed(t("认不出这份账单。支持微信/支付宝导出的 Excel(.xlsx) 或 CSV。"))
+                r.first.isEmpty() -> _state.value = State.Failed(t("文件里没找到可导入的流水（不含收支的转账行会被自动跳过）。"))
                 else -> {
                     val (mapped, totalRows, _) = r
                     val dup = countDuplicates(mapped)
@@ -188,7 +189,7 @@ class BillImportViewModel(
         return same.firstOrNull { it.name == "其他支出" || it.name == "其他收入" } ?: same.firstOrNull()
     }
 
-    private fun defaultCategoryName(direction: Int) = if (direction == Direction.INCOME) "其他收入" else "其他支出"
+    private fun defaultCategoryName(direction: Int) = if (direction == Direction.INCOME) t("其他收入") else t("其他支出")
     private fun defaultCategoryEmoji(direction: Int) = if (direction == Direction.INCOME) "✨" else "📦"
 
     private fun buildNote(item: BillMapper.Mapped): String {

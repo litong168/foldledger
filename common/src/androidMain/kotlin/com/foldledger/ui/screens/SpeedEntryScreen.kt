@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.foldledger.ui.adaptive.AdaptiveScaffold
 import com.foldledger.ui.adaptive.FoldEnv
 import com.foldledger.ui.vm.SpeedEntryViewModel
+import com.foldledger.ui.l10n.t
 
 /**
  * 一句话记账（v8.6）页面壳。
@@ -28,7 +29,7 @@ fun SpeedEntryScreen(
     )
     AdaptiveScaffold(
         env = env,
-        title = "一句话记账",
+        title = t("一句话记账"),
         subtitle = "说一句「昨天打车35」就记完",
         onBack = onBack,
         showNavigation = false

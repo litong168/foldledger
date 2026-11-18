@@ -21,6 +21,7 @@ import com.foldledger.data.prefs.AppSettings
 import com.foldledger.data.prefs.DarkMode
 import com.foldledger.platform.ApplySystemBarsStyle
 import com.foldledger.platform.dynamicColorSchemeIfAvailable
+import com.foldledger.ui.l10n.t
 
 val LocalDirectionColors = staticCompositionLocalOf { DirectionColors(WarmRed, CoolGreen) }
 
@@ -50,7 +51,7 @@ val LocalDarkTheme = staticCompositionLocalOf { false }
  *
  * 详见 [GlassGlowController] 与 [GlassGlowEngine]。
  */
-val LocalGlassGlow = staticCompositionLocalOf<GlassGlowController> { error("LocalGlassGlow 未提供") }
+val LocalGlassGlow = staticCompositionLocalOf<GlassGlowController> { error(t("LocalGlassGlow 未提供")) }
 
 /**
  * 亮色：光在浅灰白空间里漫反射。
@@ -90,7 +91,7 @@ private val LightColors = lightColorScheme(
     scrim = Color.Black
 )
 
-/** 深色：玻璃在暗环境里"提亮"，而不是"变黑"—— 这是深色液态玻璃的物理 */
+/** 深色：玻璃在暗环境里t("提亮")，而不是t("变黑")—— 这是深色液态玻璃的物理 */
 private val DarkColors = darkColorScheme(
     primary = BrandBlueDark,
     onPrimary = Color(0xFF10202F),

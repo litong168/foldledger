@@ -47,6 +47,7 @@ import com.foldledger.util.Money
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.foldledger.ui.l10n.t
 
 /**
  * 明细页的三段视图。
@@ -56,9 +57,9 @@ import java.util.Locale
  * 滑到头/尾时由平台的弹性回弹给出"到底了"的信号。
  */
 enum class DetailSegment(val label: String) {
-    TXNS("明细"),
-    CATEGORIES("分类"),
-    MONTHS("月份")
+    TXNS(t("明细")),
+    CATEGORIES(t("分类")),
+    MONTHS(t("月份"))
 }
 
 /**
@@ -191,7 +192,7 @@ fun CategoryBreakdownPage(
     if (expense.isEmpty() && income.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "这个账本还没有流水",
+                t("这个账本还没有流水"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 15.sp
             )
@@ -206,7 +207,7 @@ fun CategoryBreakdownPage(
     ) {
         item(key = "cat-expense") {
             CategoryGroupCard(
-                title = "支出",
+                title = t("支出"),
                 subtitle = "${expense.size} 个分类 · ${expense.sumOf { it.count }} 笔",
                 total = expenseTotal,
                 totalColor = dc.expense,
@@ -217,7 +218,7 @@ fun CategoryBreakdownPage(
         if (income.isNotEmpty()) {
             item(key = "cat-income") {
                 CategoryGroupCard(
-                    title = "收入",
+                    title = t("收入"),
                     subtitle = "${income.size} 个分类 · ${income.sumOf { it.count }} 笔",
                     total = incomeTotal,
                     totalColor = dc.income,
@@ -374,7 +375,7 @@ private data class MonthAgg(
     val dailyExpense: List<Long> = emptyList(),
     /** 该月实际天数（28/29/30/31），决定柱状图画几根 */
     val daysInMonth: Int = 31,
-    /** 该月支出最高的几个分类（最多 6 个），用于卡内"主要花在" */
+    /** 该月支出最高的几个分类（最多 6 个），用于卡内t("主要花在") */
     val topCategories: List<MonthCategorySlice> = emptyList(),
     /**
      * 该月金额最大的几笔（最多 5 笔）。
@@ -387,7 +388,7 @@ private data class MonthAgg(
     val topExpenses: List<MonthTopTxn> = emptyList()
 )
 
-/** 月份卡里的一行"本月最大的一笔" */
+/** 月份卡里的一行t("本月最大的一笔") */
 private data class MonthTopTxn(
     val emoji: String,
     val category: String,
@@ -396,7 +397,7 @@ private data class MonthTopTxn(
     val day: Int
 )
 
-/** 月份卡里的一行"分类构成" */
+/** 月份卡里的一行t("分类构成") */
 private data class MonthCategorySlice(
     val emoji: String,
     val name: String,
@@ -424,7 +425,7 @@ fun MonthBreakdownPage(
     if (months.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "这个账本还没有流水",
+                t("这个账本还没有流水"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 15.sp
             )
@@ -464,13 +465,13 @@ fun MonthBreakdownPage(
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        MonthMetric("支出", m.expense, if (m.expense > 0L) dc.expense else faint)
-                        MonthMetric("收入", m.income, if (m.income > 0L) dc.income else faint)
+                        MonthMetric(t("支出"), m.expense, if (m.expense > 0L) dc.expense else faint)
+                        MonthMetric(t("收入"), m.income, if (m.income > 0L) dc.income else faint)
                         // ⚠️ v13.4：结余原来一律用 onSurface（中性黑）。可它是有方向的数：
                         // 正数是攒下的、负数是透支的，用同一个黑显示，等于把最该一眼看出的
                         // 结论抹平了。±0 才用中性 —— 0 既不是赚也不是亏（和资产条同一判据）。
                         MonthMetric(
-                            "结余",
+                            t("结余"),
                             m.income - m.expense,
                             when {
                                 m.income - m.expense > 0L -> dc.income
