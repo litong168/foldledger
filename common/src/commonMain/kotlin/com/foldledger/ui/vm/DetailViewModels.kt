@@ -33,6 +33,7 @@ import com.foldledger.platform.deleteIconFile
 import com.foldledger.util.Money
 import com.foldledger.util.ReimburseAging
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -122,6 +123,44 @@ class LedgerDetailViewModel(
     fun clearReimburseFilter() { _reimburseFilter.value = emptySet() }
 
     // ============================================================
+    //  场景字段看板 / 筛选（v17）
+    //
+    //  报销账本把 state 字段做成了看板闭环；其它场景的 CHOICE 字段
+    //  （家装空间/阶段、房屋周期、母婴宝宝、日常支付方式…）以前只在副标题露脸。
+    //  这里把它们泛化成「汇总 → 点选筛选」。零 DB 改动：内存聚合 extraJson。
+    // ============================================================
+
+    /**
+     * 当前场景可看板的 CHOICE 字段汇总；只统计支出、排除回收站。
+     * 跟随 [transactions] 与账本场景（换账本即重算），报销账本排除 state 字段。
+     */
+    val sceneFieldStats: StateFlow<List<SceneFieldStat>> =
+        combine(ledger, transactions, _projectFilter) { l, txns, pid ->
+            // 跟随项目筛选 —— 与报销看板 reimburseSummaryScoped 同口径，
+            // 避免「看板 3000、点进去只有 800」的数字打架。
+            val scoped = when (pid) {
+                PROJECT_ALL -> txns
+                else -> txns.filter { it.projectId == pid }
+            }
+            summarizeSceneFields(scoped, ScenePresets.byKey(l?.sceneKey ?: ScenePresets.CUSTOM_KEY))
+        }.stateIn(viewModelScope, STOP_EAGER, emptyList())
+
+    private val _sceneFieldFilter = MutableStateFlow<SceneFieldSelection?>(null)
+    val sceneFieldFilter: StateFlow<SceneFieldSelection?> = _sceneFieldFilter.asStateFlow()
+
+    /** 点看板某个取值筛出对应流水；再点同一格取消 */
+    fun toggleSceneFieldFilter(fieldKey: String, value: String, label: String) {
+        val cur = _sceneFieldFilter.value
+        _sceneFieldFilter.value = if (cur?.key == fieldKey && cur.value == value) {
+            null
+        } else {
+            SceneFieldSelection(fieldKey, value, label)
+        }
+    }
+
+    fun clearSceneFieldFilter() { _sceneFieldFilter.value = null }
+
+    // ============================================================
     //  多维筛选（v5.7）
     //
     //  关键词只能回答「有没有提到 XX」，回答不了「上个月 200 以上的支出有哪几笔」。
@@ -142,7 +181,12 @@ class LedgerDetailViewModel(
      * 纯数字关键词还会去比金额文本（所以输 `35` 能找出 35 元的那些流水）。
      * 匹配逻辑走 Rust 核心 `DripCore.matchesQuery`（.so 缺失时 Kotlin 回退）。
      */
-    val filteredGrouped: StateFlow<List<DayGroup>> =
+    /**
+     * 前五个维度的过滤结果（项目 / 报销状态 / 多维 / 关键词），不含场景字段。
+     * 拆成两层是因为 kotlinx.coroutines 的 `combine` 最多 5 个 input；
+     * 场景字段作为第 6 个维度在 [filteredGrouped] 里叠加，彼此独立。
+     */
+    private val filteredCore: Flow<List<TransactionEntity>> =
         combine(
             transactions,
             _searchQuery,
@@ -170,8 +214,17 @@ class LedgerDetailViewModel(
             // 3) 多维筛选（v5.7：时间范围 / 收支方向 / 金额区间）
             val byFilter = f.applyTo(byState, System.currentTimeMillis())
             // 4) 关键词
-            val filtered = if (q.isBlank()) byFilter else byFilter.filter {
+            if (q.isBlank()) byFilter else byFilter.filter {
                 DripCore.matchesQuery(it.categoryName, it.note, it.amountCents, q)
+            }
+        }
+
+    val filteredGrouped: StateFlow<List<DayGroup>> =
+        combine(filteredCore, _sceneFieldFilter) { core, sf ->
+            // 5) 场景字段（v17）：按 extra 里的原始 value 筛；decode 失败的行不误伤
+            //    （值为空 → 不匹配，符合「只筛出填了这一档的流水」）
+            val filtered = if (sf == null) core else core.filter { txn ->
+                LedgerRepository.decodeExtra(txn.extraJson)[sf.key] == sf.value
             }
             groupByDay(filtered)
         }.stateIn(viewModelScope, STOP_EAGER, emptyList())
@@ -414,6 +467,13 @@ class LedgerDetailViewModel(
 
     fun setReimburseState(ids: List<Long>, state: Int) =
         viewModelScope.launch { repo.setReimburseState(ids, state) }
+
+    /**
+     * v17：行内快捷改一笔流水的场景字段。点已选档位传 null 取消。
+     * 只改 extraJson，报销状态 / 项目 / 金额不碰（repo.setExtraField 保证）。
+     */
+    fun setSceneField(txnId: Long, key: String, value: String?) =
+        viewModelScope.launch { repo.setExtraField(txnId, key, value) }
 
     // ================= v5.6 批量改账 =================
     //
@@ -1325,6 +1385,22 @@ class AddTxnViewModel(
             )
         } else {
             TxnFormState(projectId = ProjectContext.get(ledgerId), targetLedgerId = ledgerId)
+        }
+
+        // v17：递增读数（里程 / 抄表）带出上次值。只在新一笔（非连续、未编辑）时带。
+        // 一次性查询而非新增 observer：避免 STOP_EAGER 下无人 collect 导致读到空列表。
+        // 只填当前 extra 里还没有的 key —— 查询回来时用户可能已经开始填了，不覆盖。
+        if (!keepContext && sameLedger) {
+            viewModelScope.launch {
+                val scene = ScenePresets.byKey(ledger.value?.sceneKey ?: ScenePresets.CUSTOM_KEY)
+                if (scene.fields.none { it.carryOver }) return@launch
+                val carry = lastCarryOverValues(repo.transactions(ledgerId).first(), scene)
+                if (carry.isEmpty()) return@launch
+                val cur = form
+                if (cur.editingId != null) return@launch
+                val merged = carry.toMutableMap().also { m -> cur.extra.forEach { (k, v) -> if (v.isNotBlank()) m[k] = v } }
+                form = cur.copy(extra = merged)
+            }
         }
     }
 

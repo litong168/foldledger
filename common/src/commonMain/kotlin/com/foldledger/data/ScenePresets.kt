@@ -18,7 +18,12 @@ data class SceneField(
     val label: String,
     val kind: FieldKind,
     val options: List<FieldOption> = emptyList(),
-    val placeholder: String = ""
+    val placeholder: String = "",
+    /**
+     * v17：递增读数型字段（里程 / 抄表读数）。
+     * 记新一笔时自动带出该账本上次的填写值，用户只改增量，不必每次翻上一笔抄数。
+     */
+    val carryOver: Boolean = false
 )
 
 data class CategoryPreset(val name: String, val emoji: String)
@@ -260,7 +265,7 @@ object ScenePresets {
         ),
         fields = listOf(
             SceneField("vehicle", "车辆", FieldKind.TEXT, placeholder = "如：小米 SU7"),
-            SceneField("odometer", "当前里程", FieldKind.NUMBER, placeholder = "km"),
+            SceneField("odometer", "当前里程", FieldKind.NUMBER, placeholder = "km", carryOver = true),
             SceneField("fuel", "加油量/电量", FieldKind.NUMBER, placeholder = "L 或 kWh"),
             SceneField("plate", "车牌", FieldKind.TEXT, placeholder = "粤B·XXXXX")
         )
@@ -302,7 +307,7 @@ object ScenePresets {
                 FieldOption("year", "按年"),
                 FieldOption("once", "一次性")
             )),
-            SceneField("meterReading", "抄表读数", FieldKind.NUMBER, placeholder = "如：1234")
+            SceneField("meterReading", "抄表读数", FieldKind.NUMBER, placeholder = "如：1234", carryOver = true)
         )
     )
 

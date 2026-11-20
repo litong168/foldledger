@@ -142,6 +142,8 @@ import com.foldledger.ui.screens.detail.AssetBar
 import com.foldledger.ui.screens.detail.LedgerOverviewCard
 import com.foldledger.ui.screens.detail.FilteredEmptyHint
 import com.foldledger.ui.screens.detail.ReimburseFilterBar
+import com.foldledger.ui.screens.detail.SceneFieldBoard
+import com.foldledger.ui.screens.detail.SceneFieldFilterBar
 import com.foldledger.ui.screens.detail.ReimburseBoard
 import com.foldledger.ui.screens.detail.SettledArchiveBar
 import com.foldledger.ui.screens.detail.archivedProjectIds
@@ -321,11 +323,21 @@ private fun LedgerDetailBody(
     val projectBadges = remember(projectStateTotals) {
         projectStateBadges(projectStateTotals)
     }
-    // 归档判定走纯函数（detail/ProjectArchive.kt），逻辑与单测同源
-    val archivedProjectIds = remember(projects, projectStateTotals) {
-        archivedProjectIds(projects, projectStateTotals)
+    // 归档判定走纯函数（detail/ProjectArchive.kt），逻辑与单测同源。
+    // v17：非报销账本的项目流水状态是 NA，必须传 supportsReimburse=false，
+    // 否则用过的一次装修/一趟旅行会被全部误判成「已归档」塞进抽屉。
+    val archivedProjectIds = remember(projects, projectStateTotals, supportsReimburse) {
+        archivedProjectIds(projects, projectStateTotals, supportsReimburse)
     }
     val accountNames by vm.accountNames.collectAsStateWithLifecycle()
+    // v17：场景字段看板（家装空间 / 房屋周期 / 母婴宝宝 / 日常支付方式…）
+    val sceneFieldStats by vm.sceneFieldStats.collectAsStateWithLifecycle()
+    val sceneFieldFilter by vm.sceneFieldFilter.collectAsStateWithLifecycle()
+    // 行内快捷改只处理 CHOICE 字段；报销 state 走它自己的 chip，这里排除
+    val editableSceneFields = remember(ledger?.sceneKey) {
+        ScenePresets.byKey(ledger?.sceneKey ?: ScenePresets.CUSTOM_KEY)
+            .fields.filter { it.kind == com.foldledger.data.FieldKind.CHOICE && it.key != "state" }
+    }
     // v6.2：资产总览
     val accountBalances by vm.accountBalances.collectAsStateWithLifecycle()
     val netWorth by vm.netWorth.collectAsStateWithLifecycle()
@@ -504,19 +516,23 @@ private fun LedgerDetailBody(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item { SectionTitle("流水记录") }
-                        // v5.1：项目/空间切换条 —— 一次差旅、一次招待各归一块
+                        // v17：项目/空间切换条泛化到所有场景账本 ——
+                        // 报销的「一次差旅」也好，家装的「客厅/主卧」、用车的「某台车」、
+                        // 旅行的「某趟行程」也好，都是同一套「按项目分组看流水」。
+                        item {
+                            ProjectBar(
+                                projects = projects,
+                                selected = projectFilter,
+                                onSelect = vm::setProjectFilter,
+                                onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
+                                archivedIds = archivedProjectIds, badges = projectBadges,
+                                // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
+                                expanded = env.twoPane && !env.isFoldable
+                            )
+                        }
+                        // 项目汇总卡是报销专属语义（尚余垫付 / 已回款 / 三格状态），
+                        // 非报销账本没有这套流程，仍不显示。
                         if (supportsReimburse) {
-                            item {
-                                ProjectBar(
-                                    projects = projects,
-                                    selected = projectFilter,
-                                    onSelect = vm::setProjectFilter,
-                                    onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
-                                    archivedIds = archivedProjectIds, badges = projectBadges,
-                                    // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
-                                    expanded = env.twoPane && !env.isFoldable
-                                )
-                            }
                             val current = projects.firstOrNull { it.id == projectFilter }
                             if (current != null) {
                                 item {
@@ -532,6 +548,18 @@ private fun LedgerDetailBody(
                                 }
                             }
                         }
+                        // v17：场景字段看板 —— 报销的 state 已走自己的看板，这里只剩
+                        // 日常支付方式 / 家装空间阶段 / 房屋周期 / 母婴宝宝等 CHOICE 字段。
+                        // 跟着项目筛选走：点项目 chip 后看板数字只对当前项目（与报销看板同口径）。
+                        if (sceneFieldStats.isNotEmpty()) {
+                            item {
+                                SceneFieldBoard(
+                                    stats = sceneFieldStats,
+                                    selected = sceneFieldFilter,
+                                    onToggle = vm::toggleSceneFieldFilter
+                                )
+                            }
+                        }
                         // v5.2：按报销状态筛选时，顶部挂一条"当前只看什么"的提示
                         if (reimburseFilter.isNotEmpty()) {
                             item {
@@ -539,6 +567,16 @@ private fun LedgerDetailBody(
                                     states = reimburseFilter,
                                     groups = filteredGroups,
                                     onClear = vm::clearReimburseFilter
+                                )
+                            }
+                        }
+                        // v17：场景字段筛选提示条
+                        if (sceneFieldFilter != null) {
+                            item {
+                                SceneFieldFilterBar(
+                                    selection = sceneFieldFilter!!,
+                                    count = filterSummary.first,
+                                    onClear = vm::clearSceneFieldFilter
                                 )
                             }
                         }
@@ -635,6 +673,8 @@ private fun LedgerDetailBody(
                                     onEdit = onEditTransaction,
                                     onDelete = { pendingDeleteTxnId = it },
                                     onReimburse = { id, state -> vm.setReimburseState(listOf(id), state) },
+                                    sceneFields = editableSceneFields,
+                                    onSetSceneField = vm::setSceneField,
                                     quickConfirm = if (isAutoLedger) ({ id -> confirmInto(id) }) else null
                                 )
                             }
@@ -957,19 +997,20 @@ private fun LedgerDetailBody(
                             }
                         }
                     }
+                    // v17：项目条泛化到所有场景账本（与双栏左同一套）
+                    item {
+                        ProjectBar(
+                            projects = projects,
+                            selected = projectFilter,
+                            onSelect = vm::setProjectFilter,
+                            onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
+                            archivedIds = archivedProjectIds, badges = projectBadges,
+                            // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
+                            expanded = env.twoPane && !env.isFoldable
+                        )
+                    }
+                    // 项目汇总卡仍是报销专属语义
                     if (supportsReimburse) {
-                        // v5.1：项目/空间
-                        item {
-                            ProjectBar(
-                                projects = projects,
-                                selected = projectFilter,
-                                onSelect = vm::setProjectFilter,
-                                onCreate = { projectEditor = blankProject(ledger?.id ?: 0L) },
-                                archivedIds = archivedProjectIds, badges = projectBadges,
-                                // v16.1.1：桌面宽屏左栏窄，LazyRow 只露前几个 chip → FlowRow 全展开
-                                expanded = env.twoPane && !env.isFoldable
-                            )
-                        }
                         val current = projects.firstOrNull { it.id == projectFilter }
                         if (current != null) {
                             item {
@@ -991,6 +1032,25 @@ private fun LedgerDetailBody(
                                 states = reimburseFilter,
                                 groups = filteredGroups,
                                 onClear = vm::clearReimburseFilter
+                            )
+                        }
+                    }
+                    // v17：场景字段看板 + 筛选提示条（与双栏左同一套）
+                    if (sceneFieldStats.isNotEmpty()) {
+                        item {
+                            SceneFieldBoard(
+                                stats = sceneFieldStats,
+                                selected = sceneFieldFilter,
+                                onToggle = vm::toggleSceneFieldFilter
+                            )
+                        }
+                    }
+                    if (sceneFieldFilter != null) {
+                        item {
+                            SceneFieldFilterBar(
+                                selection = sceneFieldFilter!!,
+                                count = filterSummary.first,
+                                onClear = vm::clearSceneFieldFilter
                             )
                         }
                     }
@@ -1026,6 +1086,8 @@ private fun LedgerDetailBody(
                                 onEdit = onEditTransaction,
                                 onDelete = { pendingDeleteTxnId = it },
                                 onReimburse = { id, state -> vm.setReimburseState(listOf(id), state) },
+                                sceneFields = editableSceneFields,
+                                onSetSceneField = vm::setSceneField,
                                 quickConfirm = if (isAutoLedger) ({ id -> confirmInto(id) }) else null
                             )
                         }

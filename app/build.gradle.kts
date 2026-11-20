@@ -39,8 +39,8 @@ android {
         applicationId = "com.foldledger"
         minSdk = 26
         targetSdk = 35
-        versionCode = 235
-        versionName = "16.7.1"
+        versionCode = 236
+        versionName = "16.8.0"
 
         vectorDrawables { useSupportLibrary = true }
     }

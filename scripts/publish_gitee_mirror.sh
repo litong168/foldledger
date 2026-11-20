@@ -47,7 +47,7 @@ fi
 curl -sS --max-time 25 -X PATCH "${API}/repos/${OWNER}/${REPO}" \
   --data-urlencode "access_token=${TOKEN}" --data-urlencode "name=${REPO}" \
   --data-urlencode "private=false" >/dev/null
-BRANCH="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}?access_token=${TOKEN}" | grep -oE '"default_branch":"[^"]*"' | head -1 | cut -d'"' -f4)"
+BRANCH="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}?access_token=${TOKEN}" | grep -oE '"default_branch":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 [ -n "$BRANCH" ] || BRANCH="master"
 echo "  公开=是，默认分支=${BRANCH}"
 
@@ -62,7 +62,7 @@ NOTES="滴水记账 v${VERSION}（versionCode ${VERSION_CODE}），双端同版�
 echo "  apk=$APK_SIZE exe=$EXE_SIZE"
 
 echo "== 3/6 找/建 Release ${TAG} =="
-RID="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/tags/${TAG}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+' | head -1 | cut -d':' -f2)"
+RID="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/tags/${TAG}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+' | head -1 | cut -d':' -f2 || true)"
 if [ -z "$RID" ]; then
   curl -sS --max-time 30 -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
     --data-urlencode "access_token=${TOKEN}" \
@@ -70,26 +70,26 @@ if [ -z "$RID" ]; then
     --data-urlencode "name=滴水记账 ${TAG}" \
     --data-urlencode "body=${NOTES}" \
     --data-urlencode "target_commitish=${BRANCH}" >/dev/null
-  RID="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/tags/${TAG}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+' | head -1 | cut -d':' -f2)"
+  RID="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/tags/${TAG}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+' | head -1 | cut -d':' -f2 || true)"
 fi
 [ -n "$RID" ] || { echo "  Release 创建失败"; exit 1; }
 echo "  Release id=$RID"
 
 echo "== 4/6 清空旧附件（可重跑）=="
-for AID in $(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/${RID}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+,"name"' | grep -oE '[0-9]+'); do
+for AID in $(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/releases/${RID}?access_token=${TOKEN}" | grep -oE '"id":[0-9]+,"name"' | grep -oE '[0-9]+' || true); do
   curl -sS --max-time 20 -X DELETE "${API}/repos/${OWNER}/${REPO}/releases/${RID}/attach_files/${AID}?access_token=${TOKEN}" >/dev/null
   echo "  删除旧附件 $AID"
 done
 
 echo "== 5/6 上传 EXE（94MB，耐心等）=="
 EXE_URL="$(curl -sS --max-time 900 -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RID}/attach_files" \
-  -F "access_token=${TOKEN}" -F "file=@${EXE}" | grep -oE '"browser_download_url":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  -F "access_token=${TOKEN}" -F "file=@${EXE}" | grep -oE '"browser_download_url":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 [ -n "$EXE_URL" ] || { echo "  EXE 附件上传失败"; exit 1; }
 echo "  ok"
 
 echo "== 6/6 上传 APK + 生成 manifest（资产写附件 URL）并传 raw =="
 APK_URL="$(curl -sS --max-time 300 -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RID}/attach_files" \
-  -F "access_token=${TOKEN}" -F "file=@${APK}" | grep -oE '"browser_download_url":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  -F "access_token=${TOKEN}" -F "file=@${APK}" | grep -oE '"browser_download_url":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 [ -n "$APK_URL" ] || { echo "  APK 附件上传失败"; exit 1; }
 echo "  ok"
 
@@ -108,7 +108,7 @@ print(json.dumps(m, ensure_ascii=False, indent=2))
 PY
 
 B64="$(mktemp)"; base64 -w0 /tmp/gitee-manifest.json > "$B64"
-MSHA="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/contents/release/update-manifest.json?access_token=${TOKEN}" | grep -oE '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)"
+MSHA="$(curl -sS --max-time 20 "${API}/repos/${OWNER}/${REPO}/contents/release/update-manifest.json?access_token=${TOKEN}" | grep -oE '"sha":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 METHOD="POST"; [ -n "$MSHA" ] && METHOD="PUT"
 curl -sS --max-time 120 -X "$METHOD" "${API}/repos/${OWNER}/${REPO}/contents/release/update-manifest.json" \
   -d "access_token=${TOKEN}" \

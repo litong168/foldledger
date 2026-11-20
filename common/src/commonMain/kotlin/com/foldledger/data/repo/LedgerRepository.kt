@@ -5,6 +5,7 @@ import com.foldledger.data.ScenePreset
 import com.foldledger.platform.runInDbTransaction
 import com.foldledger.data.RecurringSchedule
 import com.foldledger.data.ScenePresets
+import com.foldledger.data.withExtraField
 import com.foldledger.data.backup.BackupSnapshot
 import com.foldledger.data.db.AppDatabase
 import com.foldledger.data.db.AccountEntity
@@ -504,6 +505,17 @@ class LedgerRepository(
     fun reimburseList(ledgerId: Long, state: Int) = txnDao.observeReimburseList(ledgerId, state)
 
     suspend fun getTransaction(id: Long) = txnDao.getById(id)
+
+    /**
+     * 只改一笔流水的某个场景字段（v17 行内快捷改）。
+     *
+     * value 为空 = 删除该字段。只动 extraJson，报销状态 / 项目 / 金额一律不碰；
+     * touched() 刷新时间戳保证同步正常。零 schema 改动。
+     */
+    suspend fun setExtraField(id: Long, key: String, value: String?) {
+        val txn = txnDao.getById(id) ?: return
+        txnDao.update(withExtraField(txn, key, value).touched())
+    }
 
     suspend fun addTransaction(
         ledgerId: Long,

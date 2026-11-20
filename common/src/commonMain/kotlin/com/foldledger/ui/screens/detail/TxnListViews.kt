@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.foldledger.data.FieldKind
+import com.foldledger.data.SceneField
 import com.foldledger.data.ScenePresets
 import com.foldledger.data.db.AccountEntity
 import com.foldledger.data.db.CategoryEntity
@@ -165,6 +167,10 @@ internal fun DayGroupCard(
     onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     onReimburse: (Long, Int) -> Unit,
+    /** v17：当前账本的 CHOICE 场景字段，行内快捷改用；空 = 不显示 */
+    sceneFields: List<SceneField> = emptyList(),
+    /** v17：行内改场景字段回调（txnId, fieldKey, value；null = 清除） */
+    onSetSceneField: (Long, String, String?) -> Unit = { _, _, _ -> },
     /** v15 自动记账：行级「✓ 入账」回调（非 null 时该行显示快速入账按钮） */
     quickConfirm: ((Long) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -250,6 +256,8 @@ internal fun DayGroupCard(
                             onEdit = { onEdit(txn.id) },
                             onDelete = { onDelete(txn.id) },
                             onReimburse = { onReimburse(txn.id, it) },
+                            sceneFields = sceneFields,
+                            onSetSceneField = { key, value -> onSetSceneField(txn.id, key, value) },
                             quickConfirm = quickConfirm?.let { qc -> { qc(txn.id) } }
                         )
                     }
@@ -274,12 +282,20 @@ private fun TxnRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onReimburse: (Int) -> Unit,
+    /** v17：当前账本 CHOICE 字段 / 行内改回调 */
+    sceneFields: List<SceneField> = emptyList(),
+    onSetSceneField: (String, String?) -> Unit = { _, _ -> },
     /** v15 自动记账：行级「✓ 入账」（null = 不显示） */
     quickConfirm: (() -> Unit)? = null
 ) {
     var menu by remember { mutableStateOf(false) }
     var reimburseMenu by remember { mutableStateOf(false) }
+    var sceneMenu by remember { mutableStateOf(false) }
     val extra = remember(txn.extraJson) { LedgerRepository.decodeExtra(txn.extraJson) }
+    // v17：只把「这笔填了值的 CHOICE 字段」做成行内可改 chip（跳过报销 state）
+    val editableFields = remember(sceneFields, extra) {
+        sceneFields.filter { it.kind == FieldKind.CHOICE && it.key != "state" && extra[it.key]?.isNotBlank() == true }
+    }
 
     Row(
         Modifier
@@ -368,6 +384,17 @@ private fun TxnRow(
                     expanded = reimburseMenu,
                     onExpandChange = { reimburseMenu = it },
                     onPick = { onReimburse(it) }
+                )
+            }
+            // v17：场景字段快捷改动 —— 只在这笔填过 CHOICE 字段时出现，一行最多一个入口
+            if (editableFields.isNotEmpty()) {
+                Spacer(Modifier.height(3.dp))
+                SceneFieldsChip(
+                    fields = editableFields,
+                    extra = extra,
+                    expanded = sceneMenu,
+                    onExpandChange = { sceneMenu = it },
+                    onPick = { key, value -> onSetSceneField(key, value) }
                 )
             }
         }
@@ -528,6 +555,100 @@ private fun ReimburseStateChip(
                 }
             }
             Spacer(Modifier.height(2.dp))
+        }
+    }
+}
+
+/**
+ * v17：行内场景字段快捷改。一笔流水可能有多个填了值的 CHOICE 字段，
+ * 聚成一个「✎ 字段」入口，点开后按字段分组列选项，选中项打勾。
+ * 再点已选项 = 清除该字段（与报销状态 chip 的交互一致）。
+ *
+ * 视觉：玻璃 chip + 主色，不用语义色（场景字段没有支出/回款语义）；
+ * 字号只用 11/13，选中态 = 同玻璃更高浓度 + 勾，遵守「实色选中块」禁令。
+ */
+@Composable
+private fun SceneFieldsChip(
+    fields: List<SceneField>,
+    extra: Map<String, String>,
+    expanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    onPick: (key: String, value: String?) -> Unit
+) {
+    val tint = MaterialTheme.colorScheme.primary
+    val summary = fields.firstNotNullOfOrNull { f ->
+        extra[f.key]?.let { raw -> f.options.firstOrNull { it.value == raw }?.label ?: raw }
+    } ?: t("字段")
+    Box {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .clickableScale(pressedScale = 0.9f) { onExpandChange(true) }
+                .glassChip(shape = RoundedCornerShape(50), strength = 0.55f)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("✎", fontSize = 11.sp, color = tint)
+            Spacer(Modifier.width(4.dp))
+            Text(
+                summary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = tint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 96.dp)
+            )
+        }
+        GlassMenu(expanded = expanded, onDismissRequest = { onExpandChange(false) }) {
+            fields.forEach { field ->
+                Text(
+                    t(field.label),
+                    fontSize = 11.sp,
+                    letterSpacing = 0.3.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 2.dp)
+                )
+                field.options.forEach { opt ->
+                    val active = extra[field.key] == opt.value
+                    Row(
+                        modifier = Modifier
+                            .width(188.dp)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .then(
+                                if (active) Modifier.glassChip(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tint = tint,
+                                    strength = 1.0f,
+                                    elevation = 2.dp
+                                ) else Modifier
+                            )
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickableScale(pressedScale = 0.96f) {
+                                onExpandChange(false)
+                                onPick(field.key, if (active) null else opt.value)
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            t(opt.label),
+                            fontSize = 13.sp,
+                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (active) 1f else 0.82f),
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (active) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

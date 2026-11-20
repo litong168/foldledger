@@ -103,6 +103,23 @@ class ProjectArchiveTest {
         )
         assertEquals(setOf(1L), ids)
     }
+
+    /**
+     * v17 泛化坑：非报销账本流水状态是 NA，inFlight 恒为 0。
+     * 若不传 supportsReimbursement=false，这些项目会被全部误判归档。
+     */
+    @Test
+    fun nonReimbursementProjectsOnlyArchiveWhenClosed() {
+        val ids = archivedProjectIds(
+            listOf(project(1), project(2, closed = true)),
+            mapOf(
+                1L to listOf(agg(1, ReimburseState.NA, 5)),   // 用过项目，NA 状态
+                2L to listOf(agg(2, ReimburseState.NA, 2))
+            ),
+            supportsReimbursement = false
+        )
+        assertEquals(setOf(2L), ids)
+    }
 }
 
 /**

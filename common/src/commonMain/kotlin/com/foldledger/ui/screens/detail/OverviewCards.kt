@@ -113,6 +113,7 @@ import com.foldledger.ui.vm.TxnFilter
 import com.foldledger.ui.vm.LedgerDetailViewModel
 import com.foldledger.ui.vm.LedgerUi
 import com.foldledger.ui.vm.ReimburseSummary
+import com.foldledger.ui.vm.sceneOverviewNote
 import com.foldledger.util.DateExt
 import com.foldledger.util.Money
 import com.foldledger.util.ReimburseAging
@@ -335,7 +336,8 @@ internal fun LedgerOverviewCard(
                 note = if (reimburse != null) {
                     if (reimburse.allSettled) t("已全部回款") else "${reimburse.outstandingCount} 笔待回款"
                 } else {
-                    "本月支 ${Money.format(monthExpense)}"
+                    // v17：收起态也走场景摘要 —— 展开/收起说的是同一句话
+                    sceneOverviewNote(sceneKey, monthExpense, monthIncome, totalExpense, budgetCents)
                 },
                 onClick = onToggleCompact
             )
@@ -389,7 +391,7 @@ internal fun LedgerOverviewCard(
                 }
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    "本月支出 ${Money.format(monthExpense)} · 收入 ${Money.format(monthIncome)}",
+                    sceneOverviewNote(sceneKey, monthExpense, monthIncome, totalExpense, budgetCents),
                     fontSize = 13.sp,
                     color = faint,
                     maxLines = 1,

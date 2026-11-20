@@ -25,9 +25,14 @@ import com.foldledger.data.db.ReimburseState
  */
 internal fun archivedProjectIds(
     projects: List<ProjectEntity>,
-    stateTotals: Map<Long, List<ProjectStateAgg>>
+    stateTotals: Map<Long, List<ProjectStateAgg>>,
+    /** v17：非报销账本的项目流水状态是 NA，没有「报销办完」语义 —— 只认手动「已结束」。 */
+    supportsReimbursement: Boolean = true
 ): Set<Long> = projects.filter { p ->
     if (p.closed) return@filter true
+    // ⚠️ 非报销账本：流水 reimburseState = NA(-1)，inFlight 恒为 0，
+    //    若沿用下面的报销判据会把所有用过项目全判成「已归档」。这里只认手动结束。
+    if (!supportsReimbursement) return@filter false
     val states = stateTotals[p.id].orEmpty()
     // 空项目：只是空壳，用户建了还没用
     if (states.isEmpty()) return@filter false

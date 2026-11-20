@@ -187,8 +187,9 @@ private fun TxnEditor(
     }
     val targetScene = switched?.let { ScenePresets.byKey(it.sceneKey) } ?: scene
     val targetSupportsReimburse = targetScene.supportsReimbursement
-    // 项目是账本内的（这趟差旅/这个客户），换到别的账本就没有意义了
-    val showProjectRow = supportsReimburse && switched == null
+    // v17：项目分组泛化到所有场景（一趟装修/一台车/一次旅行都能归入项目）。
+    // 项目仍是账本内的 —— 换到别的账本就没有意义了，这条约束不变。
+    val showProjectRow = switched == null
 
     // ⚠️ v9.7.2 修：这个 VM 挂在 Activity 上（key = "add-$ledgerId"），会被多次打开复用。
     // 原来只在「编辑」时 loadForEdit，新建时**什么都不做**，于是：
