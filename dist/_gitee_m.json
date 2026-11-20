@@ -1,0 +1,20 @@
+{
+  "versionCode": 236,
+  "versionName": "16.8.0",
+  "minVersionCode": 1,
+  "notes": "滴水记账 v16.8.0（versionCode 236），双端同版。",
+  "assets": {
+    "android": {
+      "name": "drip-ledger-v16.8.0-arm64.apk",
+      "size": 4397787,
+      "sha256": "9a243e6d685f855593c6d6c5bcc4187b186d21f19fb0a60d755b27288233adc4",
+      "url": "https://gitee.com/litong168/foldledger/releases/download/v16.8.0/%E6%BB%B4%E6%B0%B4%E8%AE%B0%E8%B4%A6-v16.8.0-release.apk"
+    },
+    "windows": {
+      "name": "drip-ledger-v16.8.0-win-x64-setup.exe",
+      "size": 94721536,
+      "sha256": "e8614ab41faba35244803e51d6d1413f2b7c3ea36b9fa3493923b4be8550117f",
+      "url": "https://gitee.com/litong168/foldledger/releases/download/v16.8.0/%E6%BB%B4%E6%B0%B4%E8%AE%B0%E8%B4%A6-v16.8.0-win-x64-setup.exe"
+    }
+  }
+}
