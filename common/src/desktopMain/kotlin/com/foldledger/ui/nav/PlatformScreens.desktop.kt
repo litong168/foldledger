@@ -55,6 +55,7 @@ import com.foldledger.ui.screens.DonationQrDialog
 import com.foldledger.ui.screens.SpeedEntryPanel
 import com.foldledger.ui.screens.SyncSectionCard
 import com.foldledger.ui.screens.UpdateAvailableDialog
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import com.foldledger.ui.theme.Layout
@@ -389,6 +390,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
     // M5.15：开机自启与自动更新卡，桌面专属。v16.6 起更新走 GitHub，本地目录作兜底。
     var updateDir by remember { mutableStateOf(settings.desktopUpdateDir ?: "") }
     var showUpdateDialog by remember { mutableStateOf(false) }
+    var updateJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(settings.desktopUpdateDir) {
         updateDir = settings.desktopUpdateDir ?: ""
@@ -484,7 +486,7 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
                 busy = DesktopAutoUpdater.busy.value,
                 error = DesktopAutoUpdater.lastError.value,
                 onUpdate = {
-                    scope.launch {
+                    updateJob = scope.launch {
                         val ok = DesktopAutoUpdater.downloadGithubUpdate()
                         if (ok) DesktopAutoUpdater.installUpdate()
                     }
@@ -493,7 +495,12 @@ private fun StartupCard(settings: AppSettings, appVm: AppViewModel) {
                 onSkip = {
                     scope.launch { DesktopAutoUpdater.skipThisVersion() }
                     showUpdateDialog = false
-                }
+                },
+                onCancel = {
+                    updateJob?.cancel()
+                    updateJob = null
+                },
+                usingMirror = DesktopAutoUpdater.usingMirror
             )
         }
     }

@@ -785,5 +785,7 @@ object EnStrings {
         "本月居住" to "Housing this month",
         "本月育儿" to "Baby this month",
         "本月养宠" to "Pets this month",
+        "取消下载" to "Cancel download",
+        "正在从国内镜像下载…" to "Downloading from mirror...",
     )
 }

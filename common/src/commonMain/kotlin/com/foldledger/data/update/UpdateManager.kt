@@ -4,6 +4,7 @@ import com.foldledger.APP_VERSION_CODE
 import com.foldledger.data.prefs.AppPreferences
 import kotlinx.coroutines.flow.first
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * 双端共享的更新协调器：检查 → 下载 → 校验。安装由各平台自己完成（桌面起 setup / 手机拉安装界面）。
@@ -31,11 +32,18 @@ class UpdateManager(private val prefs: AppPreferences) {
         val notes: String,
         val force: Boolean,
         val asset: UpdateChecker.Asset,
-        val downloadUrl: String
+        val downloadUrl: String,
+        /** 本端平台标识（windows / android）：换源时用来在镜像清单里取同一个资产 */
+        val platform: String = ""
     )
 
     @Volatile
     var available: Available? = null
+        private set
+
+    /** 本次下载是否已切到国内镜像（UI 用来提示，不参与逻辑） */
+    @Volatile
+    var usingMirror: Boolean = false
         private set
 
     /**
@@ -85,7 +93,8 @@ class UpdateManager(private val prefs: AppPreferences) {
                 notes = manifest.notes,
                 force = result.force,
                 asset = asset,
-                downloadUrl = url
+                downloadUrl = url,
+                platform = platform
             )
             return true
         } catch (e: Exception) {
@@ -149,6 +158,10 @@ class UpdateManager(private val prefs: AppPreferences) {
     /**
      * 下载当前可用更新到 [dir]，校验 size + sha256，返回最终文件。
      * 校验失败删文件并抛异常。
+     *
+     * v16.8.1：**慢就换源**。原来的回退只看"manifest 拿不到"，于是出现"清单拿到了、资产却
+     * 6KB/s 龟速下不完、还取消不掉"的死局。现在按 主源(带速率闸) → 镜像同版本资产(带闸)
+     * → 主源无闸硬磨 三级走；每一级失败都会清掉半成品。取消（协程 cancel）会立刻中断。
      */
     suspend fun downloadAndVerify(
         dir: File,
@@ -157,7 +170,60 @@ class UpdateManager(private val prefs: AppPreferences) {
         val info = available ?: throw IllegalStateException("没有可用的更新")
         dir.mkdirs()
         val dest = File(dir, info.asset.name)
-        val file = UpdateHttp.download(info.downloadUrl, dest) { done, total ->
+        val primary = info.downloadUrl
+        var last: Exception? = null
+        var sawSlow = false
+
+        usingMirror = false
+        // 1) 主源：带速率闸，太慢就赶紧换源，别让用户干等十几分钟
+        try {
+            return downloadFrom(primary, dest, info, gate = true, onProgress = onProgress)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (e is UpdateTooSlowException) sawSlow = true
+            last = e
+        }
+
+        // 2) 国内镜像：只在版本号完全一致时才用（防止镜像没跟上导致降级覆盖）
+        val mirror = runCatching { mirrorUrlFor(info) }.getOrNull()
+        if (!mirror.isNullOrBlank() && mirror != primary) {
+            usingMirror = true
+            try {
+                return downloadFrom(mirror, dest, info, gate = true, onProgress = onProgress)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is UpdateTooSlowException) sawSlow = true
+                last = e
+            } finally {
+                usingMirror = false
+            }
+        }
+
+        // 3) 两个源都慢：关掉闸门在主源上硬磨一次（慢也胜过失败，至少能下完）
+        if (sawSlow) {
+            try {
+                return downloadFrom(primary, dest, info, gate = false, onProgress = onProgress)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                last = e
+            }
+        }
+        throw last ?: IllegalStateException("下载失败")
+    }
+
+    /** 真正下一次并校验；失败抛异常（半成品已删），由调用方决定换哪个源 */
+    private suspend fun downloadFrom(
+        url: String,
+        dest: File,
+        info: Available,
+        gate: Boolean,
+        onProgress: ((Long, Long) -> Unit)?
+    ): File {
+        progress = 0L to -1L
+        val file = UpdateHttp.download(url, dest, detectSlow = gate) { done, total ->
             progress = done to total
             onProgress?.invoke(done, total)
         }
@@ -173,6 +239,21 @@ class UpdateManager(private val prefs: AppPreferences) {
             }
         }
         return file
+    }
+
+    /**
+     * 解析镜像里与本机同版本的资产直链；拿不到清单或版本不符返回 null。
+     *
+     * 优先用清单里的 `url` 字段（发版脚本写入的 Release 附件地址，已 URL 编码）；
+     * 空则按约定拼 raw 直链（小文件可用，大文件会被 Gitee 拦 403，届时自然换回主源）。
+     */
+    private suspend fun mirrorUrlFor(info: Available): String? {
+        val platform = info.platform.ifBlank {
+            if (info.asset.name.endsWith(".apk", ignoreCase = true)) "android" else "windows"
+        }
+        val manifest = UpdateChecker.parseManifest(UpdateHttp.get(UpdateHttp.GITEE_MANIFEST_URL))
+        val asset = UpdateChecker.mirrorAsset(manifest, platform, info.versionCode) ?: return null
+        return asset.url.ifBlank { UpdateHttp.giteeAssetUrl(asset.name) }
     }
 
     companion object {

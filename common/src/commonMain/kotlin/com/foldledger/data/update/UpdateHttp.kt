@@ -1,7 +1,9 @@
 package com.foldledger.data.update
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
@@ -10,6 +12,8 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 /**
  * 更新用的传输层：GET GitHub Releases API + 流式下载安装包。
@@ -73,28 +77,36 @@ object UpdateHttp {
      * 重试策略：每次从头重下并覆盖 .part（不做 Range 续传 —— 该下载域对 Range 支持不稳，
      * 且重定向后的签名 URL 每次都变，续传反而更容易拿到拼接坏包）。大文件下载慢，
      * 只有连接类瞬时错误才重试；"下载不完整"这类已传了一部分的失败也重试（从头）。
+     *
+     * [detectSlow] = true 时挂 [DownloadSpeedGate]：速率长期低于阈值抛 [UpdateTooSlowException]
+     * （不重试，交给上层换源），读超时也收紧到 45s；取消（用户点「取消下载」）会立刻中断并删 .part。
      */
     suspend fun download(
         url: String,
         dest: File,
+        detectSlow: Boolean = false,
         onProgress: ((Long, Long) -> Unit)? = null
     ): File = withContext(Dispatchers.IO) {
-        retry("下载") { downloadOnce(url, dest, onProgress) }
+        retry("下载") { downloadOnce(url, dest, detectSlow, onProgress) }
     }
 
-    private fun downloadOnce(
+    private suspend fun downloadOnce(
         url: String,
         dest: File,
+        detectSlow: Boolean,
         onProgress: ((Long, Long) -> Unit)?
     ): File {
         dest.parentFile?.mkdirs()
         val part = File(dest.absolutePath + ".part")
         val conn = URL(url).openConnection() as HttpURLConnection
+        // 取消时从别的线程 disconnect，让阻塞中的 read() 立刻抛错退出，不必等读超时
+        val cancelHook = coroutineContext[Job]?.invokeOnCompletion { conn.disconnect() }
         try {
             conn.requestMethod = "GET"
             conn.connectTimeout = 20_000
-            // 下安装包很慢（国内约 23KB/s，94MB 可能 >1 小时），读超时要足够长
-            conn.readTimeout = 300_000
+            // 下安装包很慢（国内约 23KB/s，94MB 可能 >1 小时），读超时要足够长；
+            // 带速率闸时收紧，好让"完全卡死"更快暴露出来
+            conn.readTimeout = if (detectSlow) 45_000 else 300_000
             conn.setRequestProperty("User-Agent", UA)
             val code = conn.responseCode
             if (code !in 200..299) {
@@ -103,15 +115,19 @@ object UpdateHttp {
             }
             val total = conn.contentLengthLong
             var downloaded = 0L
+            val gate = if (detectSlow) DownloadSpeedGate() else null
             BufferedInputStream(conn.inputStream, 64 * 1024).use { input ->
                 FileOutputStream(part).use { out ->
                     val buf = ByteArray(64 * 1024)
                     while (true) {
+                        coroutineContext.ensureActive()
                         val n = input.read(buf)
                         if (n < 0) break
                         out.write(buf, 0, n)
                         downloaded += n
                         onProgress?.invoke(downloaded, total)
+                        val slow = gate?.onBytes(n.toLong(), System.currentTimeMillis())
+                        if (slow != null) throw UpdateTooSlowException(slow)
                     }
                 }
             }
@@ -124,20 +140,33 @@ object UpdateHttp {
                 part.delete()
             }
             return dest
+        } catch (e: Throwable) {
+            // 过慢/取消都放弃这份半成品，避免下次误用或白占空间
+            if (e is UpdateTooSlowException || e is CancellationException) part.delete()
+            throw e
         } finally {
+            cancelHook?.dispose()
             conn.disconnect()
         }
     }
 
-    /** 瞬时网络错误重试（指数退避：0.4s / 0.8s / 1.6s）。4xx（除 429）不重试。 */
-    private suspend fun <T> retry(label: String, block: () -> T): T {
+    /**
+     * 瞬时网络错误重试（指数退避：0.4s / 0.8s / 1.6s）。4xx（除 429）不重试，
+     * 过慢不重试（换源更有意义），取消直接向上抛。
+     */
+    private suspend fun <T> retry(label: String, block: suspend () -> T): T {
         var last: Exception? = null
         for (attempt in 0 until RETRIES) {
             try {
                 return block()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // 取消可能表现为 IO 异常（disconnect 打断 read），这里先确认协程是否还活着
+                coroutineContext.ensureActive()
                 last = e
-                val noRetry = e is UpdateHttpException && e.code in 400..499 && e.code != 429
+                val noRetry = e is UpdateTooSlowException ||
+                    (e is UpdateHttpException && e.code in 400..499 && e.code != 429)
                 if (noRetry || attempt == RETRIES - 1) break
                 delay(400L * (1 shl attempt))
             }

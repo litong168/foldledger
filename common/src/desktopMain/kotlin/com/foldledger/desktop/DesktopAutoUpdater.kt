@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import java.awt.Desktop
 import java.io.File
 import java.util.zip.ZipFile
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * 桌面端「检查更新」v16.6.0。
@@ -48,6 +49,9 @@ object DesktopAutoUpdater {
 
     /** 供 UI 直接读取的完整更新信息（含 versionCode，跳过要用） */
     val managerAvailable: UpdateManager.Available? get() = manager.available
+
+    /** 本次下载是否已切到国内镜像（UI 提示用） */
+    val usingMirror: Boolean get() = manager.usingMirror
 
     /** 应用更新后退出本进程（由 Main.kt 注入 exitApplication） */
     var onExit: () -> Unit = {}
@@ -112,6 +116,9 @@ object DesktopAutoUpdater {
             progress.value = 0L to -1L
             updateInfo.value = info.copy(path = file.absolutePath)
             return true
+        } catch (e: CancellationException) {
+            // 「取消下载」：让协程正常结束，别当成失败弹红字
+            throw e
         } catch (e: Exception) {
             lastError.value = e.message ?: e::class.simpleName
             return false

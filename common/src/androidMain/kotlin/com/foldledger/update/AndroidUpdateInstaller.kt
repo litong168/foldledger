@@ -10,6 +10,7 @@ import com.foldledger.data.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Android 端应用内更新（v16.6）。
@@ -87,6 +88,9 @@ object AndroidUpdateInstaller {
                 }
             }
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            // 用户点了「取消下载」：别包装成失败结果，要让协程正常取消
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

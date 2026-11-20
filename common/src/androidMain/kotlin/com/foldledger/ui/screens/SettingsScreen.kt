@@ -84,6 +84,7 @@ import com.foldledger.ui.theme.wellSurface
 import com.foldledger.util.Money
 import com.foldledger.ui.vm.AppViewModel
 import com.foldledger.ui.vm.BackupViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import com.foldledger.ui.l10n.t
@@ -1187,6 +1188,7 @@ internal fun AboutCard() {
     var showUpdate by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(false) }
     var downloadBusy by remember { mutableStateOf(false) }
+    var downloadJob by remember { mutableStateOf<Job?>(null) }
     var progress by remember { mutableStateOf(0L to -1L) }
     var errorText by remember { mutableStateOf<String?>(null) }
     var silentFound by remember { mutableStateOf(false) }
@@ -1245,26 +1247,36 @@ internal fun AboutCard() {
                 onUpdate = {
                     downloadBusy = true
                     errorText = null
-                    scope.launch {
-                        if (!com.foldledger.update.AndroidUpdateInstaller.canInstallUnknownApps(context)) {
-                            com.foldledger.update.AndroidUpdateInstaller.openInstallPermissionSettings(context)
-                            errorText = t("请先开启「安装未知应用」权限，再点立即更新")
+                    downloadJob = scope.launch {
+                        try {
+                            if (!com.foldledger.update.AndroidUpdateInstaller.canInstallUnknownApps(context)) {
+                                com.foldledger.update.AndroidUpdateInstaller.openInstallPermissionSettings(context)
+                                errorText = t("请先开启「安装未知应用」权限，再点立即更新")
+                                return@launch
+                            }
+                            val result = com.foldledger.update.AndroidUpdateInstaller.downloadAndInstall(
+                                context, manager
+                            ) { done, total -> progress = done to total }
+                            result.exceptionOrNull()?.let { errorText = it.message ?: t("下载失败") }
+                        } finally {
                             downloadBusy = false
-                            return@launch
+                            progress = 0L to -1L
                         }
-                        val result = com.foldledger.update.AndroidUpdateInstaller.downloadAndInstall(
-                            context, manager
-                        ) { done, total -> progress = done to total }
-                        downloadBusy = false
-                        progress = 0L to -1L
-                        result.exceptionOrNull()?.let { errorText = it.message ?: t("下载失败") }
                     }
                 },
                 onLater = { showUpdate = false },
                 onSkip = {
                     scope.launch { manager.skipThisVersion() }
                     showUpdate = false
-                }
+                },
+                onCancel = {
+                    downloadJob?.cancel()
+                    downloadJob = null
+                    downloadBusy = false
+                    progress = 0L to -1L
+                    errorText = null
+                },
+                usingMirror = manager.usingMirror
             )
         }
     }

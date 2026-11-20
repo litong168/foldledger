@@ -98,7 +98,8 @@ fun DonationQrDialog(onDismiss: () -> Unit) {
 
 /**
  * 发现新版本的玻璃弹窗（双端共用展示，按钮行为由平台注入）。
- * [onUpdate] 立即更新（下载+安装）、[onLater] 稍后、[onSkip] 跳过此版本。
+ * [onUpdate] 立即更新（下载+安装）、[onLater] 稍后、[onSkip] 跳过此版本、
+ * [onCancel] 取消正在进行的下载（v16.8.1：下载态不再只能强杀进程）。
  */
 @Composable
 fun UpdateAvailableDialog(
@@ -108,7 +109,9 @@ fun UpdateAvailableDialog(
     error: String?,
     onUpdate: () -> Unit,
     onLater: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onCancel: () -> Unit = {},
+    usingMirror: Boolean = false
 ) {
     GlassDialog(
         onDismissRequest = { if (!info.force && !busy) onLater() },
@@ -131,7 +134,12 @@ fun UpdateAvailableDialog(
                     Spacer(Modifier.height(14.dp))
                     val (done, total) = progress ?: (0L to -1L)
                     val pct = if (total > 0) "${(done * 100 / total)}%" else "${done / 1024} KB"
-                    Text("正在下载… $pct", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        if (usingMirror) t("正在从国内镜像下载…") + " $pct"
+                        else t("正在下载…") + " $pct",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(6.dp))
                 }
                 if (!error.isNullOrBlank()) {
@@ -148,7 +156,9 @@ fun UpdateAvailableDialog(
             )
         },
         dismissButton = {
-            if (!info.force && !busy) {
+            if (busy) {
+                TextButton(onClick = onCancel) { Text(t("取消下载")) }
+            } else if (!info.force) {
                 TextButton(onClick = onSkip) { Text(t("跳过此版本")) }
             }
         },

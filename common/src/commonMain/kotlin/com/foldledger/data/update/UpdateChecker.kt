@@ -95,8 +95,7 @@ object UpdateChecker {
     fun parseTagName(releaseJson: String): String? =
         JSONObject(releaseJson).optString("tag_name", "").takeIf { it.isNotBlank() }
 
-    /** 是否有新版本：远端 versionCode > 当前；且本端有资产 */
-    data class CheckResult(
+    /** 是否有新版本：远端 versionCode > 当前；且本端有资产 */    data class CheckResult(
         val hasUpdate: Boolean,
         val force: Boolean,
         val manifest: Manifest?
@@ -123,6 +122,15 @@ object UpdateChecker {
         val force = manifest.minVersionCode > currentVersionCode
         return CheckResult(true, force, manifest)
     }
+
+    /**
+     * 从镜像清单取「与 [expectedVersionCode] 同版本」的本端资产（v16.8.1 换源用）。
+     *
+     * 版本必须一致：镜像可能还没跟上主源，若拿旧版资产去装就是降级覆盖。
+     * 不一致或没有本端资产一律返回 null，调用方跳过换源。
+     */
+    fun mirrorAsset(manifest: Manifest, platform: String, expectedVersionCode: Int): Asset? =
+        if (manifest.versionCode == expectedVersionCode) manifest.assetFor(platform) else null
 
     /** 三段版本号字符串 → 整数比较用（仅回退展示时用；权威永远是 versionCode） */
     fun versionTripleToCode(tag: String): Int {
